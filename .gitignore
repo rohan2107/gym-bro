@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+env/
+venv/
+
+# Project-specific
+gymbro-api/.venv/
+gymbro-api/gymbro.db
+gymbro-api/__pycache__/
+
+# Node
+node_modules/
+dist/
+.cache/
+*.log
+
+# Editor/OS
+.vscode/
+.idea/
+.DS_Store
+
+# Env files
+.env
+.env.*
