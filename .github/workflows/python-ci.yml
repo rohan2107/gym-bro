@@ -1,0 +1,30 @@
+name: Python CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install API deps
+        working-directory: gymbro-api
+        run: |
+          python -m venv .venv
+          . .venv/bin/activate
+          pip install -r requirements.txt
+      - name: Lint (basic import check)
+        working-directory: gymbro-api
+        run: |
+          python -c "import fastapi, sqlmodel; print('lint ok')"
+      - name: Smoke import app
+        working-directory: gymbro-api
+        run: |
+          python -c "import app.main as m; print('app loaded:', hasattr(m, 'app'))"
