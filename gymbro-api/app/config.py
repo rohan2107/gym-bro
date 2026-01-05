@@ -1,22 +1,16 @@
 from pydantic_settings import BaseSettings
+from pydantic import ConfigDict
 
 
 class Settings(BaseSettings):
-    """
-    Application settings.
-    For now this only contains the database URL.
-    You can later move this to an .env file.
-    """
+    """Application settings."""
 
-    # For first run, using SQLite is easiest.
-    # Once Postgres is ready, change this to a Postgres URL.
     DATABASE_URL: str = "sqlite:///./gymbro.db"
-    # Example Postgres URL:
-    # DATABASE_URL: str = "postgresql://postgres:postgres@localhost:5432/gymbro"
 
-    class Config:
-        env_file = ".env"
+    model_config = ConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+    )
 
 
-# This is what other modules import: `from .config import settings`
 settings = Settings()

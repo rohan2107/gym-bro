@@ -11,14 +11,14 @@ from app.db import get_session
 
 @pytest.fixture()
 def client():
-    # 🔑 Shared in-memory SQLite (single connection)
+    # Shared in-memory SQLite (single connection)
     engine = create_engine(
         "sqlite://",
         connect_args={"check_same_thread": False},
         poolclass=StaticPool,
     )
 
-    # 🔑 Import models BEFORE create_all (register tables)
+    # Import models BEFORE create_all (register tables)
     from app import models  # noqa: F401
 
     SQLModel.metadata.create_all(engine)

@@ -1,4 +1,4 @@
-from datetime import date, datetime
+from datetime import date, datetime, UTC
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, Query, status
@@ -49,7 +49,7 @@ def get_today_checkin(
     ).first()
     if existing:
         return existing
-    now = datetime.utcnow()
+    now = datetime.now(UTC)
     return DailyCheckIn(
         user_id=user_id,
         checkin_date=today,
@@ -76,7 +76,7 @@ def upsert_daily_checkin(
         )
     ).first()
 
-    now = datetime.utcnow()
+    now = datetime.now(UTC)
 
     if existing:
         existing.weight = payload.weight

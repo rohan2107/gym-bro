@@ -1,17 +1,21 @@
 from __future__ import annotations
 
-from datetime import datetime, date
+from datetime import datetime, date, UTC
 from typing import Optional
 
 from sqlalchemy import UniqueConstraint
 from sqlmodel import SQLModel, Field, Relationship
 
 
+def utc_now() -> datetime:
+    return datetime.now(UTC)
+
+
 class User(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     email: str = Field(index=True)
     display_name: Optional[str] = None
-    created_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
+    created_at: datetime = Field(default_factory=utc_now, nullable=False)
 
 
 class FoodLog(SQLModel, table=True):
@@ -26,7 +30,7 @@ class FoodLog(SQLModel, table=True):
     protein_g: Optional[float] = None
     carbs_g: Optional[float] = None
     fat_g: Optional[float] = None
-    logged_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
+    logged_at: datetime = Field(default_factory=utc_now, nullable=False)
 
     nutrient_entries: list["NutrientEntry"] = Relationship(
         back_populates="food_log", sa_relationship=True
@@ -46,7 +50,7 @@ class NutrientEntry(SQLModel, table=True):
     fat_g: Optional[float] = None
     fiber_g: Optional[float] = None
     sugar_g: Optional[float] = None
-    created_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
+    created_at: datetime = Field(default_factory=utc_now, nullable=False)
 
     food_log: "FoodLog | None" = Relationship(
         back_populates="nutrient_entries", sa_relationship=True
@@ -63,7 +67,7 @@ class WeightEntry(SQLModel, table=True):
     for_date: date = Field(nullable=False, index=True)
     weight_kg: float = Field(nullable=False)
     note: Optional[str] = None
-    logged_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
+    logged_at: datetime = Field(default_factory=utc_now, nullable=False)
 
     daily_check_in: "DailyCheckIn | None" = Relationship(
         back_populates="weight_entries", sa_relationship=True
@@ -78,7 +82,7 @@ class Workout(SQLModel, table=True):
     )
 
     name: str = Field(nullable=False)
-    started_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
+    started_at: datetime = Field(default_factory=utc_now, nullable=False)
     note: Optional[str] = None
 
     exercise_sets: list["ExerciseSet"] = Relationship(
@@ -97,7 +101,7 @@ class ExerciseSet(SQLModel, table=True):
     reps: int = Field(nullable=False)
     weight_kg: Optional[float] = None
     rpe: Optional[float] = None
-    performed_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
+    performed_at: datetime = Field(default_factory=utc_now, nullable=False)
 
     workout: "Workout | None" = Relationship(
         back_populates="exercise_sets", sa_relationship=True
@@ -118,8 +122,8 @@ class DailyCheckIn(SQLModel, table=True):
     protein_met: bool = False
     notes: Optional[str] = None
 
-    created_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
-    updated_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
+    created_at: datetime = Field(default_factory=utc_now, nullable=False)
+    updated_at: datetime = Field(default_factory=utc_now, nullable=False)
 
     food_logs: list["FoodLog"] = Relationship(
         back_populates="daily_check_in", sa_relationship=True
