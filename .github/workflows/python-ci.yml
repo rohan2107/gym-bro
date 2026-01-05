@@ -27,3 +27,7 @@ jobs:
         working-directory: gymbro-api
         run: |
           python -c "import app.main as m; print('app loaded:', hasattr(m, 'app'))"
+      - name: Test
+        working-directory: gymbro-api
+        run: |
+          pytest

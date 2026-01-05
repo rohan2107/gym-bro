@@ -3,6 +3,7 @@ from fastapi import FastAPI
 from .db import init_db
 from .routers import health
 from .routers import food_logs
+from .routers import daily_checkins
 
 
 def create_app() -> FastAPI:
@@ -11,6 +12,7 @@ def create_app() -> FastAPI:
     # Include routers
     app.include_router(health.router)
     app.include_router(food_logs.router)
+    app.include_router(daily_checkins.router)
 
     @app.on_event("startup")
     def on_startup():
