@@ -82,6 +82,9 @@ export function CheckInForm({ state, onChange, onSubmit, busy }: {
 export type FoodFormState = {
   description: string
   calories: string
+  protein: string
+  carbs: string
+  fat: string
 }
 
 export function FoodForm({ state, onChange, onSubmit, busy }: {
@@ -101,18 +104,59 @@ export function FoodForm({ state, onChange, onSubmit, busy }: {
           value={state.description}
           onChange={(e) => onChange({ description: e.target.value })}
           className="rounded border-gray-300 focus:border-green-500 focus:ring-green-500"
+          placeholder="e.g., Chicken breast with rice"
         />
       </label>
-      <label className="text-sm text-gray-700 flex flex-col gap-1">
-        Calories
-        <input
-          type="number"
-          min="0"
-          value={state.calories}
-          onChange={(e) => onChange({ calories: e.target.value })}
-          className="rounded border-gray-300 focus:border-green-500 focus:ring-green-500"
-        />
-      </label>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <label className="text-sm text-gray-700 flex flex-col gap-1">
+          Calories
+          <input
+            type="number"
+            min="0"
+            step="1"
+            value={state.calories}
+            onChange={(e) => onChange({ calories: e.target.value })}
+            className="rounded border-gray-300 focus:border-green-500 focus:ring-green-500"
+            placeholder="kcal"
+          />
+        </label>
+        <label className="text-sm text-gray-700 flex flex-col gap-1">
+          Protein (g)
+          <input
+            type="number"
+            min="0"
+            step="0.1"
+            value={state.protein}
+            onChange={(e) => onChange({ protein: e.target.value })}
+            className="rounded border-gray-300 focus:border-green-500 focus:ring-green-500"
+            placeholder="g"
+          />
+        </label>
+        <label className="text-sm text-gray-700 flex flex-col gap-1">
+          Carbs (g)
+          <input
+            type="number"
+            min="0"
+            step="0.1"
+            value={state.carbs}
+            onChange={(e) => onChange({ carbs: e.target.value })}
+            className="rounded border-gray-300 focus:border-green-500 focus:ring-green-500"
+            placeholder="g"
+          />
+        </label>
+        <label className="text-sm text-gray-700 flex flex-col gap-1">
+          Fat (g)
+          <input
+            type="number"
+            min="0"
+            step="0.1"
+            value={state.fat}
+            onChange={(e) => onChange({ fat: e.target.value })}
+            className="rounded border-gray-300 focus:border-green-500 focus:ring-green-500"
+            placeholder="g"
+          />
+        </label>
+      </div>
       <button
         type="submit"
         disabled={busy}
