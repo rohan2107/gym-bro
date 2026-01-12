@@ -1,20 +1,25 @@
-# Gym Bro — MVP Completion Status
+# MVP Status
 
-## ✅ Backend (FastAPI + SQLModel)
-- [x] Core models: `User`, `DailyCheckIn`, `FoodLog`, `Workout`, `ExerciseSet`, `WeightEntry`, `NutrientEntry`.
-- [x] Routers: `daily_checkins`, `food_logs`, `workouts`, `weight_entries`, `exercise_sets`, `health`.
-- [x] Endpoints:
-  - `GET /daily-checkins/today` — Fetch today's check-in.
-  - `PUT /daily-checkins/{date}` — Upsert check-in (weight, trained, protein_met, steps, notes).
-  - `GET /food-logs/` — List food logs for user.
-  - `POST /food-logs/` — Create food log (description, optional calories/macros).
-  - `GET /workouts` — List workouts for user (ordered newest first).
-  - `POST /workouts` — Create workout (name, optional note).
-  - `GET /health` — Health check.
-- [x] User scoping via `X-User-Id` header.
-- [x] SQLite dev DB; Postgres-ready via `.env`.
-- [x] Tests pass: check-in CRUD, food log CRUD, workout CRUD.
-- [x] DB init on startup (SQLModel auto-create all tables).
+**Status**: ✅ Complete & Committed (January 12, 2026)
+
+## Summary
+
+| Component | Status | Details |
+|-----------|--------|---------|
+| Backend | ✅ Complete | FastAPI + SQLModel, all CRUD endpoints, user scoping |
+| Frontend | ✅ Complete | React + Vite, three logging flows (check-in, meals, workouts) |
+| DevOps | ✅ Complete | PowerShell start scripts, .env configuration |
+| Tests | ✅ Passing | Backend tests (pytest), E2E flows verified |
+| Build | ✅ Passing | TypeScript strict, npm build successful |
+
+## What's Working
+
+✅ Daily check-in (weight, steps, trained, protein, notes)  
+✅ Meal logging with optional calories  
+✅ Workout logging with notes  
+✅ Data persistence across sessions  
+✅ User isolation via X-User-Id header  
+✅ Error handling & validation
 
 ## ✅ Frontend (React + Vite + TypeScript + Tailwind)
 - [x] App.tsx: Interactive UI with state management.
