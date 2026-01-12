@@ -49,13 +49,24 @@ export default function MealsPage() {
     e.preventDefault();
     setSaving(true);
     setError(null);
+
+    // Validate numeric inputs
+    const parseAndValidate = (value: string, name: string, min: number, max: number): number | null => {
+      if (!value) return null;
+      const num = Number(value);
+      if (!Number.isFinite(num) || num < min || num > max) {
+        throw new Error(`${name} must be between ${min} and ${max}`);
+      }
+      return num;
+    };
+
     try {
       const created = await api.createFoodLog({
         description: foodForm.description,
-        calories: foodForm.calories ? Number(foodForm.calories) : null,
-        protein_g: foodForm.protein ? Number(foodForm.protein) : null,
-        carbs_g: foodForm.carbs ? Number(foodForm.carbs) : null,
-        fat_g: foodForm.fat ? Number(foodForm.fat) : null,
+        calories: parseAndValidate(foodForm.calories, 'Calories', 0, 10000),
+        protein_g: parseAndValidate(foodForm.protein, 'Protein', 0, 500),
+        carbs_g: parseAndValidate(foodForm.carbs, 'Carbs', 0, 500),
+        fat_g: parseAndValidate(foodForm.fat, 'Fat', 0, 500),
       });
       setFoodLogs((prev) => [created, ...prev]);
       setFoodForm({ description: '', calories: '', protein: '', carbs: '', fat: '' });
@@ -98,9 +109,10 @@ export default function MealsPage() {
         {!loading && foodLogs.length > 0 && (
           <div className="space-y-3">
             {foodLogs.map((meal) => (
-              <div
+              <article
                 key={meal.id}
                 className="border border-gray-200 rounded-lg p-4 hover:border-green-300 transition-colors"
+                aria-label={`Meal: ${meal.description || 'Untitled meal'}`}
               >
                 <div className="font-medium text-gray-900 mb-2">
                   {meal.description || 'Untitled meal'}
@@ -124,12 +136,29 @@ export default function MealsPage() {
                   </div>
                 </div>
                 <div className="text-xs text-gray-500 mt-2">
-                  {new Date(meal.logged_at).toLocaleTimeString([], {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                  })}
+                  {(() => {
+                    const mealDate = new Date(meal.logged_at);
+                    const now = new Date();
+                    const isSameDay = now.toDateString() === mealDate.toDateString();
+                    const yesterday = new Date();
+                    yesterday.setDate(now.getDate() - 1);
+                    const isYesterday = yesterday.toDateString() === mealDate.toDateString();
+                    const timeString = mealDate.toLocaleTimeString([], {
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    });
+                    if (isSameDay) return `Today at ${timeString}`;
+                    if (isYesterday) return `Yesterday at ${timeString}`;
+                    const includeYear = mealDate.getFullYear() !== now.getFullYear();
+                    const dateString = mealDate.toLocaleDateString(undefined, {
+                      month: 'short',
+                      day: 'numeric',
+                      ...(includeYear ? { year: 'numeric' } : {}),
+                    });
+                    return `${dateString} at ${timeString}`;
+                  })()}
                 </div>
-              </div>
+              </article>
             ))}
           </div>
         )}

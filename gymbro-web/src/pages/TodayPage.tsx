@@ -51,7 +51,13 @@ export default function TodayPage() {
         }
       } catch (err) {
         if (!cancelled) {
-          setError(err instanceof Error ? err.message : 'Failed to load data');
+          if (err instanceof Error) {
+            setError(err.message);
+          } else if (typeof navigator !== 'undefined' && !navigator.onLine) {
+            setError('Unable to load data. Please check your internet connection.');
+          } else {
+            setError('An unexpected error occurred while loading data. Please try again.');
+          }
         }
       } finally {
         if (!cancelled) {
@@ -90,7 +96,13 @@ export default function TodayPage() {
       const updated = await api.upsertCheckIn(today, payload);
       setCheckin(updated);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save check-in');
+      if (err instanceof Error) {
+        setError(err.message);
+      } else if (typeof navigator !== 'undefined' && !navigator.onLine) {
+        setError('Unable to save check-in. Please check your internet connection.');
+      } else {
+        setError('An unexpected error occurred while saving. Please try again.');
+      }
     } finally {
       setSaving(false);
     }

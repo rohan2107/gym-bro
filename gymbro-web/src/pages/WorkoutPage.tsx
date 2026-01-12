@@ -54,7 +54,13 @@ export default function WorkoutPage() {
       setWorkouts((prev) => [created, ...prev]);
       setWorkoutForm({ name: '', note: '' });
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save workout');
+      if (err instanceof Error) {
+        setError(err.message);
+      } else if (typeof navigator !== 'undefined' && !navigator.onLine) {
+        setError('Unable to save workout. Please check your internet connection.');
+      } else {
+        setError('An unexpected error occurred while saving. Please try again.');
+      }
     } finally {
       setSaving(false);
     }
@@ -109,9 +115,10 @@ export default function WorkoutPage() {
         {!loading && workouts.length > 0 && (
           <div className="space-y-3">
             {workouts.map((workout) => (
-              <div
+              <article
                 key={workout.id}
                 className="border border-gray-200 rounded-lg p-4 hover:border-purple-300 transition-colors"
+                aria-label={`Workout: ${workout.name}`}
               >
                 <div className="flex justify-between items-start">
                   <div className="flex-1">
@@ -135,7 +142,7 @@ export default function WorkoutPage() {
                     </div>
                   </div>
                 </div>
-              </div>
+              </article>
             ))}
           </div>
         )}
