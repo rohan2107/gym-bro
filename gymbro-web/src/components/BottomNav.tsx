@@ -1,9 +1,11 @@
 export default function BottomNav() {
+  const navButtonClass = "flex flex-col items-center justify-center w-16 h-16 text-gray-600 hover:text-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:ring-offset-2 transition-colors";
+
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 safe-area-inset-bottom" aria-label="Main navigation">
       <div className="flex justify-around items-center h-16 max-w-lg mx-auto">
         <button 
-          className="flex flex-col items-center justify-center w-16 h-16 text-gray-600 hover:text-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:ring-inset transition-colors" 
+          className={navButtonClass}
           aria-label="Today's overview"
         >
           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -13,7 +15,7 @@ export default function BottomNav() {
         </button>
 
         <button 
-          className="flex flex-col items-center justify-center w-16 h-16 text-gray-600 hover:text-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:ring-inset transition-colors" 
+          className={navButtonClass}
           aria-label="Meal planning"
         >
           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -23,7 +25,7 @@ export default function BottomNav() {
         </button>
 
         <button 
-          className="flex flex-col items-center justify-center w-16 h-16 text-gray-600 hover:text-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:ring-inset transition-colors" 
+          className={navButtonClass}
           aria-label="Workout routines"
         >
           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -33,7 +35,7 @@ export default function BottomNav() {
         </button>
 
         <button 
-          className="flex flex-col items-center justify-center w-16 h-16 text-gray-600 hover:text-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:ring-inset transition-colors" 
+          className={navButtonClass}
           aria-label="User profile"
         >
           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
