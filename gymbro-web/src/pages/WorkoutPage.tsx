@@ -26,7 +26,13 @@ export default function WorkoutPage() {
         }
       } catch (err) {
         if (!cancelled) {
-          setError(err instanceof Error ? err.message : 'Failed to load workouts');
+          if (typeof navigator !== 'undefined' && !navigator.onLine) {
+            setError('Unable to load workouts. Please check your internet connection.');
+          } else if (err instanceof Error) {
+            setError(err.message);
+          } else {
+            setError('An unexpected error occurred while loading workouts. Please try again.');
+          }
         }
       } finally {
         if (!cancelled) {
@@ -54,10 +60,10 @@ export default function WorkoutPage() {
       setWorkouts((prev) => [created, ...prev]);
       setWorkoutForm({ name: '', note: '' });
     } catch (err) {
-      if (err instanceof Error) {
-        setError(err.message);
-      } else if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      if (typeof navigator !== 'undefined' && !navigator.onLine) {
         setError('Unable to save workout. Please check your internet connection.');
+      } else if (err instanceof Error) {
+        setError(err.message);
       } else {
         setError('An unexpected error occurred while saving. Please try again.');
       }

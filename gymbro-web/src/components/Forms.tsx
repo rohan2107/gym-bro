@@ -23,9 +23,11 @@ export function CheckInForm({ state, onChange, onSubmit, busy }: {
             type="number"
             step="0.1"
             min="0"
+            max="500"
             value={state.weight}
             onChange={(e) => onChange({ weight: e.target.value })}
             className="rounded border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+            disabled={busy}
           />
         </label>
         <label className="text-sm text-gray-700 flex flex-col gap-1">
@@ -33,9 +35,11 @@ export function CheckInForm({ state, onChange, onSubmit, busy }: {
           <input
             type="number"
             min="0"
+            max="100000"
             value={state.steps}
             onChange={(e) => onChange({ steps: e.target.value })}
             className="rounded border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+            disabled={busy}
           />
         </label>
       </div>
@@ -46,6 +50,7 @@ export function CheckInForm({ state, onChange, onSubmit, busy }: {
             checked={state.trained}
             onChange={(e) => onChange({ trained: e.target.checked })}
             className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+            disabled={busy}
           />
           Trained
         </label>
@@ -55,6 +60,7 @@ export function CheckInForm({ state, onChange, onSubmit, busy }: {
             checked={state.proteinMet}
             onChange={(e) => onChange({ proteinMet: e.target.checked })}
             className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+            disabled={busy}
           />
           Protein met
         </label>
@@ -66,6 +72,8 @@ export function CheckInForm({ state, onChange, onSubmit, busy }: {
           onChange={(e) => onChange({ notes: e.target.value })}
           className="rounded border-gray-300 focus:border-blue-500 focus:ring-blue-500"
           rows={2}
+          maxLength={500}
+          disabled={busy}
         />
       </label>
       <button
@@ -96,15 +104,17 @@ export function FoodForm({ state, onChange, onSubmit, busy }: {
   return (
     <form onSubmit={onSubmit} className="space-y-3">
       <label className="text-sm text-gray-700 flex flex-col gap-1">
-        Description
+        Description *
         <input
           type="text"
           required
           minLength={1}
+          maxLength={200}
           value={state.description}
           onChange={(e) => onChange({ description: e.target.value })}
           className="rounded border-gray-300 focus:border-green-500 focus:ring-green-500"
           placeholder="e.g., Chicken breast with rice"
+          disabled={busy}
         />
       </label>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -113,11 +123,13 @@ export function FoodForm({ state, onChange, onSubmit, busy }: {
           <input
             type="number"
             min="0"
+            max="10000"
             step="1"
             value={state.calories}
             onChange={(e) => onChange({ calories: e.target.value })}
             className="rounded border-gray-300 focus:border-green-500 focus:ring-green-500"
             placeholder="kcal"
+            disabled={busy}
           />
         </label>
         <label className="text-sm text-gray-700 flex flex-col gap-1">
@@ -125,11 +137,13 @@ export function FoodForm({ state, onChange, onSubmit, busy }: {
           <input
             type="number"
             min="0"
+            max="500"
             step="0.1"
             value={state.protein}
             onChange={(e) => onChange({ protein: e.target.value })}
             className="rounded border-gray-300 focus:border-green-500 focus:ring-green-500"
             placeholder="g"
+            disabled={busy}
           />
         </label>
         <label className="text-sm text-gray-700 flex flex-col gap-1">
@@ -137,11 +151,13 @@ export function FoodForm({ state, onChange, onSubmit, busy }: {
           <input
             type="number"
             min="0"
+            max="500"
             step="0.1"
             value={state.carbs}
             onChange={(e) => onChange({ carbs: e.target.value })}
             className="rounded border-gray-300 focus:border-green-500 focus:ring-green-500"
             placeholder="g"
+            disabled={busy}
           />
         </label>
         <label className="text-sm text-gray-700 flex flex-col gap-1">
@@ -149,11 +165,13 @@ export function FoodForm({ state, onChange, onSubmit, busy }: {
           <input
             type="number"
             min="0"
+            max="500"
             step="0.1"
             value={state.fat}
             onChange={(e) => onChange({ fat: e.target.value })}
             className="rounded border-gray-300 focus:border-green-500 focus:ring-green-500"
             placeholder="g"
+            disabled={busy}
           />
         </label>
       </div>
@@ -182,23 +200,27 @@ export function WorkoutForm({ state, onChange, onSubmit, busy }: {
   return (
     <form onSubmit={onSubmit} className="space-y-3">
       <label className="text-sm text-gray-700 flex flex-col gap-1">
-        Name
+        Name *
         <input
           type="text"
           required
           minLength={1}
+          maxLength={100}
           value={state.name}
           onChange={(e) => onChange({ name: e.target.value })}
           className="rounded border-gray-300 focus:border-purple-500 focus:ring-purple-500"
+          disabled={busy}
         />
       </label>
       <label className="text-sm text-gray-700 flex flex-col gap-1">
-        Note
+        Note (optional)
         <textarea
           value={state.note}
           onChange={(e) => onChange({ note: e.target.value })}
           rows={2}
           className="rounded border-gray-300 focus:border-purple-500 focus:ring-purple-500"
+          maxLength={1000}
+          disabled={busy}
         />
       </label>
       <button

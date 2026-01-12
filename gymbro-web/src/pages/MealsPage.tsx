@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { api, FoodLog } from '../lib/api';
 import { FoodForm, FoodFormState } from '../components/Forms';
+import { formatRelativeDateTime } from '../lib/utils';
 
 export default function MealsPage() {
   const [loading, setLoading] = useState(true);
@@ -29,7 +30,13 @@ export default function MealsPage() {
         }
       } catch (err) {
         if (!cancelled) {
-          setError(err instanceof Error ? err.message : 'Failed to load meals');
+          if (typeof navigator !== 'undefined' && !navigator.onLine) {
+            setError('Unable to load meals. Please check your internet connection.');
+          } else if (err instanceof Error) {
+            setError(err.message);
+          } else {
+            setError('An unexpected error occurred while loading meals. Please try again.');
+          }
         }
       } finally {
         if (!cancelled) {
@@ -71,7 +78,13 @@ export default function MealsPage() {
       setFoodLogs((prev) => [created, ...prev]);
       setFoodForm({ description: '', calories: '', protein: '', carbs: '', fat: '' });
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save meal');
+      if (typeof navigator !== 'undefined' && !navigator.onLine) {
+        setError('Unable to save meal. Please check your internet connection.');
+      } else if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError('An unexpected error occurred while saving. Please try again.');
+      }
     } finally {
       setSaving(false);
     }
@@ -136,27 +149,7 @@ export default function MealsPage() {
                   </div>
                 </div>
                 <div className="text-xs text-gray-500 mt-2">
-                  {(() => {
-                    const mealDate = new Date(meal.logged_at);
-                    const now = new Date();
-                    const isSameDay = now.toDateString() === mealDate.toDateString();
-                    const yesterday = new Date();
-                    yesterday.setDate(now.getDate() - 1);
-                    const isYesterday = yesterday.toDateString() === mealDate.toDateString();
-                    const timeString = mealDate.toLocaleTimeString([], {
-                      hour: '2-digit',
-                      minute: '2-digit',
-                    });
-                    if (isSameDay) return `Today at ${timeString}`;
-                    if (isYesterday) return `Yesterday at ${timeString}`;
-                    const includeYear = mealDate.getFullYear() !== now.getFullYear();
-                    const dateString = mealDate.toLocaleDateString(undefined, {
-                      month: 'short',
-                      day: 'numeric',
-                      ...(includeYear ? { year: 'numeric' } : {}),
-                    });
-                    return `${dateString} at ${timeString}`;
-                  })()}
+                  {formatRelativeDateTime(meal.logged_at)}
                 </div>
               </article>
             ))}

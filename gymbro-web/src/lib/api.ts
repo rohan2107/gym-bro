@@ -57,7 +57,13 @@ export const api = {
       body: JSON.stringify(data),
     }),
   listFoodLogs: () => request<FoodLog[]>('/food-logs/'),
-  createFoodLog: (data: Partial<FoodLog>) =>
+  createFoodLog: (data: {
+    description: string
+    calories?: number | null
+    protein_g?: number | null
+    carbs_g?: number | null
+    fat_g?: number | null
+  }) =>
     request<FoodLog>('/food-logs/', {
       method: 'POST',
       body: JSON.stringify(data),

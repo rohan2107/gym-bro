@@ -1,10 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { api, DailyCheckIn, FoodLog } from '../lib/api';
 import { CheckInForm, CheckInFormState } from '../components/Forms';
-
-function toDateInputValue(d = new Date()) {
-  return d.toISOString().slice(0, 10);
-}
+import { toDateInputValue } from '../lib/utils';
 
 export default function TodayPage() {
   const today = useMemo(() => toDateInputValue(), []);
@@ -51,10 +48,10 @@ export default function TodayPage() {
         }
       } catch (err) {
         if (!cancelled) {
-          if (err instanceof Error) {
-            setError(err.message);
-          } else if (typeof navigator !== 'undefined' && !navigator.onLine) {
+          if (typeof navigator !== 'undefined' && !navigator.onLine) {
             setError('Unable to load data. Please check your internet connection.');
+          } else if (err instanceof Error) {
+            setError(err.message);
           } else {
             setError('An unexpected error occurred while loading data. Please try again.');
           }
@@ -96,10 +93,10 @@ export default function TodayPage() {
       const updated = await api.upsertCheckIn(today, payload);
       setCheckin(updated);
     } catch (err) {
-      if (err instanceof Error) {
-        setError(err.message);
-      } else if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      if (typeof navigator !== 'undefined' && !navigator.onLine) {
         setError('Unable to save check-in. Please check your internet connection.');
+      } else if (err instanceof Error) {
+        setError(err.message);
       } else {
         setError('An unexpected error occurred while saving. Please try again.');
       }
