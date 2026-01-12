@@ -153,6 +153,7 @@ Build a **production-ready fitness tracking app** that serves as both:
 
 **Deliverables**:
 - [ ] All endpoints have proper error handling + validation
+- [ ] Frontend unit tests (Vitest + React Testing Library)
 - [ ] E2E tests for happy path (Playwright)
 - [ ] Backend test coverage expanded to 85%+
 - [ ] CORS verified for both localhost + production
