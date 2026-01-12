@@ -1,0 +1,71 @@
+export type DailyCheckIn = {
+  id: number
+  user_id: number
+  checkin_date: string
+  weight: number | null
+  trained: boolean
+  steps: number | null
+  protein_met: boolean
+  notes: string | null
+}
+
+export type FoodLog = {
+  id: number
+  description: string | null
+  calories: number | null
+  protein_g: number | null
+  carbs_g: number | null
+  fat_g: number | null
+  logged_at: string
+}
+
+export type Workout = {
+  id: number
+  name: string
+  note: string | null
+  started_at: string
+}
+
+const API_BASE = '/api'
+// TODO: replace with real auth token/user id when auth is added.
+const USER_ID = import.meta.env.VITE_USER_ID ?? '1'
+
+async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
+  const res = await fetch(`${API_BASE}${path}`, {
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      'X-User-Id': USER_ID,
+      ...(options.headers || {}),
+    },
+  })
+
+  if (!res.ok) {
+    const message = await res.text()
+    throw new Error(message || `Request failed (${res.status})`)
+  }
+
+  if (res.status === 204) return undefined as T
+  return (await res.json()) as T
+}
+
+export const api = {
+  getTodayCheckIn: () => request<DailyCheckIn>('/daily-checkins/today'),
+  upsertCheckIn: (dateISO: string, data: Partial<Omit<DailyCheckIn, 'id' | 'user_id' | 'checkin_date'>>) =>
+    request<DailyCheckIn>(`/daily-checkins/${dateISO}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+  listFoodLogs: () => request<FoodLog[]>('/food-logs/'),
+  createFoodLog: (data: Partial<FoodLog>) =>
+    request<FoodLog>('/food-logs/', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  listWorkouts: () => request<Workout[]>('/workouts'),
+  createWorkout: (data: { name: string; note?: string | null }) =>
+    request<Workout>('/workouts', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+}
