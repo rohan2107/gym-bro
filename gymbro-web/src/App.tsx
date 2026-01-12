@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { api, DailyCheckIn, FoodLog, Workout } from './lib/api'
 import { CheckInForm, CheckInFormState, FoodForm, FoodFormState, WorkoutForm, WorkoutFormState } from './components/Forms'
+import BottomNav from './components/BottomNav'
 
 function toDateInputValue(d = new Date()) {
   return d.toISOString().slice(0, 10)
@@ -208,6 +209,8 @@ export function App() {
           <p>&copy; 2026 Gym Bro. All rights reserved.</p>
         </div>
       </footer>
+
+      <BottomNav />
     </div>
   )
 }

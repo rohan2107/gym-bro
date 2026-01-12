@@ -232,14 +232,33 @@
 
 ---
 
+### 5. Testing: Vitest + Playwright
+
+**Decision**: Vitest (unit) + React Testing Library + Playwright (E2E)
+
+**Why**:
+- **Vitest**: Vite-native, fast, same config as build
+- **React Testing Library**: Component testing best practices
+- **Playwright**: Cross-browser E2E (Chrome, Safari, Firefox)
+
+**Testing strategy**:
+1. **Unit tests**: Components (BottomNav, Forms), utilities (date formatting)
+2. **Integration tests**: API client, error handling
+3. **E2E tests**: Critical flows (login, log meal, workout)
+
+**Phase 1B**: Add Vitest + component tests  
+**Phase 3A**: Add Playwright E2E tests
+
+---
+
 ## 🎓 Skills Gained by Phase
 
 | Phase | Skills |
 |-------|--------|
 | 1A (Mobile UX) | React patterns, Tailwind, PWA, responsive design |
-| 1B (Vercel) | Serverless deployment, PostgreSQL, CI/CD |
+| 1B (Vercel) | Serverless deployment, PostgreSQL, CI/CD, frontend testing (Vitest) |
 | 2 (OAuth) | Google Cloud, OAuth 2.0, JWT, multi-tenant design |
-| 3A (Stabilization) | Testing, monitoring, performance optimization |
+| 3A (Stabilization) | E2E testing (Playwright), monitoring, performance optimization |
 | 3B (AI) | Vision API, image processing, ML integration |
 
 ---
