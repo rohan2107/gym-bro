@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { api, DailyCheckIn, FoodLog } from '../lib/api';
 import { CheckInForm, CheckInFormState } from '../components/Forms';
-import { toDateInputValue } from '../lib/utils';
+import { toDateInputValue, handleRequestError } from '../lib/utils';
 
 export default function TodayPage() {
   const today = useMemo(() => toDateInputValue(), []);
@@ -33,10 +33,15 @@ export default function TodayPage() {
         ]);
         if (!cancelled) {
           setCheckin(todayCheckin);
-          // Filter meals for today only
-          const todayMeals = meals.filter((m) => 
-            m.logged_at.startsWith(today)
-          );
+          // Filter meals for today only (using local date range)
+          const todayStart = new Date();
+          todayStart.setHours(0, 0, 0, 0);
+          const todayEnd = new Date(todayStart);
+          todayEnd.setDate(todayEnd.getDate() + 1);
+          const todayMeals = meals.filter((m) => {
+            const loggedAt = new Date(m.logged_at);
+            return !Number.isNaN(loggedAt.getTime()) && loggedAt >= todayStart && loggedAt < todayEnd;
+          });
           setFoodLogs(todayMeals);
           setCheckInForm({
             weight: todayCheckin.weight?.toString() ?? '',
@@ -48,13 +53,7 @@ export default function TodayPage() {
         }
       } catch (err) {
         if (!cancelled) {
-          if (typeof navigator !== 'undefined' && !navigator.onLine) {
-            setError('Unable to load data. Please check your internet connection.');
-          } else if (err instanceof Error) {
-            setError(err.message);
-          } else {
-            setError('An unexpected error occurred while loading data. Please try again.');
-          }
+          setError(handleRequestError(err));
         }
       } finally {
         if (!cancelled) {
@@ -93,13 +92,7 @@ export default function TodayPage() {
       const updated = await api.upsertCheckIn(today, payload);
       setCheckin(updated);
     } catch (err) {
-      if (typeof navigator !== 'undefined' && !navigator.onLine) {
-        setError('Unable to save check-in. Please check your internet connection.');
-      } else if (err instanceof Error) {
-        setError(err.message);
-      } else {
-        setError('An unexpected error occurred while saving. Please try again.');
-      }
+      setError(handleRequestError(err));
     } finally {
       setSaving(false);
     }
@@ -113,7 +106,7 @@ export default function TodayPage() {
       </div>
 
       {error && (
-        <div className="rounded bg-red-50 border border-red-200 text-red-700 px-4 py-3 text-sm mb-4" role="alert">
+        <div className="rounded bg-red-50 border border-red-200 text-red-700 px-4 py-3 text-sm mb-4" role="alert" aria-live="assertive">
           {error}
         </div>
       )}
@@ -161,7 +154,9 @@ export default function TodayPage() {
           </div>
 
           <div className="bg-white rounded-lg shadow p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Update Check-in</h2>
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">
+              {checkin ? 'Update Check-in' : 'Daily Check-in Form'}
+            </h2>
             <CheckInForm
               state={checkInForm}
               onChange={(p) => setCheckInForm((s) => ({ ...s, ...p }))}

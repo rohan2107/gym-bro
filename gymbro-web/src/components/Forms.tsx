@@ -210,6 +210,7 @@ export function WorkoutForm({ state, onChange, onSubmit, busy }: {
           onChange={(e) => onChange({ name: e.target.value })}
           className="rounded border-gray-300 focus:border-purple-500 focus:ring-purple-500"
           disabled={busy}
+          placeholder="e.g., Upper Body"
         />
       </label>
       <label className="text-sm text-gray-700 flex flex-col gap-1">

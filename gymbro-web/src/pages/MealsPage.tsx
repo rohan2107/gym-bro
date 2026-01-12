@@ -1,7 +1,17 @@
 import { useEffect, useState } from 'react';
 import { api, FoodLog } from '../lib/api';
 import { FoodForm, FoodFormState } from '../components/Forms';
-import { formatRelativeDateTime } from '../lib/utils';
+import { formatRelativeDateTime, handleRequestError } from '../lib/utils';
+
+// Validation helper for numeric inputs
+function parseAndValidate(value: string, name: string, min: number, max: number): number | null {
+  if (!value) return null;
+  const num = Number(value);
+  if (!Number.isFinite(num) || num < min || num > max) {
+    throw new Error(`${name} must be between ${min} and ${max}`);
+  }
+  return num;
+}
 
 export default function MealsPage() {
   const [loading, setLoading] = useState(true);
@@ -30,13 +40,7 @@ export default function MealsPage() {
         }
       } catch (err) {
         if (!cancelled) {
-          if (typeof navigator !== 'undefined' && !navigator.onLine) {
-            setError('Unable to load meals. Please check your internet connection.');
-          } else if (err instanceof Error) {
-            setError(err.message);
-          } else {
-            setError('An unexpected error occurred while loading meals. Please try again.');
-          }
+          setError(handleRequestError(err));
         }
       } finally {
         if (!cancelled) {
@@ -57,16 +61,6 @@ export default function MealsPage() {
     setSaving(true);
     setError(null);
 
-    // Validate numeric inputs
-    const parseAndValidate = (value: string, name: string, min: number, max: number): number | null => {
-      if (!value) return null;
-      const num = Number(value);
-      if (!Number.isFinite(num) || num < min || num > max) {
-        throw new Error(`${name} must be between ${min} and ${max}`);
-      }
-      return num;
-    };
-
     try {
       const created = await api.createFoodLog({
         description: foodForm.description,
@@ -78,13 +72,7 @@ export default function MealsPage() {
       setFoodLogs((prev) => [created, ...prev]);
       setFoodForm({ description: '', calories: '', protein: '', carbs: '', fat: '' });
     } catch (err) {
-      if (typeof navigator !== 'undefined' && !navigator.onLine) {
-        setError('Unable to save meal. Please check your internet connection.');
-      } else if (err instanceof Error) {
-        setError(err.message);
-      } else {
-        setError('An unexpected error occurred while saving. Please try again.');
-      }
+      setError(handleRequestError(err));
     } finally {
       setSaving(false);
     }
@@ -95,7 +83,7 @@ export default function MealsPage() {
       <h1 className="text-2xl font-bold text-gray-900 mb-6">Meals</h1>
 
       {error && (
-        <div className="rounded bg-red-50 border border-red-200 text-red-700 px-4 py-3 text-sm mb-4" role="alert">
+        <div className="rounded bg-red-50 border border-red-200 text-red-700 px-4 py-3 text-sm mb-4" role="alert" aria-live="assertive">
           {error}
         </div>
       )}

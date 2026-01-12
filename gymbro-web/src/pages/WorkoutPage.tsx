@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { api, Workout } from '../lib/api';
 import { WorkoutForm, WorkoutFormState } from '../components/Forms';
+import { handleRequestError } from '../lib/utils';
 
 export default function WorkoutPage() {
   const [loading, setLoading] = useState(true);
@@ -26,13 +27,7 @@ export default function WorkoutPage() {
         }
       } catch (err) {
         if (!cancelled) {
-          if (typeof navigator !== 'undefined' && !navigator.onLine) {
-            setError('Unable to load workouts. Please check your internet connection.');
-          } else if (err instanceof Error) {
-            setError(err.message);
-          } else {
-            setError('An unexpected error occurred while loading workouts. Please try again.');
-          }
+          setError(handleRequestError(err));
         }
       } finally {
         if (!cancelled) {
@@ -60,13 +55,7 @@ export default function WorkoutPage() {
       setWorkouts((prev) => [created, ...prev]);
       setWorkoutForm({ name: '', note: '' });
     } catch (err) {
-      if (typeof navigator !== 'undefined' && !navigator.onLine) {
-        setError('Unable to save workout. Please check your internet connection.');
-      } else if (err instanceof Error) {
-        setError(err.message);
-      } else {
-        setError('An unexpected error occurred while saving. Please try again.');
-      }
+      setError(handleRequestError(err));
     } finally {
       setSaving(false);
     }
@@ -77,7 +66,7 @@ export default function WorkoutPage() {
       <h1 className="text-2xl font-bold text-gray-900 mb-6">Workouts</h1>
 
       {error && (
-        <div className="rounded bg-red-50 border border-red-200 text-red-700 px-4 py-3 text-sm mb-4" role="alert">
+        <div className="rounded bg-red-50 border border-red-200 text-red-700 px-4 py-3 text-sm mb-4" role="alert" aria-live="assertive">
           {error}
         </div>
       )}

@@ -1,9 +1,16 @@
 export function toDateInputValue(d = new Date()) {
-  return d.toISOString().slice(0, 10);
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 }
 
 export function formatRelativeDateTime(dateString: string): string {
   const date = new Date(dateString);
+  if (Number.isNaN(date.getTime())) {
+    return 'Invalid date';
+  }
+  
   const now = new Date();
   const isSameDay = now.toDateString() === date.toDateString();
   const yesterday = new Date();
@@ -26,4 +33,14 @@ export function formatRelativeDateTime(dateString: string): string {
   });
   
   return `${formattedDate} at ${timeString}`;
+}
+
+export function handleRequestError(err: unknown): string {
+  if (typeof navigator !== 'undefined' && !navigator.onLine) {
+    return 'Unable to complete request. Please check your internet connection.';
+  }
+  if (err instanceof Error) {
+    return err.message;
+  }
+  return 'An unexpected error occurred. Please try again.';
 }

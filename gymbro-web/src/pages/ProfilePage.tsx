@@ -30,7 +30,7 @@ export default function ProfilePage() {
         <div className="space-y-3 text-sm text-gray-600">
           <div className="flex justify-between items-center py-2 border-b">
             <span>User ID</span>
-            <span className="font-mono text-gray-900">1</span>
+            <span className="font-mono text-gray-900">--</span>
           </div>
           <div className="flex justify-between items-center py-2 border-b">
             <span>Version</span>
