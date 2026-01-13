@@ -253,6 +253,128 @@ FoodLog created with AI data
 
 ---
 
+### **Phase 3C: Energy Balance & Analytics (Weeks 13–15)**
+**Focus**: Weight loss science - thermodynamics-based energy balance tracking**
+
+**Core Concept**: Track energy in vs energy out to predict and validate weight loss rates
+
+**Deliverables**:
+- [ ] TDEE (Total Daily Energy Expenditure) estimation algorithm
+- [ ] Strong app workout import (CSV/API)
+- [ ] LLM-powered calorie burn estimation for workouts
+- [ ] Energy balance calculation (TDEE - calories consumed)
+- [ ] Expected weight loss rate calculator
+- [ ] Analytics dashboard showing predicted vs actual weight loss
+- [ ] Discrepancy detection & user alerts
+
+**Backend Features**:
+- [ ] TDEE calculation endpoint: `POST /analytics/tdee`
+  - Inputs: weight history, activity level, age, gender, height
+  - Uses Mifflin-St Jeor + activity multiplier
+  - Adaptive: recalculates weekly based on actual weight change
+- [ ] Strong app import: `POST /workouts/import-strong`
+  - Parse Strong CSV export
+  - LLM call to estimate calorie burn per exercise
+  - Store as workout entries
+- [ ] Energy balance endpoint: `GET /analytics/energy-balance?date={date}`
+  - Returns: TDEE, calories consumed, deficit/surplus, expected weight change
+- [ ] Discrepancy detection: `GET /analytics/validate`
+  - Compares expected vs actual weight loss
+  - Flags data issues (underreporting food, overestimating TDEE)
+  - Returns: confidence score, suggested corrections
+
+**Frontend Features**:
+- [ ] TDEE Setup Wizard (one-time)
+  - Collects: age, gender, height, activity level
+  - Calculates initial TDEE
+- [ ] Energy Balance Dashboard (`/analytics`)
+  - Daily energy balance chart (calories in/out)
+  - Weekly deficit/surplus summary
+  - Expected vs actual weight loss graph
+  - Confidence indicators (data quality)
+- [ ] Import Strong Workouts
+  - Upload CSV button
+  - Review imported workouts + calorie estimates
+  - Confirm/edit before saving
+- [ ] Data Validation Alerts
+  - Banner when weight change doesn't match energy balance
+  - Suggestions: "You're losing faster than expected - are you tracking all meals?"
+  - Analytics insights: "Your TDEE may be higher than estimated"
+
+**AI/LLM Integration (Workout Calorie Burn)**:
+- [ ] Endpoint: `POST /ai/estimate-workout-calories`
+  - Inputs: exercise name, sets, reps, weight, duration, user stats
+  - LLM prompt: "Estimate calories burned for [exercise details]"
+  - Returns: calorie estimate + confidence level
+  - Fallback: MET (Metabolic Equivalent) database lookup
+- [ ] Use GPT-4 or Claude for workout interpretation
+- [ ] Cache common exercises to reduce API calls
+- [ ] User can override estimates
+
+**TDEE Algorithm (Adaptive)**:
+- Week 1–2: Use Mifflin-St Jeor equation (baseline)
+- Week 3+: Adjust based on actual weight change
+  - If losing faster → increase TDEE estimate
+  - If losing slower → decrease TDEE estimate
+  - Formula: `TDEE_new = calories_consumed + (weight_change * 3500 / 7)`
+  - Smoothed with 2-week moving average
+
+**Analytics & Validation**:
+- [ ] Calculate expected weight change from energy balance
+  - 3500 calories = 1 lb of fat
+  - Weekly deficit → expected lb/week loss
+- [ ] Compare to actual weight measurements
+- [ ] Flag discrepancies > 20%:
+  - "Expected to lose 2 lbs, only lost 0.5 lb"
+  - Possible causes: underreporting food, overestimating activity
+- [ ] Provide actionable feedback
+
+**Future Integrations (Deferred)**:
+- ⏳ Apple Health import (requires Swift/iOS app - Phase 4+)
+- ⏳ Strava integration (cycling/running calorie burn)
+- ⏳ Fitbit/Garmin API (step count, heart rate)
+- ⏳ MyFitnessPal food database integration
+
+**New Backend Files**:
+- `app/routers/analytics.py` — TDEE, energy balance, validation
+- `app/routers/imports.py` — Strong CSV import
+- `app/services/tdee_calculator.py` — Adaptive TDEE algorithm
+- `app/services/llm_client.py` — GPT-4/Claude for workout analysis
+- `app/models.py` — Add UserProfile (age, gender, height, activity level)
+
+**New Frontend Files**:
+- `pages/AnalyticsPage.tsx` — Energy balance dashboard
+- `components/TDEESetup.tsx` — Initial TDEE wizard
+- `components/EnergyBalanceChart.tsx` — Daily in/out visualization
+- `components/ImportStrong.tsx` — CSV upload + review
+- `components/DataValidationAlert.tsx` — Discrepancy warnings
+
+**Definition of Done**:
+- TDEE adapts to your actual weight loss rate
+- Strong workouts import and get calorie estimates
+- Dashboard shows daily energy balance
+- App alerts you when data doesn't match science
+- Expected weight loss ± 10% of actual (validation works)
+
+**Portfolio Impact**: ⭐⭐⭐⭐ Shows deep understanding of fitness science + data validation
+
+**New Skills**:
+- ✅ Adaptive algorithms (TDEE recalculation)
+- ✅ Data validation & anomaly detection
+- ✅ CSV parsing & external data import
+- ✅ LLM integration for domain-specific tasks
+- ✅ Complex analytics calculations
+- ✅ User feedback loops (correcting tracking errors)
+
+**Cost**:
+- LLM API: ~$0.01/workout estimate (GPT-4)
+- Estimated: $5–10/month for active user
+- Can cache common exercises to reduce costs
+
+**Time Estimate**: 2–3 weeks
+
+---
+
 ## 🎯 Success Milestones
 
 | Week | Milestone | Status | Notes |
@@ -262,6 +384,7 @@ FoodLog created with AI data
 | 4–6 | Google SSO working | ⏳ | Friends can log in |
 | 7–8 | Stable + tested | ⏳ | Ready for AI |
 | 9–12 | AI meal photos | ⏳ | Differentiated feature |
+| 13–15 | Energy balance & analytics | ⏳ | Science-based weight loss |
 | 12+ | Portfolio-ready | ⏳ | Interview talking points |
 
 ---

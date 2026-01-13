@@ -214,6 +214,22 @@ NEW in PR #4 (Jan 13): Service Worker, Offline Support, PWA Enhancements
 - ⏳ AI meal photo analysis
 - ⏳ Calorie/macro estimation
 
+**Week 13-15 (Phase 3C - Energy Balance & Analytics)**:
+- ⏳ TDEE (Total Daily Energy Expenditure) estimation
+- ⏳ Adaptive TDEE algorithm (learns from actual weight change)
+- ⏳ Strong app workout import (CSV)
+- ⏳ LLM-powered workout calorie burn estimation
+- ⏳ Energy balance tracking (calories in vs out)
+- ⏳ Expected weight loss calculator
+- ⏳ Analytics dashboard (predicted vs actual)
+- ⏳ Data validation & discrepancy alerts
+- ⏳ User feedback for tracking errors
+
+**Future (Phase 4+)**:
+- ⏳ Apple Health integration (requires Swift/iOS app)
+- ⏳ Strava/Garmin/Fitbit integrations
+- ⏳ MyFitnessPal food database
+
 ---
 
 ## 🔑 Key Decisions
@@ -325,6 +341,73 @@ NEW in PR #4 (Jan 13): Service Worker, Offline Support, PWA Enhancements
 - **OpenAI Vision**: $0.01/image (expensive for frequent photos)
 - **On-device TensorFlow**: Privacy but lower accuracy
 - **Clarifai**: Food-specific but smaller community
+
+---
+
+### 7. Energy Balance & Analytics: Science-Based Weight Loss
+
+**Decision**: Thermodynamics-based TDEE + adaptive learning
+
+**Core Principle**: Weight loss = Energy Out - Energy In (3500 cal deficit = 1 lb fat loss)
+
+**TDEE Calculation Strategy**:
+1. **Week 1-2**: Mifflin-St Jeor equation (baseline estimate)
+   - BMR = 10×weight(kg) + 6.25×height(cm) - 5×age(y) + s
+   - s = +5 for male, -161 for female
+   - TDEE = BMR × activity multiplier (1.2–1.9)
+2. **Week 3+**: Adaptive algorithm (learns from actual data)
+   - TDEE = avg_calories_consumed + (actual_weight_change × 3500 / 7)
+   - Uses 2-week rolling average to smooth noise
+   - Adjusts ±10% max per week to prevent wild swings
+
+**Why Adaptive**:
+- Static formulas have ±20% error
+- Individual metabolisms vary significantly
+- Activity levels fluctuate
+- Adaptive approach converges to personal TDEE within 3-4 weeks
+
+**Workout Calorie Estimation**:
+| Method | Accuracy | Cost | When to Use |
+|--------|----------|------|-------------|
+| LLM (GPT-4/Claude) | 85% | $0.01/workout | Complex exercises (weightlifting) |
+| MET Database | 70% | $0 | Standard cardio (running, cycling) |
+| User Override | 100% | $0 | User has heart rate monitor data |
+
+**Decision**: Hybrid approach
+- Default: MET database (free, fast)
+- Complex workouts: LLM estimation
+- Always allow user override
+
+**Strong App Import**:
+- Parse CSV export from Strong app
+- Extract: exercise name, sets, reps, weight, duration
+- Send to LLM: "Estimate calories burned for 3 sets of 10 reps bench press at 185 lbs for 30-year-old 180 lb male"
+- Cache common exercises to reduce API calls
+
+**Data Validation Logic**:
+```python
+expected_weight_change = (calories_consumed - TDEE) / 3500 * 7  # lbs/week
+actual_weight_change = current_weight - last_week_weight
+
+discrepancy = abs(expected - actual) / expected
+if discrepancy > 0.2:  # >20% off
+    if actual < expected:
+        alert("Losing faster than expected - verify food tracking")
+    else:
+        alert("Losing slower than expected - check portion sizes or TDEE")
+```
+
+**Analytics Dashboard**:
+- Daily energy balance chart (stacked bar: in vs out)
+- Expected vs actual weight loss line graph
+- Confidence indicator (based on data completeness)
+- Trend analysis (2-week, 4-week, 12-week)
+
+**Portfolio Value**: ⭐⭐⭐⭐
+- Shows understanding of scientific principles
+- Adaptive algorithms (not just static formulas)
+- Data validation & quality checks
+- User feedback loops (correcting errors)
 
 ---
 
