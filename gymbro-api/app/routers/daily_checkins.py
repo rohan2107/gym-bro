@@ -69,6 +69,13 @@ def get_checkin_by_date(
     session: Session = Depends(get_session),
     user_id: int = Depends(get_user_id),
 ):
+    """
+    Get a check-in for a specific date.
+    
+    If no check-in exists for the requested date, returns a non-persisted template
+    object with default values (id=None). This allows clients to pre-populate forms
+    with default values without requiring a separate endpoint for templates.
+    """
     existing = session.exec(
         select(DailyCheckIn).where(
             DailyCheckIn.user_id == user_id, DailyCheckIn.checkin_date == checkin_date
@@ -76,7 +83,7 @@ def get_checkin_by_date(
     ).first()
     if existing:
         return existing
-    # Return empty check-in for the requested date
+    # Return non-persisted template check-in with default values
     now = datetime.now(UTC)
     return DailyCheckIn(
         user_id=user_id,

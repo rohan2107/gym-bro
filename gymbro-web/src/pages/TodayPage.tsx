@@ -34,11 +34,13 @@ export default function TodayPage() {
         ]);
         if (!cancelled) {
           setCheckin(dateCheckin);
-          // Filter meals for selected date only (using local date range)
-          const dateStart = new Date(selectedDate);
-          dateStart.setHours(0, 0, 0, 0);
-          const dateEnd = new Date(dateStart);
-          dateEnd.setDate(dateEnd.getDate() + 1);
+          // Filter meals for selected date only (parse date components to avoid timezone issues)
+          const [yearStr, monthStr, dayStr] = selectedDate.split('-');
+          const year = Number(yearStr);
+          const month = Number(monthStr);
+          const day = Number(dayStr);
+          const dateStart = new Date(year, month - 1, day);
+          const dateEnd = new Date(year, month - 1, day + 1);
           const dateMeals = meals.filter((m) => {
             const loggedAt = new Date(m.logged_at);
             return !Number.isNaN(loggedAt.getTime()) && loggedAt >= dateStart && loggedAt < dateEnd;
@@ -85,10 +87,16 @@ export default function TodayPage() {
   };
 
   const goToNextDay = () => {
-    const date = new Date(selectedDate);
-    date.setDate(date.getDate() + 1);
-    if (toDateInputValue(date) <= today) {
-      setSelectedDate(toDateInputValue(date));
+    const [yearStr, monthStr, dayStr] = selectedDate.split('-');
+    const currentDate = new Date(Number(yearStr), Number(monthStr) - 1, Number(dayStr));
+    currentDate.setDate(currentDate.getDate() + 1);
+    
+    const [todayYearStr, todayMonthStr, todayDayStr] = today.split('-');
+    const todayDate = new Date(Number(todayYearStr), Number(todayMonthStr) - 1, Number(todayDayStr));
+    
+    // Use Date comparison instead of string comparison
+    if (currentDate <= todayDate) {
+      setSelectedDate(toDateInputValue(currentDate));
     }
   };
 

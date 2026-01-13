@@ -1,7 +1,7 @@
-from typing import List
+from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlmodel import Session, select
+from sqlmodel import Session, SQLModel, select
 
 from ..db import get_session
 from ..models import FoodLog
@@ -9,6 +9,15 @@ from ..deps import get_user_id
 
 
 router = APIRouter(prefix="/food-logs", tags=["food-logs"])
+
+
+class FoodLogUpdate(SQLModel):
+    """Payload model for updating a food log - only includes updatable fields."""
+    description: str
+    calories: Optional[float] = None
+    protein_g: Optional[float] = None
+    carbs_g: Optional[float] = None
+    fat_g: Optional[float] = None
 
 
 @router.get("/", response_model=List[FoodLog])
@@ -52,7 +61,7 @@ def get_food_log(
 @router.put("/{log_id}", response_model=FoodLog)
 def update_food_log(
     log_id: int,
-    payload: FoodLog,
+    payload: FoodLogUpdate,
     session: Session = Depends(get_session),
     user_id: int = Depends(get_user_id),
 ):
