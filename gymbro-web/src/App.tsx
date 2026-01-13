@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import BottomNav from './components/BottomNav'
+import { OfflineIndicator } from './components/OfflineIndicator'
 import TodayPage from './pages/TodayPage'
 import MealsPage from './pages/MealsPage'
 import WorkoutPage from './pages/WorkoutPage'
@@ -9,6 +10,8 @@ export function App() {
   return (
     <BrowserRouter>
       <div className="min-h-screen bg-gray-50 pb-16">
+        <OfflineIndicator />
+        
         <header className="bg-white shadow">
           <div className="max-w-7xl mx-auto px-4 py-6">
             <h1 className="text-3xl font-bold text-gray-900">Gym Bro</h1>

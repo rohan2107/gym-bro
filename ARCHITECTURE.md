@@ -1,6 +1,8 @@
 # Architecture & Technical Decisions
 
-**Last Updated**: January 12, 2026
+**Last Updated**: January 13, 2026  
+**Current Phase**: Week 1, Phase 1A (Mobile UX & Polish)  
+**Latest Features**: Service Worker + Offline Support, Edit/Delete CRUD, Date Navigation
 
 ---
 
@@ -8,20 +10,89 @@
 
 ### Tech Stack
 
-| Layer | Technology | Why |
-|-------|-----------|-----|
-| **Frontend** | React 18 + Vite + TypeScript | Modern, fast, responsive |
-| **Mobile** | PWA + Tailwind + Service Worker | Works offline, installable |
-| **Backend** | FastAPI + SQLModel | Async, type-safe, fast |
-| **Database** | PostgreSQL (Neon) | Scalable, relational, free tier |
-| **Auth** | Google OAuth 2.0 + JWT | Industry standard, secure |
-| **Hosting** | Vercel (frontend + functions) | Free tier, auto-deploy, simple |
-| **Storage** | Vercel Blob | Free, integrated, simple |
-| **AI/Vision** | Google Cloud Vision API | Food detection, free tier |
-| **Testing** | pytest (backend) + Playwright (E2E) | Comprehensive coverage |
-| **CI/CD** | GitHub → Vercel | Automatic on push |
+| Layer | Technology | Status | Details |
+|-------|-----------|--------|----------|
+| **Frontend** | React 18 + Vite 5 + TypeScript 5.3 | ✅ Production | Strict mode, fast refresh |
+| **Mobile UI** | Bottom nav, PWA, Tailwind 3.3 | ✅ Complete | 4 tabs, responsive |
+| **Offline** | Service Worker (Cache API) | ✅ Complete | Network-first API, cache-first assets |
+| **Backend** | FastAPI 0.124 + SQLModel | ✅ Production | Full CRUD, async, type-safe |
+| **Database (Dev)** | SQLite | ✅ Active | Local development |
+| **Database (Prod)** | PostgreSQL (Neon) | ⏳ Planned | Week 2-3 deployment |
+| **Auth (Current)** | X-User-Id header | ✅ MVP | Temporary for development |
+| **Auth (Prod)** | Google OAuth 2.0 + JWT | ⏳ Planned | Week 4-6 |
+| **Hosting (Current)** | Local dev servers | ✅ Active | Vite + Uvicorn |
+| **Hosting (Prod)** | Vercel | ⏳ Planned | Week 2-3 deployment |
+| **Storage** | Vercel Blob | ⏳ Planned | Week 9-12 (photo uploads) |
+| **AI/Vision** | Google Cloud Vision API | ⏳ Planned | Week 9-12 (meal photos) |
+| **Testing** | pytest (backend) | ⚠️ Partial | Core endpoints tested |
+| **CI/CD** | GitHub | ✅ Active | Manual merge, no automation yet |
 
-### Architecture Diagram
+### Architecture Diagram (Current - Local Development)
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                  User (Browser - localhost)                  │
+│                Chrome/Edge on Windows/Phone                  │
+└─────────────────────────────────────────────────────────────┘
+                              ↓
+┌─────────────────────────────────────────────────────────────┐
+│         Frontend (Vite Dev Server :5173)                     │
+│       React 18 + TypeScript + Tailwind + PWA                │
+│  ┌────────────────────────────────────────────────┐         │
+│  │ Service Worker (sw.js)                         │         │
+│  │ ├─ Cache API responses (24h expiration)        │         │
+│  │ ├─ Offline detection & fallback                │         │
+│  │ └─ Network-first for /api, cache-first assets  │         │
+│  └────────────────────────────────────────────────┘         │
+│  ┌────────────────────────────────────────────────┐         │
+│  │ Pages (React Router)                           │         │
+│  │ ├─ / (TodayPage) - Check-in + date picker      │         │
+│  │ ├─ /meals (MealsPage) - Full CRUD              │         │
+│  │ ├─ /workout (WorkoutPage) - Full CRUD          │         │
+│  │ └─ /profile (ProfilePage) - Stats placeholder  │         │
+│  └────────────────────────────────────────────────┘         │
+│  ┌────────────────────────────────────────────────┐         │
+│  │ BottomNav - Fixed tab navigation               │         │
+│  └────────────────────────────────────────────────┘         │
+└─────────────────────────────────────────────────────────────┘
+                        ↓ Vite proxy: /api → :8000
+┌─────────────────────────────────────────────────────────────┐
+│         Backend (Uvicorn :8000 --reload)                     │
+│           FastAPI + SQLModel + Pydantic v2                  │
+│  ┌────────────────────────────────────────────────┐         │
+│  │ Routers (app/routers/)                         │         │
+│  │ ├─ /health - Health check                      │         │
+│  │ ├─ /daily-checkins - GET, PUT (upsert)         │         │
+│  │ │   └─ /{date} - Get check-in by date ✨NEW    │         │
+│  │ ├─ /food-logs - Full CRUD ✨NEW                │         │
+│  │ │   ├─ GET / - List all                        │         │
+│  │ │   ├─ POST / - Create                         │         │
+│  │ │   ├─ GET /{id} - Get one ✨NEW               │         │
+│  │ │   ├─ PUT /{id} - Update ✨NEW                │         │
+│  │ │   └─ DELETE /{id} - Delete ✨NEW             │         │
+│  │ └─ /workouts - Full CRUD ✨NEW                 │         │
+│  │     ├─ GET / - List all                        │         │
+│  │     ├─ POST / - Create                         │         │
+│  │     ├─ PUT /{id} - Update ✨NEW                │         │
+│  │     └─ DELETE /{id} - Delete ✨NEW             │         │
+│  └────────────────────────────────────────────────┘         │
+│  ┌────────────────────────────────────────────────┐         │
+│  │ Dependencies (app/deps.py)                     │         │
+│  │ └─ get_user_id() - Reads X-User-Id header      │         │
+│  └────────────────────────────────────────────────┘         │
+└─────────────────────────────────────────────────────────────┘
+                              ↓
+                    ┌──────────────────┐
+                    │  SQLite Database │
+                    │   (gymbro.db)    │
+                    │  Local file      │
+                    └──────────────────┘
+
+✨ NEW in PR #3 (Jan 13): Edit/Delete CRUD, Date Navigation, Timezone Fixes
+✨ NEW in PR #4 (Current): Service Worker, Offline Support, PWA Enhancements
+```
+
+### Architecture Diagram (Future - Production on Vercel)
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -31,23 +102,13 @@
 ┌─────────────────────────────────────────────────────────────┐
 │              Vercel CDN (Frontend Static)                    │
 │         React 18 + Vite + TypeScript + Tailwind             │
-│  ├─ Check-in card                                           │
-│  ├─ Meals logging (+ photo capture)                         │
-│  ├─ Workouts logging                                        │
-│  └─ Analytics dashboard                                     │
+│  + Service Worker + Offline Support                         │
 └─────────────────────────────────────────────────────────────┘
                               ↓ /api
 ┌─────────────────────────────────────────────────────────────┐
 │            Vercel Functions (Backend Serverless)             │
 │        FastAPI + SQLModel + Pydantic v2                     │
-│  ├─ /health                      [status check]             │
-│  ├─ /auth/google/callback        [OAuth flow]               │
-│  ├─ /daily-checkins              [CRUD]                     │
-│  ├─ /food-logs                   [CRUD + photo]             │
-│  ├─ /workouts                    [CRUD]                     │
-│  ├─ /exercise-sets               [CRUD]                     │
-│  ├─ /weight-entries              [CRUD]                     │
-│  └─ /analytics                   [aggregations]             │
+│  + Google OAuth 2.0 + JWT Authentication                    │
 └─────────────────────────────────────────────────────────────┘
             ↓                    ↓                   ↓
     ┌──────────────┐  ┌──────────────────┐  ┌──────────────┐
@@ -56,6 +117,102 @@
     │ (3 GB free)    │ │ (1 GB free)      │  │ (1000/mo)    │
     └──────────────┘  └──────────────────┘  └──────────────┘
 ```
+
+---
+
+## ✅ Current Implementation Status
+
+### Completed Features (as of Jan 13, 2026)
+
+**Frontend (gymbro-web/)**:
+- ✅ React 18 + Vite 5 + TypeScript 5.3 (strict mode)
+- ✅ Tailwind CSS 3.3 for styling
+- ✅ React Router 7.12 with 4 routes
+- ✅ Bottom navigation (fixed tabs: Today, Meals, Workout, Profile)
+- ✅ **TodayPage**: Daily check-in form + date picker for historical data
+  - Date navigation (Previous/Next/Today buttons)
+  - Filters meals by selected date
+  - Smart button logic (Next → Today transition)
+- ✅ **MealsPage**: Full CRUD for food logs
+  - Create, edit, delete meals
+  - Edit mode pre-fills form
+  - Confirmation dialogs for delete
+- ✅ **WorkoutPage**: Full CRUD for workouts
+  - Create, edit, delete workouts
+  - Same UX pattern as meals
+- ✅ **ProfilePage**: Placeholder stats (no API integration yet)
+- ✅ **Service Worker**: Offline support
+  - Cache-first for static assets
+  - Network-first for API calls
+  - 24-hour cache expiration
+  - Offline fallback responses
+- ✅ **OfflineIndicator**: Orange banner when offline
+- ✅ **Utilities** (src/lib/utils.ts):
+  - `toDateInputValue()` - Local timezone date formatting
+  - `formatRelativeDateTime()` - "Today at", "Yesterday at" display
+  - `handleRequestError()` - Centralized error handling
+- ✅ **PWA Manifest**: App installable on mobile
+  - Blue theme color (#2563eb)
+  - Portrait orientation
+  - App icons (192x192, 512x512)
+
+**Backend (gymbro-api/)**:
+- ✅ FastAPI 0.124 + SQLModel + Pydantic v2
+- ✅ SQLite database (local dev)
+- ✅ User scoping via `X-User-Id` header
+- ✅ **Health Router** (`/health`): Status check
+- ✅ **Daily Check-ins Router** (`/daily-checkins`):
+  - `GET /` - List check-ins with date filtering
+  - `GET /today` - Get or create today's check-in
+  - `GET /{date}` - Get check-in for specific date ✨ PR #3
+  - `PUT /{date}` - Upsert check-in
+- ✅ **Food Logs Router** (`/food-logs`):
+  - `GET /` - List all user's food logs
+  - `POST /` - Create food log
+  - `GET /{id}` - Get single food log ✨ PR #3
+  - `PUT /{id}` - Update with `FoodLogUpdate` model ✨ PR #3
+  - `DELETE /{id}` - Delete food log ✨ PR #3
+- ✅ **Workouts Router** (`/workouts`):
+  - `GET /` - List all user's workouts
+  - `POST /` - Create workout
+  - `PUT /{id}` - Update workout ✨ PR #3
+  - `DELETE /{id}` - Delete workout ✨ PR #3
+- ✅ **Security**: Dedicated update models (prevent id/user_id modification)
+- ✅ **Validation**: Client + server validation
+- ✅ **Error Handling**: Proper 404s, validation errors
+
+**Development Workflow**:
+- ✅ PowerShell start scripts (start-all.ps1)
+- ✅ Git workflow with feature branches
+- ✅ PR reviews with GitHub Copilot
+- ✅ TypeScript strict compilation
+- ✅ Hot reload (Vite + Uvicorn --reload)
+
+### Deferred/Planned Features
+
+**Week 2-3 (Phase 1B - Deployment)**:
+- ⏳ Deploy to Vercel (frontend + backend functions)
+- ⏳ Migrate to Neon PostgreSQL
+- ⏳ Environment configuration (production secrets)
+- ⏳ CORS configuration
+- ⏳ Database backups
+
+**Week 4-6 (Phase 2 - Authentication)**:
+- ⏳ Google OAuth 2.0 setup
+- ⏳ JWT token generation/validation
+- ⏳ Multi-user support
+- ⏳ Protected routes
+
+**Week 7-8 (Phase 3A - Testing)**:
+- ⏳ Backend test coverage for new endpoints
+- ⏳ Frontend E2E tests (Playwright)
+- ⏳ Performance optimization
+
+**Week 9-12 (Phase 3B - AI Features)**:
+- ⏳ Photo upload (Vercel Blob)
+- ⏳ Google Cloud Vision API integration
+- ⏳ AI meal photo analysis
+- ⏳ Calorie/macro estimation
 
 ---
 
