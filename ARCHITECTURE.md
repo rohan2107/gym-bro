@@ -30,92 +30,92 @@
 ### Architecture Diagram (Current - Local Development)
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                  User (Browser - localhost)                  │
-│                Chrome/Edge on Windows/Phone                  │
-└─────────────────────────────────────────────────────────────┘
+┌────────────────────────────────────────────────────────────┐
+│                 User (Browser - localhost)                 │
+│               Chrome/Edge on Windows/Phone                 │
+└────────────────────────────────────────────────────────────┘
                               ↓
-┌─────────────────────────────────────────────────────────────┐
-│         Frontend (Vite Dev Server :5173)                     │
-│       React 18 + TypeScript + Tailwind + PWA                │
-│  ┌────────────────────────────────────────────────┐         │
-│  │ Service Worker (sw.js)                         │         │
-│  │ ├─ Cache API responses (24h expiration)        │         │
-│  │ ├─ Offline detection & fallback                │         │
-│  │ └─ Network-first for /api, cache-first assets  │         │
-│  └────────────────────────────────────────────────┘         │
-│  ┌────────────────────────────────────────────────┐         │
-│  │ Pages (React Router)                           │         │
-│  │ ├─ / (TodayPage) - Check-in + date picker      │         │
-│  │ ├─ /meals (MealsPage) - Full CRUD              │         │
-│  │ ├─ /workout (WorkoutPage) - Full CRUD          │         │
-│  │ └─ /profile (ProfilePage) - Stats placeholder  │         │
-│  └────────────────────────────────────────────────┘         │
-│  ┌────────────────────────────────────────────────┐         │
-│  │ BottomNav - Fixed tab navigation               │         │
-│  └────────────────────────────────────────────────┘         │
-└─────────────────────────────────────────────────────────────┘
-                        ↓ Vite proxy: /api → :8000
-┌─────────────────────────────────────────────────────────────┐
-│         Backend (Uvicorn :8000 --reload)                     │
-│           FastAPI + SQLModel + Pydantic v2                  │
-│  ┌────────────────────────────────────────────────┐         │
-│  │ Routers (app/routers/)                         │         │
-│  │ ├─ /health - Health check                      │         │
-│  │ ├─ /daily-checkins - GET, PUT (upsert)         │         │
-│  │ │   └─ /{date} - Get check-in by date ✨NEW    │         │
-│  │ ├─ /food-logs - Full CRUD ✨NEW                │         │
-│  │ │   ├─ GET / - List all                        │         │
-│  │ │   ├─ POST / - Create                         │         │
-│  │ │   ├─ GET /{id} - Get one ✨NEW               │         │
-│  │ │   ├─ PUT /{id} - Update ✨NEW                │         │
-│  │ │   └─ DELETE /{id} - Delete ✨NEW             │         │
-│  │ └─ /workouts - Full CRUD ✨NEW                 │         │
-│  │     ├─ GET / - List all                        │         │
-│  │     ├─ POST / - Create                         │         │
-│  │     ├─ PUT /{id} - Update ✨NEW                │         │
-│  │     └─ DELETE /{id} - Delete ✨NEW             │         │
-│  └────────────────────────────────────────────────┘         │
-│  ┌────────────────────────────────────────────────┐         │
-│  │ Dependencies (app/deps.py)                     │         │
-│  │ └─ get_user_id() - Reads X-User-Id header      │         │
-│  └────────────────────────────────────────────────┘         │
-└─────────────────────────────────────────────────────────────┘
+┌────────────────────────────────────────────────────────────┐
+│           Frontend (Vite Dev Server :5173)                 │
+│         React 18 + TypeScript + Tailwind + PWA             │
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │ Service Worker (sw.js)                              │   │
+│  │ - Cache API responses (24h expiration)              │   │
+│  │ - Offline detection & fallback                      │   │
+│  │ - Network-first for /api, cache-first assets        │   │
+│  └─────────────────────────────────────────────────────┘   │
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │ Pages (React Router)                                │   │
+│  │ - / (TodayPage) - Check-in + date picker            │   │
+│  │ - /meals (MealsPage) - Full CRUD [NEW]              │   │
+│  │ - /workout (WorkoutPage) - Full CRUD [NEW]          │   │
+│  │ - /profile (ProfilePage) - Stats placeholder        │   │
+│  └─────────────────────────────────────────────────────┘   │
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │ BottomNav - Fixed tab navigation                    │   │
+│  └─────────────────────────────────────────────────────┘   │
+└────────────────────────────────────────────────────────────┘
+                         ↓ Vite proxy: /api → :8000
+┌────────────────────────────────────────────────────────────┐
+│           Backend (Uvicorn :8000 --reload)                 │
+│            FastAPI + SQLModel + Pydantic v2                │
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │ Routers (app/routers/)                              │   │
+│  │ - /health - Health check                            │   │
+│  │ - /daily-checkins - GET, PUT (upsert)               │   │
+│  │   - /{date} - Get check-in by date [NEW]            │   │
+│  │ - /food-logs - Full CRUD [NEW]                      │   │
+│  │   - GET / - List all                                │   │
+│  │   - POST / - Create                                 │   │
+│  │   - GET /{id} - Get one [NEW]                       │   │
+│  │   - PUT /{id} - Update [NEW]                        │   │
+│  │   - DELETE /{id} - Delete [NEW]                     │   │
+│  │ - /workouts - Full CRUD [NEW]                       │   │
+│  │   - GET / - List all                                │   │
+│  │   - POST / - Create                                 │   │
+│  │   - PUT /{id} - Update [NEW]                        │   │
+│  │   - DELETE /{id} - Delete [NEW]                     │   │
+│  └─────────────────────────────────────────────────────┘   │
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │ Dependencies (app/deps.py)                          │   │
+│  │ - get_user_id() - Reads X-User-Id header            │   │
+│  └─────────────────────────────────────────────────────┘   │
+└────────────────────────────────────────────────────────────┘
                               ↓
-                    ┌──────────────────┐
-                    │  SQLite Database │
-                    │   (gymbro.db)    │
-                    │  Local file      │
-                    └──────────────────┘
+                    ┌───────────────────┐
+                    │ SQLite Database   │
+                    │   (gymbro.db)     │
+                    │   Local file      │
+                    └───────────────────┘
 
-✨ NEW in PR #3 (Jan 13): Edit/Delete CRUD, Date Navigation, Timezone Fixes
-✨ NEW in PR #4 (Current): Service Worker, Offline Support, PWA Enhancements
+NEW in PR #3 (Jan 13): Edit/Delete CRUD, Date Navigation, Timezone Fixes
+NEW in PR #4 (Jan 13): Service Worker, Offline Support, PWA Enhancements
 ```
 
 ### Architecture Diagram (Future - Production on Vercel)
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                        User (Phone)                          │
+│                        User (Phone)                         │
 └─────────────────────────────────────────────────────────────┘
                               ↓
 ┌─────────────────────────────────────────────────────────────┐
-│              Vercel CDN (Frontend Static)                    │
+│              Vercel CDN (Frontend Static)                   │
 │         React 18 + Vite + TypeScript + Tailwind             │
 │  + Service Worker + Offline Support                         │
 └─────────────────────────────────────────────────────────────┘
                               ↓ /api
 ┌─────────────────────────────────────────────────────────────┐
-│            Vercel Functions (Backend Serverless)             │
+│            Vercel Functions (Backend Serverless)            │
 │        FastAPI + SQLModel + Pydantic v2                     │
 │  + Google OAuth 2.0 + JWT Authentication                    │
 └─────────────────────────────────────────────────────────────┘
-            ↓                    ↓                   ↓
-    ┌──────────────┐  ┌──────────────────┐  ┌──────────────┐
-    │ Neon PostgreSQL│ │  Vercel Blob     │  │ Google Cloud │
-    │   Database     │ │ Photo Storage    │  │ Vision API   │
-    │ (3 GB free)    │ │ (1 GB free)      │  │ (1000/mo)    │
-    └──────────────┘  └──────────────────┘  └──────────────┘
+            ↓                    ↓                    ↓
+    ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐
+    │ Neon PostgreSQL │  │  Vercel Blob    │  │  Google Cloud   │
+    │   Database      │  │ Photo Storage   │  │   Vision API    │
+    │  (3 GB free)    │  │  (1 GB free)    │  │   (1000/mo)     │
+    └─────────────────┘  └─────────────────┘  └─────────────────┘
 ```
 
 ---

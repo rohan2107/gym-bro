@@ -37,11 +37,11 @@ Build a **production-ready fitness tracking app** that serves as both:
 **You're the QA tester → catch all UX issues early**
 
 **Deliverables**:
-- [ ] Bottom navigation (tab-based UI)
-- [ ] Responsive mobile layout (full-width, single-column on phone)
+- [x] Bottom navigation (tab-based UI) ✅ **PR #1 - Jan 12, 2026**
+- [x] Responsive mobile layout (full-width, single-column on phone) ✅ **Complete**
 - [x] Edit/Delete functionality for meals & workouts ✅ **PR #3 - Jan 13, 2026**
 - [x] Date picker for check-in history ✅ **PR #3 - Jan 13, 2026**
-- [ ] Offline caching (service worker)
+- [x] Offline caching (service worker) ✅ **PR #4 - Jan 13, 2026**
 - [ ] Tested on actual iPhone + Android
 
 **Key files to modify**:
