@@ -8,6 +8,7 @@ export default function WorkoutPage() {
   const [error, setError] = useState<string | null>(null);
   const [workouts, setWorkouts] = useState<Workout[]>([]);
   const [saving, setSaving] = useState(false);
+  const [editingId, setEditingId] = useState<number | null>(null);
 
   const [workoutForm, setWorkoutForm] = useState<WorkoutFormState>({
     name: '',
@@ -48,16 +49,55 @@ export default function WorkoutPage() {
     setSaving(true);
     setError(null);
     try {
-      const created = await api.createWorkout({
+      const workoutData = {
         name: workoutForm.name,
         note: workoutForm.note || null,
-      });
-      setWorkouts((prev) => [created, ...prev]);
+      };
+
+      if (editingId !== null) {
+        // Update existing workout
+        const updated = await api.updateWorkout(editingId, workoutData);
+        setWorkouts((prev) => prev.map((w) => (w.id === editingId ? updated : w)));
+        setEditingId(null);
+      } else {
+        // Create new workout
+        const created = await api.createWorkout(workoutData);
+        setWorkouts((prev) => [created, ...prev]);
+      }
+
       setWorkoutForm({ name: '', note: '' });
     } catch (err) {
       setError(handleRequestError(err));
     } finally {
       setSaving(false);
+    }
+  };
+
+  const startEdit = (workout: Workout) => {
+    setEditingId(workout.id);
+    setWorkoutForm({
+      name: workout.name,
+      note: workout.note || '',
+    });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setWorkoutForm({ name: '', note: '' });
+  };
+
+  const deleteWorkout = async (id: number) => {
+    if (!confirm('Delete this workout?')) return;
+
+    try {
+      await api.deleteWorkout(id);
+      setWorkouts((prev) => prev.filter((w) => w.id !== id));
+      if (editingId === id) {
+        cancelEdit();
+      }
+    } catch (err) {
+      setError(handleRequestError(err));
     }
   };
 
@@ -72,19 +112,31 @@ export default function WorkoutPage() {
       )}
 
       <div className="bg-white rounded-lg shadow p-6 mb-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Quick Log</h2>
+        <h2 className="text-lg font-semibold text-gray-900 mb-4">
+          {editingId ? 'Edit Workout' : 'Quick Log'}
+        </h2>
         <WorkoutForm
           state={workoutForm}
           onChange={(p) => setWorkoutForm((s) => ({ ...s, ...p }))}
           onSubmit={submitWorkout}
           busy={saving}
         />
-        <div className="mt-4 p-4 bg-blue-50 rounded-lg text-sm">
-          <p className="text-gray-700">
-            <strong>Coming soon:</strong> Import workouts from Strong app (paste JSON).
-            For now, use the form above to log workouts manually.
-          </p>
-        </div>
+        {editingId ? (
+          <button
+            type="button"
+            onClick={cancelEdit}
+            className="mt-3 w-full bg-gray-200 text-gray-700 px-4 py-2 rounded font-medium hover:bg-gray-300"
+          >
+            Cancel Edit
+          </button>
+        ) : (
+          <div className="mt-4 p-4 bg-blue-50 rounded-lg text-sm">
+            <p className="text-gray-700">
+              <strong>Coming soon:</strong> Import workouts from Strong app (paste JSON).
+              For now, use the form above to log workouts manually.
+            </p>
+          </div>
+        )}
       </div>
 
       <div className="bg-white rounded-lg shadow p-6">
@@ -136,6 +188,22 @@ export default function WorkoutPage() {
                       })}
                     </div>
                   </div>
+                </div>
+                <div className="flex gap-2 mt-3">
+                  <button
+                    onClick={() => startEdit(workout)}
+                    className="flex-1 text-sm bg-blue-50 text-blue-700 px-3 py-1.5 rounded hover:bg-blue-100 transition-colors"
+                    aria-label={`Edit ${workout.name}`}
+                  >
+                    Edit
+                  </button>
+                  <button
+                    onClick={() => deleteWorkout(workout.id)}
+                    className="flex-1 text-sm bg-red-50 text-red-700 px-3 py-1.5 rounded hover:bg-red-100 transition-colors"
+                    aria-label={`Delete ${workout.name}`}
+                  >
+                    Delete
+                  </button>
                 </div>
               </article>
             ))}

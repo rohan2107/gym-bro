@@ -5,6 +5,7 @@ import { toDateInputValue, handleRequestError } from '../lib/utils';
 
 export default function TodayPage() {
   const today = useMemo(() => toDateInputValue(), []);
+  const [selectedDate, setSelectedDate] = useState(today);
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -27,28 +28,30 @@ export default function TodayPage() {
       setLoading(true);
       setError(null);
       try {
-        const [todayCheckin, meals] = await Promise.all([
-          api.getTodayCheckIn(),
+        const [dateCheckin, meals] = await Promise.all([
+          api.getCheckInByDate(selectedDate),
           api.listFoodLogs(),
         ]);
         if (!cancelled) {
-          setCheckin(todayCheckin);
-          // Filter meals for today only (using local date range)
-          const todayStart = new Date();
-          todayStart.setHours(0, 0, 0, 0);
-          const todayEnd = new Date(todayStart);
-          todayEnd.setDate(todayEnd.getDate() + 1);
-          const todayMeals = meals.filter((m) => {
+          setCheckin(dateCheckin);
+          // Filter meals for selected date only (parse date components to avoid timezone issues)
+          const [yearStr, monthStr, dayStr] = selectedDate.split('-');
+          const year = Number(yearStr);
+          const month = Number(monthStr);
+          const day = Number(dayStr);
+          const dateStart = new Date(year, month - 1, day);
+          const dateEnd = new Date(year, month - 1, day + 1);
+          const dateMeals = meals.filter((m) => {
             const loggedAt = new Date(m.logged_at);
-            return !Number.isNaN(loggedAt.getTime()) && loggedAt >= todayStart && loggedAt < todayEnd;
+            return !Number.isNaN(loggedAt.getTime()) && loggedAt >= dateStart && loggedAt < dateEnd;
           });
-          setFoodLogs(todayMeals);
+          setFoodLogs(dateMeals);
           setCheckInForm({
-            weight: todayCheckin.weight?.toString() ?? '',
-            trained: todayCheckin.trained,
-            proteinMet: todayCheckin.protein_met,
-            steps: todayCheckin.steps?.toString() ?? '',
-            notes: todayCheckin.notes ?? '',
+            weight: dateCheckin.weight?.toString() ?? '',
+            trained: dateCheckin.trained,
+            proteinMet: dateCheckin.protein_met,
+            steps: dateCheckin.steps?.toString() ?? '',
+            notes: dateCheckin.notes ?? '',
           });
         }
       } catch (err) {
@@ -67,7 +70,7 @@ export default function TodayPage() {
     return () => {
       cancelled = true;
     };
-  }, [today]);
+  }, [selectedDate]);
 
   const totalCalories = useMemo(() => {
     return foodLogs.reduce((sum, meal) => sum + (meal.calories ?? 0), 0);
@@ -76,6 +79,30 @@ export default function TodayPage() {
   const totalProtein = useMemo(() => {
     return foodLogs.reduce((sum, meal) => sum + (meal.protein_g ?? 0), 0);
   }, [foodLogs]);
+
+  const goToPreviousDay = () => {
+    const date = new Date(selectedDate);
+    date.setDate(date.getDate() - 1);
+    setSelectedDate(toDateInputValue(date));
+  };
+
+  const goToNextDay = () => {
+    const [yearStr, monthStr, dayStr] = selectedDate.split('-');
+    const currentDate = new Date(Number(yearStr), Number(monthStr) - 1, Number(dayStr));
+    currentDate.setDate(currentDate.getDate() + 1);
+    
+    const [todayYearStr, todayMonthStr, todayDayStr] = today.split('-');
+    const todayDate = new Date(Number(todayYearStr), Number(todayMonthStr) - 1, Number(todayDayStr));
+    
+    // Use Date comparison instead of string comparison
+    if (currentDate <= todayDate) {
+      setSelectedDate(toDateInputValue(currentDate));
+    }
+  };
+
+  const goToToday = () => {
+    setSelectedDate(today);
+  };
 
   const submitCheckin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -89,7 +116,7 @@ export default function TodayPage() {
         steps: checkInForm.steps ? Number(checkInForm.steps) : null,
         notes: checkInForm.notes || null,
       };
-      const updated = await api.upsertCheckIn(today, payload);
+      const updated = await api.upsertCheckIn(selectedDate, payload);
       setCheckin(updated);
     } catch (err) {
       setError(handleRequestError(err));
@@ -101,8 +128,44 @@ export default function TodayPage() {
   return (
     <div className="p-4 max-w-2xl mx-auto">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Today's Check-in</h1>
-        <p className="text-sm text-gray-500">{today}</p>
+        <div className="flex items-center justify-between mb-3">
+          <h1 className="text-2xl font-bold text-gray-900">Daily Check-in</h1>
+          <input
+            type="date"
+            value={selectedDate}
+            onChange={(e) => setSelectedDate(e.target.value)}
+            max={today}
+            className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            aria-label="Select date"
+          />
+        </div>
+        <div className="flex items-center justify-between gap-2">
+          <button
+            onClick={goToPreviousDay}
+            className="px-3 py-1.5 text-sm bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition-colors"
+            aria-label="Previous day"
+          >
+            ← Previous
+          </button>
+          <p className="text-sm text-gray-500 text-center flex-1">
+            {selectedDate === today ? 'Today' : new Date(selectedDate).toLocaleDateString(undefined, { 
+              weekday: 'short', 
+              month: 'short', 
+              day: 'numeric' 
+            })}
+          </p>
+          {selectedDate === today ? (
+            <div className="w-20" />
+          ) : (
+            <button
+              onClick={selectedDate < today ? goToNextDay : goToToday}
+              className="px-3 py-1.5 text-sm bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors"
+              aria-label={selectedDate < today ? 'Next day' : 'Go to today'}
+            >
+              {selectedDate < today ? 'Next →' : 'Today'}
+            </button>
+          )}
+        </div>
       </div>
 
       {error && (
@@ -116,7 +179,9 @@ export default function TodayPage() {
       {!loading && (
         <>
           <div className="bg-white rounded-lg shadow p-6 mb-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Today's Summary</h2>
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">
+              {selectedDate === today ? "Today's Summary" : 'Daily Summary'}
+            </h2>
             <div className="space-y-2 text-sm text-gray-700">
               <div className="flex justify-between">
                 <span>Weight:</span>

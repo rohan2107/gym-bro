@@ -51,6 +51,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 
 export const api = {
   getTodayCheckIn: () => request<DailyCheckIn>('/daily-checkins/today'),
+  getCheckInByDate: (dateISO: string) => request<DailyCheckIn>(`/daily-checkins/${dateISO}`),
   upsertCheckIn: (dateISO: string, data: Partial<Omit<DailyCheckIn, 'id' | 'user_id' | 'checkin_date'>>) =>
     request<DailyCheckIn>(`/daily-checkins/${dateISO}`, {
       method: 'PUT',
@@ -68,10 +69,34 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(data),
     }),
+  updateFoodLog: (id: number, data: {
+    description: string
+    calories?: number | null
+    protein_g?: number | null
+    carbs_g?: number | null
+    fat_g?: number | null
+  }) =>
+    request<FoodLog>(`/food-logs/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+  deleteFoodLog: (id: number) =>
+    request<void>(`/food-logs/${id}`, {
+      method: 'DELETE',
+    }),
   listWorkouts: () => request<Workout[]>('/workouts'),
   createWorkout: (data: { name: string; note?: string | null }) =>
     request<Workout>('/workouts', {
       method: 'POST',
       body: JSON.stringify(data),
+    }),
+  updateWorkout: (id: number, data: { name: string; note?: string | null }) =>
+    request<Workout>(`/workouts/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+  deleteWorkout: (id: number) =>
+    request<void>(`/workouts/${id}`, {
+      method: 'DELETE',
     }),
 }
