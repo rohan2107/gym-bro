@@ -63,6 +63,34 @@ def get_today_checkin(
     )
 
 
+@router.get("/{checkin_date}", response_model=DailyCheckIn)
+def get_checkin_by_date(
+    checkin_date: date,
+    session: Session = Depends(get_session),
+    user_id: int = Depends(get_user_id),
+):
+    existing = session.exec(
+        select(DailyCheckIn).where(
+            DailyCheckIn.user_id == user_id, DailyCheckIn.checkin_date == checkin_date
+        )
+    ).first()
+    if existing:
+        return existing
+    # Return empty check-in for the requested date
+    now = datetime.now(UTC)
+    return DailyCheckIn(
+        user_id=user_id,
+        checkin_date=checkin_date,
+        weight=None,
+        trained=False,
+        steps=None,
+        protein_met=False,
+        notes=None,
+        created_at=now,
+        updated_at=now,
+    )
+
+
 @router.put("/{checkin_date}", response_model=DailyCheckIn, status_code=status.HTTP_200_OK)
 def upsert_daily_checkin(
     checkin_date: date,
