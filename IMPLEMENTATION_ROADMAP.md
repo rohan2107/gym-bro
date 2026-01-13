@@ -1,5 +1,5 @@
 # Gym Bro: 12-Week Development Roadmap
-**Updated**: January 12, 2026  
+**Updated**: January 13, 2026  
 **Goal**: Portfolio project with personal daily use, Google SSO, and AI meal photos  
 **Total time to completion**: 12 weeks of focused work
 
@@ -39,8 +39,8 @@ Build a **production-ready fitness tracking app** that serves as both:
 **Deliverables**:
 - [ ] Bottom navigation (tab-based UI)
 - [ ] Responsive mobile layout (full-width, single-column on phone)
-- [ ] Edit/Delete functionality for meals & workouts
-- [ ] Date picker for check-in history
+- [x] Edit/Delete functionality for meals & workouts ✅ **PR #3 - Jan 13, 2026**
+- [x] Date picker for check-in history ✅ **PR #3 - Jan 13, 2026**
 - [ ] Offline caching (service worker)
 - [ ] Tested on actual iPhone + Android
 

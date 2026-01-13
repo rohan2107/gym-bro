@@ -26,10 +26,30 @@
   - Daily check-in card: view/update weight, steps, trained/protein flags, notes.
   - Meals column: log description + optional calories; list newest first.
   - Workouts column: log name + optional note; list newest first.
+- [x] **Edit/Delete UI for meals and workouts** ✨ **PR #3**
+  - Edit button pre-fills form with existing data
+  - Delete button with confirmation dialog
+  - Cancel edit button to clear editing state
+  - Form heading changes based on edit mode
+- [x] **Date navigation for historical check-ins** ✨ **PR #3**
+  - Date picker input (constrained to today or earlier)
+  - Previous/Next/Today navigation buttons
+  - Smart button logic (Next → Today when appropriate)
+  - Dynamic heading based on selected date
+  - Filters meals by selected date range
+- [x] **Timezone-aware date handling** ✨ **PR #3**
+  - Local timezone utilities (toDateInputValue, formatRelativeDateTime)
+  - Explicit date component parsing (no UTC confusion)
+  - Proper Date object comparisons
 - [x] API client (src/lib/api.ts): typed requests with `X-User-Id` header.
+  - Full CRUD methods for food logs (update, delete)
+  - Full CRUD methods for workouts (update, delete)
+  - Get check-in by date endpoint
 - [x] Form components (src/components/Forms.tsx): CheckInForm, FoodForm, WorkoutForm.
 - [x] Client-side validation: required text fields, min/max constraints on numbers.
 - [x] Error handling: error banner on API failures; disabled buttons while saving.
+  - Centralized error handler (handleRequestError utility)
+  - Offline detection (navigator.onLine check)
 - [x] Tailwind + PostCSS configured (ESM).
 - [x] Vite dev server with `/api` proxy to backend.
 - [x] PWA manifest + basic service worker in public/.
@@ -44,18 +64,31 @@
 - [x] Updated gymbro-web/README.md: setup, build, structure, env, features.
 - [x] .env.local in gymbro-web with VITE_USER_ID=1.
 
+## ✅ Backend Enhancements (PR #3 - January 13, 2026)
+- [x] **Food logs full CRUD**:
+  - GET /food-logs/{log_id} - Get single food log
+  - PUT /food-logs/{log_id} - Update with FoodLogUpdate model (security hardened)
+  - DELETE /food-logs/{log_id} - Delete with confirmation
+- [x] **Daily check-ins by date**:
+  - GET /daily-checkins/{checkin_date} - Get check-in for any date
+  - Returns non-persisted template if none exists (documented behavior)
+- [x] **Security improvements**:
+  - FoodLogUpdate model prevents modification of id, user_id, logged_at
+  - All endpoints enforce user_id filtering
+  - 404 handling for missing resources
+
 ## 🧹 Cleanup Checklist
 
 ### Code Quality
-- [ ] Remove console.logs / debug statements (none identified yet).
-- [ ] Add JSDoc/docstrings to custom hooks / util functions (none custom yet).
-- [ ] Ensure all imports are used (check for dead imports in all files).
+- [x] Remove console.logs / debug statements ✅
+- [x] Add JSDoc/docstrings to utility functions ✅ (handleRequestError, toDateInputValue, formatRelativeDateTime)
+- [x] Ensure all imports are used ✅
 
 ### Backend
-- [ ] Review routers for consistency (response formats, error handling).
-- [ ] Add request validation errors to all endpoints (e.g., bad date format in PUT /daily-checkins/{date}).
-- [ ] Verify CORS headers if frontend and backend run on different origins.
-- [ ] Add 404 handling for missing resources (e.g., GET /workouts/{id} not found).
+- [x] Review routers for consistency (response formats, error handling) ✅
+- [x] Add request validation with proper models (FoodLogUpdate) ✅
+- [x] Verify CORS headers if frontend and backend run on different origins ✅
+- [x] Add 404 handling for missing resources ✅
 
 ### Frontend
 - [ ] Check for unused CSS classes in Tailwind build.
@@ -69,7 +102,8 @@
 - [ ] Add soft-delete support if needed (not in MVP scope).
 
 ### Testing
-- [ ] Backend tests should cover edge cases (empty fields, negative numbers, bad user_id).
+- [x] Backend tests should cover edge cases (empty fields, negative numbers, bad user_id) ✅ (existing tests)
+- [ ] **New endpoints need test coverage** (food log CRUD, get check-in by date) ⚠️ **Deferred to separate testing PR**
 - [ ] Frontend e2e tests (Playwright or Cypress) for happy path: log check-in, meal, workout, refresh page, verify persistence.
 
 ### Config & Secrets
@@ -86,18 +120,34 @@
 - [ ] Add CI/CD workflow (GitHub Actions for tests).
 - [ ] Document production env vars and secrets management.
 
-## 🚀 MVP Status: COMPLETE & COMMITTED
+## 🚀 MVP Status: ENHANCED & READY FOR MOBILE
 
-**Committed to GitHub on**: January 12, 2026  
+**Last Updated**: January 13, 2026  
+**Latest PR**: #3 (Edit/Delete + Date Navigation)  
 **Build Status**: ✅ TypeScript strict compilation passing  
-**Test Status**: ✅ All backend tests passing (pytest)  
-**E2E Verification**: ✅ All three logging flows tested and working  
+**Test Status**: ⚠️ Core tests passing, new endpoints need coverage  
+**Code Quality**: ✅ GitHub Copilot approved (4/6 issues fixed, 2 deferred to testing PR)  
+
+## 🚀 MVP Status: ENHANCED & READY FOR MOBILE
+
+**Last Updated**: January 13, 2026  
+**Latest PR**: #3 (Edit/Delete + Date Navigation)  
+**Build Status**: ✅ TypeScript strict compilation passing  
+**Test Status**: ⚠️ Core tests passing, new endpoints need coverage  
+**Code Quality**: ✅ GitHub Copilot approved (4/6 issues fixed, 2 deferred to testing PR)  
 
 ### What This Means
-- Core MVP is **production-ready for beta launch**
-- All CRUD operations functional and user-scoped
-- Error handling and validation in place
-- Documentation complete (README, API docs, setup guides)
+- Core MVP is **enhanced with full CRUD** for all entities
+- Historical data navigation fully functional
+- Timezone handling properly implemented
+- Security hardened (dedicated update models)
+- Ready for **Phase 1A continuation** (bottom nav, mobile layout, PWA)
+
+### Next Steps (Week 1 Phase 1A)
+1. Bottom navigation component (tab-based UI)
+2. Responsive mobile layout (single column)
+3. Service worker for offline caching
+4. Test on actual iPhone/Android devices
 - No known blockers for local development or limited production deployment
 
 ### Next Phase: Feature Expansion
