@@ -1,5 +1,6 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from .db import init_db
 from .routers import health, food_logs, daily_checkins, weight_entries, workouts, exercise_sets
@@ -17,6 +18,19 @@ def create_app() -> FastAPI:
     app = FastAPI(
         title="Gym Bro API",
         lifespan=lifespan,
+    )
+
+    # CORS: Allow frontend from Vercel and local development
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=[
+            "http://localhost:5173",  # Vite dev server
+            "https://*.vercel.app",   # Vercel deployments (wildcard)
+            "*",  # Temporary: allow all for ngrok testing (restrict later)
+        ],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
     )
 
     # Include routers
