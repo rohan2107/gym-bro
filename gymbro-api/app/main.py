@@ -18,6 +18,7 @@ def create_app() -> FastAPI:
     app = FastAPI(
         title="Gym Bro API",
         lifespan=lifespan,
+        root_path="/api",  # Vercel routes /api/* to this app
     )
 
     # CORS: Allow frontend from Vercel and local development
