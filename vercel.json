@@ -9,7 +9,7 @@
       }
     },
     {
-      "src": "gymbro-api/api/handler.py",
+      "src": "api/handler.py",
       "use": "@vercel/python"
     }
   ],
