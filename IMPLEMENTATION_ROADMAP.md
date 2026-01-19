@@ -111,16 +111,79 @@
 
 ---
 
-### Phase 3: Testing & Stability
+### Phase 3: Testing & CI/CD Pipeline
 
-**Goal**: Ensure production-ready quality before adding AI features
+**Goal**: Comprehensive test coverage and automated quality gates
 
-- [ ] Frontend unit tests (Vitest + React Testing Library)
-- [ ] E2E tests for critical flows (Playwright)
-- [ ] Backend test coverage >80%
-- [ ] Performance optimization (response time <200ms)
-- [ ] Error monitoring and logging setup
-- [ ] Database migration strategy
+**Testing Strategy**:
+
+**Unit Tests (Backend)**:
+- [ ] Expand pytest coverage to >80%
+- [ ] Test all routers (daily-checkins, food-logs, workouts)
+- [ ] Test authentication helpers and dependencies
+- [ ] Test database models and validation
+- [ ] Mock external dependencies (database, OAuth)
+
+**Unit Tests (Frontend)**:
+- [ ] Vitest + React Testing Library setup
+- [ ] Test components (Forms, BottomNav, OfflineIndicator)
+- [ ] Test utility functions (date formatting, API client)
+- [ ] Test hooks and context providers
+- [ ] Mock API responses
+
+**Integration Tests**:
+- [ ] API endpoint integration tests with test database
+- [ ] Database transaction tests (CRUD operations)
+- [ ] Authentication flow integration tests
+- [ ] Error handling across layers
+
+**E2E Tests (Playwright)**:
+- [ ] Critical user flows:
+  - Sign in with Google (once OAuth is live)
+  - Create daily check-in
+  - Log meal with full data
+  - Create and edit workout
+  - Offline mode (cache, sync)
+- [ ] Cross-browser testing (Chrome, Firefox, Safari)
+- [ ] Mobile viewport testing
+
+**CI/CD Pipeline (GitHub Actions)**:
+- [ ] On pull request:
+  - Run backend unit tests (pytest)
+  - Run frontend unit tests (Vitest)
+  - TypeScript type checking
+  - Linting (ESLint, Ruff)
+  - Build verification
+- [ ] On merge to main:
+  - All PR checks
+  - Integration tests
+  - Deploy to Vercel (automatic)
+  - Run E2E tests against staging
+  - Performance checks (Lighthouse CI)
+
+**Performance & Monitoring**:
+- [ ] Response time optimization (<200ms avg)
+- [ ] Database query optimization (indexes, N+1 queries)
+- [ ] Frontend bundle size optimization
+- [ ] Lighthouse CI integration (PWA score >90)
+- [ ] Error tracking setup (Sentry or similar)
+- [ ] Performance monitoring (Vercel Analytics)
+
+**Database Management**:
+- [ ] Migration strategy (Alembic setup)
+- [ ] Rollback procedures
+- [ ] Seed data for testing environments
+- [ ] Backup verification
+
+**Success Criteria**:
+- ✅ 80%+ backend test coverage
+- ✅ 70%+ frontend test coverage
+- ✅ All E2E tests passing
+- ✅ CI/CD pipeline green on every merge
+- ✅ Zero production errors for 1 week
+- ✅ Response time <200ms P95
+
+**Time Estimate**: 2-3 weeks
 
 ---
 
