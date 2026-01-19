@@ -19,8 +19,12 @@
       "dest": "/gymbro-api/api/handler.py"
     },
     {
+      "src": "/assets/(.*)",
+      "dest": "/gymbro-web/dist/assets/$1"
+    },
+    {
       "src": "/(.*)",
-      "dest": "/gymbro-web/dist/$1"
+      "dest": "/gymbro-web/dist/index.html"
     }
   ]
 }
