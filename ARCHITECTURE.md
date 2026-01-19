@@ -1,9 +1,8 @@
 # Architecture & Technical Decisions
 
 **Last Updated**: January 19, 2026  
-**Current Phase**: Phase 1B (Vercel Deployment) - In Progress  
-**Status**: 🚀 Frontend deployed, backend integration in progress  
-**Latest Features**: Vercel deployment, PostgreSQL migration, service worker, mobile UI
+**Status**: ✅ Deployed to Vercel (Frontend + Backend), PostgreSQL in production  
+**Next Phase**: Google OAuth 2.0 Authentication
 
 ---
 
@@ -18,13 +17,13 @@
 | **Offline** | Service Worker (Cache API) | ✅ Complete | Network-first API, cache-first assets |
 | **Backend** | FastAPI 0.124 + SQLModel | ✅ Production | Full CRUD, async, type-safe |
 | **Database (Dev)** | SQLite | ✅ Active | Local development |
-| **Database (Prod)** | PostgreSQL (Neon) | 🚀 Deployed | Production database |
+| **Database (Prod)** | PostgreSQL (Neon) | ✅ Production | Serverless PostgreSQL |
 | **Auth (Current)** | X-User-Id header | ✅ Active | Temporary for MVP |
-| **Auth (Prod)** | Google OAuth 2.0 + JWT | ⏳ Planned | Week 4-6 |
-| **Hosting (Frontend)** | Vercel | 🚀 Deployed | Static site |
-| **Hosting (Backend)** | Vercel Functions | 🔧 Deploying | Serverless API |
-| **Storage** | Vercel Blob | ⏳ Planned | Week 9-12 (photo uploads) |
-| **AI/Vision** | Google Cloud Vision API | ⏳ Planned | Week 9-12 (meal photos) |
+| **Auth (Next)** | Google OAuth 2.0 + JWT | ⏳ Planned | Phase 2 |
+| **Hosting (Frontend)** | Vercel | ✅ Production | Static site |
+| **Hosting (Backend)** | Vercel Functions | ✅ Production | Serverless API |
+| **Storage** | Vercel Blob | ⏳ Planned | Phase 3 (photo uploads) |
+| **AI/Vision** | Google Cloud Vision API | ⏳ Planned | Phase 3 (meal photos) |
 | **Testing** | pytest (backend) | ⚠️ Partial | Core endpoints tested |
 | **CI/CD** | GitHub | ✅ Active | Manual merge, no automation yet |
 
@@ -89,8 +88,6 @@
                     │   Local file      │
                     └───────────────────┘
 
-NEW in PR #3 (Jan 13): Edit/Delete CRUD, Date Navigation, Timezone Fixes
-NEW in PR #4 (Jan 13): Service Worker, Offline Support, PWA Enhancements
 ```
 
 ### Architecture Diagram (Future - Production on Vercel)
@@ -165,19 +162,19 @@ NEW in PR #4 (Jan 13): Service Worker, Offline Support, PWA Enhancements
 - ✅ **Daily Check-ins Router** (`/daily-checkins`):
   - `GET /` - List check-ins with date filtering
   - `GET /today` - Get or create today's check-in
-  - `GET /{date}` - Get check-in for specific date ✨ PR #3
+  - `GET /{date}` - Get check-in for specific date
   - `PUT /{date}` - Upsert check-in
 - ✅ **Food Logs Router** (`/food-logs`):
   - `GET /` - List all user's food logs
   - `POST /` - Create food log
-  - `GET /{id}` - Get single food log ✨ PR #3
-  - `PUT /{id}` - Update with `FoodLogUpdate` model ✨ PR #3
-  - `DELETE /{id}` - Delete food log ✨ PR #3
+  - `GET /{id}` - Get single food log
+  - `PUT /{id}` - Update food log
+  - `DELETE /{id}` - Delete food log
 - ✅ **Workouts Router** (`/workouts`):
   - `GET /` - List all user's workouts
   - `POST /` - Create workout
-  - `PUT /{id}` - Update workout ✨ PR #3
-  - `DELETE /{id}` - Delete workout ✨ PR #3
+  - `PUT /{id}` - Update workout
+  - `DELETE /{id}` - Delete workout
 - ✅ **Security**: Dedicated update models (prevent id/user_id modification)
 - ✅ **Validation**: Client + server validation
 - ✅ **Error Handling**: Proper 404s, validation errors
@@ -189,47 +186,24 @@ NEW in PR #4 (Jan 13): Service Worker, Offline Support, PWA Enhancements
 - ✅ TypeScript strict compilation
 - ✅ Hot reload (Vite + Uvicorn --reload)
 
-### Deferred/Planned Features
+### Roadmap
 
-**Week 2-3 (Phase 1B - Deployment)**:
-- ⏳ Deploy to Vercel (frontend + backend functions)
-- ⏳ Migrate to Neon PostgreSQL
-- ⏳ Environment configuration (production secrets)
-- ⏳ CORS configuration
-- ⏳ Database backups
+**Phase 2 - Authentication** (Next):
+- Google OAuth 2.0 setup
+- JWT token generation/validation
+- Multi-user support with data isolation
+- Protected routes
 
-**Week 4-6 (Phase 2 - Authentication)**:
-- ⏳ Google OAuth 2.0 setup
-- ⏳ JWT token generation/validation
-- ⏳ Multi-user support
-- ⏳ Protected routes
+**Phase 3 - Advanced Features**:
+- Photo upload and Google Cloud Vision integration
+- AI meal photo analysis with calorie estimation
+- Energy balance tracking (TDEE, weight predictions)
+- Strong app workout import
+- Analytics dashboard
 
-**Week 7-8 (Phase 3A - Testing)**:
-- ⏳ Backend test coverage for new endpoints
-- ⏳ Frontend E2E tests (Playwright)
-- ⏳ Performance optimization
-
-**Week 9-12 (Phase 3B - AI Features)**:
-- ⏳ Photo upload (Vercel Blob)
-- ⏳ Google Cloud Vision API integration
-- ⏳ AI meal photo analysis
-- ⏳ Calorie/macro estimation
-
-**Week 13-15 (Phase 3C - Energy Balance & Analytics)**:
-- ⏳ TDEE (Total Daily Energy Expenditure) estimation
-- ⏳ Adaptive TDEE algorithm (learns from actual weight change)
-- ⏳ Strong app workout import (CSV)
-- ⏳ LLM-powered workout calorie burn estimation
-- ⏳ Energy balance tracking (calories in vs out)
-- ⏳ Expected weight loss calculator
-- ⏳ Analytics dashboard (predicted vs actual)
-- ⏳ Data validation & discrepancy alerts
-- ⏳ User feedback for tracking errors
-
-**Future (Phase 4+)**:
-- ⏳ Apple Health integration (requires Swift/iOS app)
-- ⏳ Strava/Garmin/Fitbit integrations
-- ⏳ MyFitnessPal food database
+**Phase 4 - Integrations**:
+- Apple Health, Strava, MyFitnessPal
+- Third-party fitness tracker sync
 
 ---
 

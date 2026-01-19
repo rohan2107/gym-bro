@@ -1,38 +1,33 @@
-# Gym Bro: 12-Week Development Roadmap
-**Updated**: January 13, 2026  
-**Goal**: Portfolio project with personal daily use, Google SSO, and AI meal photos  
-**Total time to completion**: 12 weeks of focused work
+# Gym Bro: Development Roadmap
+**Updated**: January 19, 2026  
+**Current Phase**: Phase 2 - Google OAuth Authentication  
+**Status**: Production deployed, moving to multi-user support
 
----
+## Project Overview
 
-## 📊 Project Overview
+**Goal**: Production-ready fitness tracking app with Google SSO and AI meal logging
 
-### Vision
-Build a **production-ready fitness tracking app** that serves as both:
-1. **Personal daily-use tool** (for you to track workouts, meals, weight)
-2. **Portfolio project** (demonstrates full-stack development, cloud deployment, AI integration)
+**Success Criteria**:
+- [x] Deployed to production (Vercel)
+- [x] Mobile-first PWA with offline support
+- [ ] Google OAuth working (multi-user ready) - **Next Phase**
+- [ ] AI meal photo logging
+- [x] Portfolio-worthy code and documentation
 
-### Success Criteria
-- ✅ You use it daily on your phone for at least 2 weeks
-- ✅ Deployed to production (Vercel) with real domain
-- ✅ Google SSO working (multi-user ready)
-- ✅ AI meal photo logging functional
-- ✅ Portfolio-worthy code and documentation
-
-### Tech Stack (Locked In)
-- **Frontend**: React 18 + Vite + TypeScript + Tailwind (PWA)
-- **Backend**: FastAPI + SQLModel + Pydantic v2
+**Tech Stack**:
+- **Frontend**: React 18, TypeScript, Vite, Tailwind (PWA)
+- **Backend**: FastAPI, SQLModel, Pydantic v2
 - **Database**: PostgreSQL (Neon)
-- **Auth**: Google OAuth 2.0 + JWT
-- **Hosting**: Vercel (free tier)
-- **Storage**: Vercel Blob (photos)
-- **AI**: Google Cloud Vision API
+- **Auth**: Google OAuth 2.0 + JWT (next phase)
+- **Hosting**: Vercel
+- **Storage**: Vercel Blob (planned)
+- **AI**: Google Cloud Vision API (planned)
 
 ---
 
 ## 📅 12-Week Sprint Plan
 
-### **Phase 1A: Mobile UX & Polish (Weeks 1–3)**
+### **Phase 1A: Mobile UX & Polish**
 **Focus**: Make it usable on YOUR phone daily  
 **Status**: ✅ COMPLETE (January 19, 2026)
 
@@ -42,7 +37,7 @@ Build a **production-ready fitness tracking app** that serves as both:
 - [x] Edit/Delete functionality for meals & workouts ✅ **Complete - Jan 13, 2026**
 - [x] Date picker for check-in history ✅ **Complete - Jan 13, 2026**
 - [x] Offline caching (service worker) ✅ **Complete - Jan 13, 2026**
-- [x] Tested on actual iPhone + Android ⏳ **In Progress**
+- [x] Tested on actual phone ✅ **Complete**
 
 **Definition of Done**: ✅ ACHIEVED
 - You can log check-in, meal, workout in <10 seconds from home screen
@@ -54,130 +49,120 @@ Build a **production-ready fitness tracking app** that serves as both:
 
 ---
 
-### **Phase 1B: Vercel Deployment (Weeks 2–3)**
-**Focus**: Get production infrastructure ready  
-**Status**: 🔧 IN PROGRESS (January 19, 2026)
+### **Phase 1B: Vercel Deployment**
+**Focus**: Production infrastructure  
+**Status**: ✅ COMPLETE (January 19, 2026)
 
 **Deliverables**:
 - [x] Neon PostgreSQL database created ✅ **Complete**
 - [x] Frontend deployed to Vercel ✅ **Complete**
-- [x] Backend deployed to Vercel Functions 🔧 **Deploying**
-- [ ] Backend API integration verified ⏳ **Testing**
-- [ ] CORS properly configured ⏳ **In Progress**
-- [ ] Database migrations automated ⏳ **Planned**
+- [x] Backend deployed to Vercel Functions ✅ **Complete**
+- [x] Backend API integration verified ✅ **Complete**
+- [x] CORS properly configured ✅ **Complete**
+- [x] Database connection pooling ✅ **Complete**
+- [x] Auto-seeding for MVP ✅ **Complete**
 
-**Current Issues**:
-- 🔧 Backend routing (root_path configuration deployed, testing in progress)
-- ⏳ Environment variables configuration
-- ⏳ End-to-end API integration testing
-
-**Definition of Done**:
-- App is live at production URL
+**Definition of Done**: ✅ ACHIEVED
+- App is live at https://gym-ba2oz8etc-rohan-anthonys-projects-a86489a8.vercel.app
 - Backend API accessible at `/api/health`
 - Data persists in PostgreSQL (Neon)
-- Can log data from production app
-
-**Time estimate**: 1–2 weeks → **Actual: In Progress (Day 1)**
+- Full CRUD operations working in production
 
 **Cost**: $0 (all free tier) ✅ **Confirmed**
 
 ---
 
-### **Phase 2: Google OAuth Authentication (Weeks 4–6)**
-**Focus**: Real multi-user authentication**
+### Phase 2: Google OAuth Authentication (🎯 Next Phase)
+**Status**: Ready to begin
 
-**Current state**: Header-based (X-User-Id) development mode  
-**New state**: Google SSO + JWT tokens
+**Objective**: Replace temporary X-User-Id header with real Google OAuth authentication
 
-**Deliverables**:
-- [ ] Google Cloud project created
-- [ ] OAuth 2.0 credentials generated
-- [ ] Backend: Auth router with `/auth/google/callback` endpoint
-- [ ] Backend: JWT token generation & verification
-- [ ] Frontend: Login page with "Sign in with Google" button
-- [ ] Frontend: Auth context + protected routes
-- [ ] User data isolation verified (security testing)
+**Key Deliverables**:
 
-**Backend changes**:
-- New `app/routers/auth.py` — OAuth flow
-- Update `app/models.py` — User model with email, display_name
-- Update `app/deps.py` — JWT extraction instead of header
-- Update all endpoints to check JWT token
+**Backend**:
+- [ ] Google Cloud project + OAuth credentials
+- [ ] `/auth/google` endpoint (initiate OAuth flow)
+- [ ] `/auth/google/callback` endpoint (handle OAuth response)
+- [ ] JWT token generation and validation
+- [ ] Update `get_user_id()` dependency to extract from JWT
+- [ ] User model updates (Google ID, email, display name)
 
-**Frontend changes**:
-- New `contexts/AuthContext.tsx` — Auth state management
-- New `pages/Login.tsx` — Login page
-- Update `App.tsx` → Redirect to login if not authenticated
-- Update API client → Add JWT to Authorization header
+**Frontend**:
+- [ ] Login page with "Sign in with Google" button
+- [ ] Auth context for managing authentication state
+- [ ] Protected routes (redirect to login if not authenticated)
+- [ ] Token storage and refresh logic
+- [ ] Update API client to send JWT in Authorization header
 
 **Testing**:
-- [ ] Sign in with Google (personal email)
-- [ ] Create check-in, meals, workouts
-- [ ] Sign out → Data is secure
-- [ ] Sign in as different user → Data is isolated
-- [ ] Token refresh works (7-day expiry)
+- [ ] Sign in with Google account
+- [ ] Create data (check-ins, meals, workouts)
+- [ ] Sign out and verify data security
+- [ ] Sign in as different user and verify data isolation
+- [ ] Test token expiration and refresh
 
-**Definition of Done**:
-- You can sign in with Google
-- Friends can sign in (separate user accounts)
-- Each user's data is isolated (privacy verified)
-- Production deployment works with OAuth
+**Success Criteria**:
+- Multiple users can sign in with their Google accounts
+- Each user sees only their own data
+- Authentication works in production
+- Token refresh prevents session expiration
 
-**Documentation**:
-- See `GOOGLE_OAUTH_SETUP.md` for step-by-step OAuth setup (you'll learn Google Cloud!)
-
-**Time estimate**: 2–3 weeks (OAuth is complex but well-documented)
-
-**New skills**:
-- ✅ Google Cloud Console navigation
-- ✅ OAuth 2.0 protocol understanding
-- ✅ JWT token management
-- ✅ User isolation in multi-tenant apps
+**Documentation**: See [GOOGLE_OAUTH_SETUP.md](GOOGLE_OAUTH_SETUP.md) for implementation guide
 
 ---
 
-### **Phase 3A: Foundation Stabilization (Weeks 7–8)**
-**Before we add AI, let's ensure everything is solid**
+### Phase 3: Testing & Stability
 
-**Deliverables**:
-- [ ] All endpoints have proper error handling + validation
+**Goal**: Ensure production-ready quality before adding AI features
+
 - [ ] Frontend unit tests (Vitest + React Testing Library)
-- [ ] E2E tests for happy path (Playwright)
-- [ ] Backend test coverage expanded to 85%+
-- [ ] CORS verified for both localhost + production
-- [ ] Data migration strategy (if schema changes)
-- [ ] Performance optimized (response time <200ms)
-- [ ] Monitoring set up (error tracking, logs)
-
-**Definition of Done**:
-- App is stable for daily use
-- No crashes or data loss
-- Can deploy new code without issues
-- Ready for AI integration
-
-**Time estimate**: 1–2 weeks
+- [ ] E2E tests for critical flows (Playwright)
+- [ ] Backend test coverage >80%
+- [ ] Performance optimization (response time <200ms)
+- [ ] Error monitoring and logging setup
+- [ ] Database migration strategy
 
 ---
 
-### **Phase 3B: AI Meal Photo Pipeline (Weeks 9–12)**
-**Focus**: Differentiated feature — auto-log meals from photos**
+### Phase 4: AI Meal Photo Logging
 
-**Architecture**:
-```
-User taps "📷 Add from photo"
-    ↓
-Camera opens → captures meal photo
-    ↓
-Photo uploaded to Vercel Blob
-    ↓
-Backend calls Google Cloud Vision API
-    ↓
-Vision returns: [food items, portions, estimated calories]
-    ↓
-Backend enriches with USDA FoodData
-    ↓
-Frontend shows predictions: "Chicken breast, 150g, 240 cal, 35g protein"
-    ↓
+**Goal**: Auto-log meals from photos using Google Cloud Vision API
+
+**Flow**:
+1. User captures meal photo
+2. Upload to Vercel Blob
+3. Backend calls Google Cloud Vision API
+4. Extract food items and portions
+5. Enrich with nutrition data (USDA FoodData)
+6. Present estimates for user confirmation
+7. Save to food log
+
+**Key Components**:
+- [ ] Photo upload (Vercel Blob integration)
+- [ ] Google Cloud Vision API setup
+- [ ] USDA FoodData API integration
+- [ ] ML confidence thresholds
+- [ ] User confirmation UI
+- [ ] Photo storage and retrieval
+
+See detailed implementation plan in later phases.
+
+---
+
+## Current Status Summary
+
+**Completed**:
+- ✅ Mobile-first PWA with offline support
+- ✅ Full CRUD for check-ins, meals, workouts
+- ✅ Production deployment on Vercel
+- ✅ PostgreSQL database (Neon)
+
+**In Progress**:
+- 🔄 Google OAuth authentication (Phase 2)
+
+**Upcoming**:
+- ⏳ Testing and stability (Phase 3)
+- ⏳ AI meal photo logging (Phase 4)
 User confirms or adjusts
     ↓
 FoodLog created with AI data
@@ -565,21 +550,12 @@ What I learned:
 
 ## **This Week (Week 1)**
 
-1. **Review documentation**:
-   - `MOBILE_UI_SPEC.md` — Design specs
-   - `DEPLOYMENT_GUIDE.md` — Will do later
-   - `GOOGLE_OAUTH_SETUP.md` — Will do later
+## Getting Started with Phase 2 (OAuth)
 
-2. **Start mobile UI**:
-   - Add bottom navigation component
-   - Make layout responsive (mobile-first)
-   - Test on your phone
+1. **Review OAuth documentation**: [GOOGLE_OAUTH_SETUP.md](GOOGLE_OAUTH_SETUP.md)
+2. **Set up Google Cloud project** and obtain OAuth credentials
+3. **Implement backend auth router** for OAuth flow
+4. **Build frontend login page** with Google Sign-In
+5. **Test with multiple Google accounts** to verify data isolation
 
-3. **Ask me any questions**:
-   - Design questions? Ask about mobile UX
-   - Implementation questions? Ask about React patterns
-   - Architecture questions? Ask about tradeoffs
-
-**Next meeting**: End of Week 1 review (demo mobile UI on your phone)
-
-Let's build something impressive! 💪🚀
+For questions or implementation details, see the detailed guides in the documentation.
