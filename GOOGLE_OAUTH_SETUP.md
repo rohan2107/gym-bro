@@ -21,9 +21,9 @@ Backend exchanges code for ID token
     ↓
 Backend creates/fetches User in database
     ↓
-Backend returns JWT token (httpOnly cookie)
+Backend returns JWT token (httpOnly, Secure, SameSite cookie)
     ↓
-Frontend stores JWT, uses it for all API calls
+Frontend sends cookie automatically with all API calls
     ↓
 User can log in/out, see their data only
 ```
@@ -41,10 +41,12 @@ User can log in/out, see their data only
 
 **Wait for project to be created (~1 minute)**
 
-### Step 1.2: Enable Google OAuth API
+### Step 1.2: Enable Google Identity Services
 1. In Google Cloud Console, go to "APIs & Services" → "Library"
-2. Search for "Google+ API"
-3. Click it → "Enable"
+2. Search for "Google Identity Services"
+3. Click "Google Identity Services API" → "Enable"
+
+**Note**: We're using OAuth 2.0 / OpenID Connect (modern standard), NOT the deprecated Google+ API
 
 **Wait for API to be enabled**
 
