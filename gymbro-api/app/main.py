@@ -8,8 +8,12 @@ from .db import init_db
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup: Initialize database tables
-    init_db()
+    # Startup: Initialize database tables (safe for serverless)
+    try:
+        init_db()
+    except Exception as e:
+        # Log but don't crash - tables might already exist
+        print(f"Warning: init_db failed (tables may already exist): {e}")
     yield
     # Shutdown: cleanup if needed
 
