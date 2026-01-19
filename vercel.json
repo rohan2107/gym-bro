@@ -8,8 +8,6 @@
     { "src": "/(.*)", "dest": "/index.html" }
   ],
   "functions": {
-    "api/handler.py": {
-      "runtime": "python3.12"
-    }
+    "api/handler.py": {}
   }
 }
