@@ -1,30 +1,19 @@
 {
   "buildCommand": "cd gymbro-web && npm ci && npm run build",
   "outputDirectory": "gymbro-web/dist",
-  "builds": [
-    {
-      "src": "gymbro-api/api/handler.py",
-      "use": "@vercel/python"
-    },
-    {
-      "src": "gymbro-web/package.json",
-      "use": "@vercel/static-build",
-      "config": {
-        "distDir": "dist"
-      }
+  "functions": {
+    "gymbro-api/api/handler.py": {
+      "runtime": "@vercel/python@4.3.1"
     }
-  ],
-  "routes": [
+  },
+  "rewrites": [
     {
-      "src": "/api/(.*)",
-      "dest": "gymbro-api/api/handler.py"
+      "source": "/api/:path*",
+      "destination": "/gymbro-api/api/handler.py"
     },
     {
-      "handle": "filesystem"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/index.html"
+      "source": "/:path*",
+      "destination": "/index.html"
     }
   ]
 }
