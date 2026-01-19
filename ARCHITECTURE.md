@@ -1,8 +1,9 @@
 # Architecture & Technical Decisions
 
-**Last Updated**: January 13, 2026  
-**Current Phase**: Week 1, Phase 1A (Mobile UX & Polish)  
-**Latest Features**: Service Worker + Offline Support, Edit/Delete CRUD, Date Navigation
+**Last Updated**: January 19, 2026  
+**Current Phase**: Phase 1B (Vercel Deployment) - In Progress  
+**Status**: 🚀 Frontend deployed, backend integration in progress  
+**Latest Features**: Vercel deployment, PostgreSQL migration, service worker, mobile UI
 
 ---
 
@@ -17,11 +18,11 @@
 | **Offline** | Service Worker (Cache API) | ✅ Complete | Network-first API, cache-first assets |
 | **Backend** | FastAPI 0.124 + SQLModel | ✅ Production | Full CRUD, async, type-safe |
 | **Database (Dev)** | SQLite | ✅ Active | Local development |
-| **Database (Prod)** | PostgreSQL (Neon) | ⏳ Planned | Week 2-3 deployment |
-| **Auth (Current)** | X-User-Id header | ✅ MVP | Temporary for development |
+| **Database (Prod)** | PostgreSQL (Neon) | 🚀 Deployed | Production database |
+| **Auth (Current)** | X-User-Id header | ✅ Active | Temporary for MVP |
 | **Auth (Prod)** | Google OAuth 2.0 + JWT | ⏳ Planned | Week 4-6 |
-| **Hosting (Current)** | Local dev servers | ✅ Active | Vite + Uvicorn |
-| **Hosting (Prod)** | Vercel | ⏳ Planned | Week 2-3 deployment |
+| **Hosting (Frontend)** | Vercel | 🚀 Deployed | Static site |
+| **Hosting (Backend)** | Vercel Functions | 🔧 Deploying | Serverless API |
 | **Storage** | Vercel Blob | ⏳ Planned | Week 9-12 (photo uploads) |
 | **AI/Vision** | Google Cloud Vision API | ⏳ Planned | Week 9-12 (meal photos) |
 | **Testing** | pytest (backend) | ⚠️ Partial | Core endpoints tested |

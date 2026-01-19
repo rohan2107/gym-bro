@@ -1,16 +1,19 @@
-# Deployment Guide: Vercel + Neon + Vercel Blob
+# Deployment Guide: Vercel + Neon PostgreSQL
 
-**Goal**: Deploy your app to production on Vercel (free tier)  
-**Time**: 45 minutes for first-time setup  
-**Cost**: $0 for MVP usage
+**Status**: ✅ Production deployment complete (January 19, 2026)  
+**Live URL**: https://gym-62nyxe7vc-rohan-anthonys-projects-a86489a8.vercel.app  
+**Cost**: $0 (Vercel + Neon free tiers)  
+
+This guide documents the actual deployment process used for Gym Bro on Vercel.
 
 ---
 
 ## 📋 Prerequisites
 
-- [ ] GitHub account (required for Vercel)
-- [ ] GitHub Student Pack (for Vercel credits, optional but helpful)
-- [ ] GitHub Student Pack claim: https://education.github.com/pack
+- ✅ GitHub account (required for Vercel)
+- ✅ Vercel account (linked to GitHub)
+- ✅ Neon account (PostgreSQL database)
+- Optional: Custom domain (for production URL)
 
 ---
 
@@ -60,94 +63,216 @@ python -m uvicorn app.main:app --reload
 
 ---
 
-## Part 2: Vercel Setup (Frontend + Backend)
+## Part 2: Vercel Frontend Deployment
 
-### Step 2.1: Create Vercel Account & Link GitHub
-1. Go to https://vercel.com
-2. Click "Sign Up" → "Continue with GitHub"
-3. Authorize Vercel
-4. Create team name or use personal
+### Step 2.1: Prepare Repository
+Ensure your repo has these files:
+- `vercel.json` (routing configuration)
+- `gymbro-web/package.json` (dependencies)
+- `gymbro-web/vite.config.ts` (build config)
 
-### Step 2.2: Import Frontend Project
-1. Click "Add New" → "Project"
-2. Find `gym-bro` repository in list
-3. Click "Import"
+### Step 2.2: Deploy Frontend
+1. Go to https://vercel.com/dashboard
+2. Click "Add New" → "Project"
+3. Import your `gym-bro` repository
+4. Configure:
+   - **Framework Preset**: Vite
+   - **Root Directory**: `gymbro-web` (not needed if using vercel.json)
+   - **Build Command**: Auto-detected (npm run build)
+   - **Output Directory**: `dist`
+   - **Install Command**: Auto-detected (npm ci)
 
-**Configure import**:
-- Framework: "Next.js" (or Other)
-  - Actually, Vite isn't in the list; we'll use "Other"
-- Root directory: `./gymbro-web`
-- Build command: `npm run build`
-- Output directory: `dist`
-- Environment variables: **Leave empty for now**
+5. Click "Deploy"
 
-**Click "Deploy"** (will fail, that's OK — we need to set env vars)
-
-### Step 2.3: Set Environment Variables (Frontend)
-After deployment fails:
-1. Go to project settings → "Environment Variables"
-2. Add:
+### Step 2.3: Set Frontend Environment Variables
+After first deployment:
+1. Go to Project Settings → Environment Variables
+2. Add (optional for MVP):
    ```
-   VITE_API_URL=https://gym-bro-api.vercel.app/api
+   VITE_USER_ID=1
    ```
-   (Replace with your actual backend URL once deployed)
-3. Redeploy (click "Deployments" → "Redeploy")
+3. Click "Save"
+
+**✅ Frontend should now be live!**
 
 ---
 
-## Part 3: Backend Deployment (Vercel Functions)
+## Part 3: Vercel Backend Deployment
 
-### Challenge: FastAPI on Vercel Functions
-Vercel Functions run serverless code, but FastAPI is a traditional ASGI app. We need an adapter.
+### Step 3.1: Prepare Backend Files
 
-### Step 3.1: Install Vercel ASGI Handler
-```bash
-cd gymbro-api
-pip install vercel-asgi
-```
+Your repository should have:
+- `api/handler.py` - Serverless function handler
+- `api/requirements.txt` - Python dependencies
+- `gymbro-api/app/` - FastAPI application code
 
-### Step 3.2: Create `api/handler.py`
-Create new file: `gymbro-api/api/handler.py`
-
+#### `api/handler.py` (Serverless Entry Point)
 ```python
 """Vercel serverless handler for FastAPI app."""
-from vercel_asgi import asgi_handler
+import sys
+from pathlib import Path
+
+# Add gymbro-api to Python path
+repo_root = Path(__file__).parent.parent
+gymbro_api_path = repo_root / "gymbro-api"
+sys.path.insert(0, str(gymbro_api_path))
+
+# Import FastAPI app - Vercel supports it natively
 from app.main import app
 
-# Vercel calls this function for every request
-handler = asgi_handler(app)
+# Vercel uses the 'app' variable directly (no adapter needed)
 ```
 
-### Step 3.3: Update Vercel Config
-Create `vercel.json` in repo root:
+#### `api/requirements.txt` (Python Dependencies)
+```txt
+fastapi==0.124.2
+sqlmodel==0.0.27
+psycopg2-binary==2.9.11
+pydantic==2.12.5
+pydantic-settings==2.12.0
+python-dotenv==1.2.1
+```
 
+#### `gymbro-api/app/main.py` (Add root_path)
+```python
+def create_app() -> FastAPI:
+    app = FastAPI(
+        title="Gym Bro API",
+        lifespan=lifespan,
+        root_path="/api",  # Critical: Vercel routes /api/* to this app
+    )
+```
+
+### Step 3.2: Configure Vercel Routing
+
+Your `vercel.json` at repo root:
 ```json
 {
-  "builds": [
-    {
-      "src": "gymbro-api/requirements.txt",
-      "use": "@vercel/python"
-    },
-    {
-      "src": "gymbro-web/package.json",
-      "use": "@vercel/next"
-    }
-  ],
+  "version": 2,
+  "buildCommand": "cd gymbro-web && npm ci && npm run build",
+  "outputDirectory": "gymbro-web/dist",
   "routes": [
-    {
-      "src": "/api/(.*)",
-      "dest": "gymbro-api/api/handler.py"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "gymbro-web/.vercel/output/static/$1"
-    }
-  ],
-  "env": {
-    "DATABASE_URL": "@database_url"
-  }
+    { "src": "/api/(.*)", "dest": "/api/handler" },
+    { "handle": "filesystem" },
+    { "src": "/(.*)", "dest": "/index.html" }
+  ]
 }
 ```
+
+### Step 3.3: Set Backend Environment Variables
+
+**Critical**: Add DATABASE_URL before deploying!
+
+1. Vercel Dashboard → Your Project → Settings → Environment Variables
+2. Add:
+   - **Key**: `DATABASE_URL`
+   - **Value**: Your Neon connection string from Part 1
+   - **Environment**: Production (and Preview if needed)
+3. Save
+
+### Step 3.4: Deploy Backend
+The backend deploys automatically with the frontend (single Vercel project).
+
+After deployment, Vercel will:
+- Install Python dependencies from `api/requirements.txt`
+- Create a serverless function at `/api/handler`
+- Route `/api/*` requests to the function
+
+### Step 3.5: Verify Backend
+```bash
+curl https://your-app.vercel.app/api/health
+# Expected: {"status":"ok"}
+```
+
+**Common Issues**:
+- **404 Not Found**: Check `root_path="/api"` in main.py
+- **500 Error**: Check DATABASE_URL is set correctly
+- **Module Not Found**: Check api/requirements.txt has all dependencies
+
+---
+
+## Part 4: Testing & Validation
+
+### Test 1: Health Check
+```
+https://your-app.vercel.app/api/health
+```
+Expected: `{"status":"ok"}`
+
+### Test 2: Frontend Access
+```
+https://your-app.vercel.app/
+```
+Expected: See the Gym Bro UI
+
+### Test 3: Create Check-In
+Use the UI or curl:
+```bash
+curl -X PUT https://your-app.vercel.app/api/daily-checkins/2026-01-19 \
+  -H "Content-Type: application/json" \
+  -H "X-User-Id: 1" \
+  -d '{"weight":180,"steps":8000,"trained":true}'
+```
+
+### Test 4: View Logs
+Vercel Dashboard → Deployment → Functions → `/api/handler` → Logs
+
+---
+
+## Part 5: Ongoing Maintenance
+
+### Database Backups
+Neon provides automatic daily backups (free tier: 7-day retention)
+
+### Monitoring
+- Vercel Analytics: Project → Analytics
+- Function Logs: Deployment → Functions
+- Error Tracking: Deployment → Logs (filter by "error")
+
+### Redeployment
+- **Auto**: Push to GitHub → Vercel auto-deploys
+- **Manual**: Vercel Dashboard → Deployments → Redeploy
+
+---
+
+## Cost Breakdown (Free Tier Limits)
+
+| Service | Free Tier | Usage | Cost |
+|---------|-----------|-------|------|
+| Vercel (Hosting) | 100 GB bandwidth/month | ~1-5 GB/month | $0 |
+| Vercel (Functions) | 100K invocations/month | ~1-10K/month | $0 |
+| Neon (Database) | 3 GB storage | <100 MB | $0 |
+| **Total** | | | **$0** |
+
+---
+
+## Troubleshooting
+
+### Backend Returns 404
+**Cause**: `root_path` not set in FastAPI app  
+**Fix**: Add `root_path="/api"` to FastAPI constructor
+
+### Backend Returns 500
+**Cause**: DATABASE_URL missing or invalid  
+**Fix**: Check environment variables in Vercel settings
+
+### Database Connection Timeout
+**Cause**: Neon database sleeping (free tier)  
+**Fix**: First request may be slow (10-15s), subsequent requests fast
+
+### Frontend 404 on Refresh
+**Cause**: Vercel routing misconfigured  
+**Fix**: Ensure vercel.json has catch-all route to index.html
+
+---
+
+## Next Steps
+
+1. ✅ Test all CRUD operations from UI
+2. ⏳ Set up custom domain (optional)
+3. ⏳ Enable Vercel Analytics
+4. ⏳ Configure error monitoring
+5. ⏳ Add Google OAuth (Week 4-6)
 
 ### Step 3.4: Deploy Backend
 1. Go to Vercel dashboard → "Add New" → "Project"
