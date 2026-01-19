@@ -8,7 +8,7 @@ This will create all tables in your production database.
 """
 import os
 from sqlmodel import SQLModel, create_engine
-from app.models import User, FoodLog, Workout, ExerciseSet, WeightEntry, DailyCheckIn
+from app.models import User, FoodLog, Workout, ExerciseSet, WeightEntry, DailyCheckIn, NutrientEntry
 
 # Get database URL from environment variable
 DATABASE_URL = os.getenv("DATABASE_URL")
@@ -43,6 +43,7 @@ try:
     print("   - exercise_sets")
     print("   - weight_entries")
     print("   - daily_check_ins")
+    print("   - nutrient_entries")
     print("\n🚀 Your database is ready for Vercel deployment!")
     
 except Exception as e:

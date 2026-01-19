@@ -15,8 +15,8 @@ def create_app() -> FastAPI:
         allow_origins=[
             "http://localhost:5173",  # Vite dev server
             "http://localhost:4173",  # Vite preview
-            "https://*.vercel.app",   # Vercel production & preview
         ],
+        allow_origin_regex=r"https://.*\.vercel\.app",  # Vercel production & preview
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
