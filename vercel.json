@@ -5,7 +5,7 @@
       "src": "gymbro-web/package.json",
       "use": "@vercel/static-build",
       "config": {
-        "buildCommand": "npm run build",
+        "buildCommand": "cd gymbro-web && npm run build",
         "outputDirectory": "gymbro-web/dist"
       }
     },
