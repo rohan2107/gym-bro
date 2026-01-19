@@ -4,10 +4,10 @@ from pathlib import Path
 
 # Add gymbro-api to Python path so we can import from app
 repo_root = Path(__file__).parent.parent
-sys.path.insert(0, str(repo_root / "gymbro-api"))
+gymbro_api_path = repo_root / "gymbro-api"
+sys.path.insert(0, str(gymbro_api_path))
 
-from mangum import Mangum
+# Import the FastAPI app directly - Vercel supports it natively
 from app.main import app
 
-# Vercel calls this function for every request
-handler = Mangum(app)
+# Vercel uses the 'app' variable directly (no adapter needed)

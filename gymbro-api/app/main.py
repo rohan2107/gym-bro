@@ -1,12 +1,23 @@
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from .routers import health, food_logs, daily_checkins, weight_entries, workouts, exercise_sets
+from .db import init_db
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup: Initialize database tables
+    init_db()
+    yield
+    # Shutdown: cleanup if needed
 
 
 def create_app() -> FastAPI:
     app = FastAPI(
         title="Gym Bro API",
+        lifespan=lifespan,
     )
 
     # CORS: Allow frontend from Vercel and local development
