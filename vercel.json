@@ -6,8 +6,5 @@
     { "src": "/api/(.*)", "dest": "/api/handler" },
     { "handle": "filesystem" },
     { "src": "/(.*)", "dest": "/index.html" }
-  ],
-  "functions": {
-    "api/handler.py": {}
-  }
+  ]
 }
