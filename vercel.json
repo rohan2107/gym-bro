@@ -1,14 +1,6 @@
 {
-  "version": 2,
-  "builds": [
-    {
-      "src": "gymbro-api/api/handler.py",
-      "use": "@vercel/python",
-      "config": {
-        "maxLambdaSize": "15mb"
-      }
-    }
-  ],
+  "buildCommand": "cd gymbro-web && npm install && npm run build",
+  "outputDirectory": "gymbro-web/dist",
   "routes": [
     {
       "src": "/api/(.*)",
@@ -16,10 +8,13 @@
     },
     {
       "src": "/(.*)",
-      "dest": "gymbro-web/$1"
+      "dest": "/index.html"
     }
   ],
-  "env": {
-    "DATABASE_URL": "@database_url"
-  }
+  "builds": [
+    {
+      "src": "gymbro-api/api/handler.py",
+      "use": "@vercel/python"
+    }
+  ]
 }
