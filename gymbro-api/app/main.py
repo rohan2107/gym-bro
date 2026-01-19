@@ -1,23 +1,12 @@
-from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from .db import init_db
 from .routers import health, food_logs, daily_checkins, weight_entries, workouts, exercise_sets
-
-
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    # Startup
-    init_db()
-    yield
-    # Shutdown (nothing needed yet)
 
 
 def create_app() -> FastAPI:
     app = FastAPI(
         title="Gym Bro API",
-        lifespan=lifespan,
     )
 
     # CORS: Allow frontend from Vercel and local development
@@ -25,8 +14,8 @@ def create_app() -> FastAPI:
         CORSMiddleware,
         allow_origins=[
             "http://localhost:5173",  # Vite dev server
-            "https://*.vercel.app",   # Vercel deployments (wildcard)
-            "*",  # Temporary: allow all for ngrok testing (restrict later)
+            "http://localhost:4173",  # Vite preview
+            "https://*.vercel.app",   # Vercel production & preview
         ],
         allow_credentials=True,
         allow_methods=["*"],
