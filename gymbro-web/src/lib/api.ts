@@ -26,7 +26,9 @@ export type Workout = {
   started_at: string
 }
 
-const API_BASE = '/api'
+// API_BASE: In development uses Vite proxy (/api -> localhost:8000)
+// In production, uses environment variable (ngrok tunnel or deployed backend)
+const API_BASE = import.meta.env.VITE_API_URL || '/api'
 // TODO: replace with real auth token/user id when auth is added.
 const USER_ID = import.meta.env.VITE_USER_ID ?? '1'
 

@@ -1,0 +1,20 @@
+{
+  "buildCommand": "cd gymbro-web && npm install && npm run build",
+  "outputDirectory": "gymbro-web/dist",
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "gymbro-api/api/handler.py"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/index.html"
+    }
+  ],
+  "builds": [
+    {
+      "src": "gymbro-api/api/handler.py",
+      "use": "@vercel/python"
+    }
+  ]
+}
