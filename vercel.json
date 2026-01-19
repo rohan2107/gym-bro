@@ -16,15 +16,14 @@
   "routes": [
     {
       "src": "/api/(.*)",
-      "dest": "/gymbro-api/api/handler.py"
+      "dest": "/api/handler"
     },
     {
-      "src": "/assets/(.*)",
-      "dest": "/gymbro-web/dist/assets/$1"
+      "handle": "filesystem"
     },
     {
       "src": "/(.*)",
-      "dest": "/gymbro-web/dist/index.html"
+      "dest": "/index.html"
     }
   ]
 }
