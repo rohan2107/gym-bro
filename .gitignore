@@ -4,17 +4,25 @@ __pycache__/
 .venv/
 env/
 venv/
+.pytest_cache/
 
 # Project-specific
 gymbro-api/.venv/
 gymbro-api/gymbro.db
 gymbro-api/__pycache__/
+gymbro-api/.pytest_cache/
+
+# Database files
+*.db
+*.db-journal
+gymbro.db
 
 # Node
 node_modules/
 dist/
 .cache/
 *.log
+package-lock.json
 
 # Editor/OS
 .vscode/
@@ -24,3 +32,4 @@ dist/
 # Env files
 .env
 .env.*
+!.env.example
