@@ -187,6 +187,105 @@
 
 ---
 
+### Phase 3C: Energy Balance & Analytics
+**Status**: Planned for Weeks 13-15  
+**Focus**: Science-based weight loss tracking using thermodynamics principles
+
+**Objective**: Track energy in vs energy out to predict and validate weight loss rates
+
+**Scientific Foundation**:
+- Energy Balance = Energy In (food) - Energy Out (TDEE + workouts)
+- ~3500 kcal deficit = 1 lb of fat mass (long-term energy equivalence)
+- Probabilistic diagnosis when observed weight trajectories diverge from expected energy balance
+
+**Key Deliverables**:
+
+**Backend**:
+- [ ] TDEE calculation endpoint: `POST /analytics/tdee`
+  - Mifflin-St Jeor equation (Week 1-2 baseline)
+  - Adaptive learning (Week 3+ based on actual weight change)
+  - Multi-hypothesis evaluation for discrepancies
+- [ ] Strong app import: `POST /imports/strong`
+  - Parse Strong CSV export
+  - LLM-powered calorie burn estimation
+  - Workout calorie cache (reduce API costs)
+- [ ] Energy balance endpoint: `GET /analytics/energy-balance`
+  - Daily energy in/out calculation
+  - Expected vs actual weight change comparison
+- [ ] Consistency analysis: `GET /analytics/validate`
+  - Minimum 3-4 weeks of data required
+  - Ranked hypothesis evaluation (intake bias, TDEE drift, noise)
+  - Probabilistic confidence levels
+- [ ] User profile model (age, gender, height, activity level)
+- [ ] TDEE estimates table (time-series tracking)
+- [ ] Energy balance table (calculated daily)
+- [ ] Workout calorie cache table
+
+**Frontend**:
+- [ ] TDEE Setup Wizard (one-time)
+  - Basic info (age, gender, height, weight)
+  - Activity level selection
+  - Goal setting (lose/maintain/gain)
+  - Initial TDEE calculation
+- [ ] Analytics Dashboard (`/analytics`)
+  - Current status (today's energy balance)
+  - Multi-week trend analysis (minimum 4 weeks)
+  - Expected vs actual weight graph
+  - Daily energy balance chart
+- [ ] Import Strong Workouts
+  - CSV upload interface
+  - Review calorie estimates
+  - Confirm/edit before saving
+- [ ] Data Validation Alerts
+  - Trajectory divergence insights
+  - Ranked explanations (not accusations)
+  - Suggested review areas
+  - Graceful degradation with incomplete data
+
+**AI/LLM Integration**:
+- [ ] Workout calorie estimation: `POST /ai/estimate-workout-calories`
+  - GPT-4/Claude for complex weightlifting
+  - MET database fallback for standard cardio
+  - User override support
+  - 30-day caching strategy (80% cost reduction)
+
+**TDEE Algorithm**:
+- Week 1-2: Mifflin-St Jeor baseline (±300 cal error expected)
+- Week 3+: Adaptive adjustment based on actual data
+- Smoothed with 2-week moving average
+- Maximum ±10% adjustment per week
+
+**Validation & Analytics**:
+- [ ] Minimum 3-4 weeks data requirement
+- [ ] Smoothed weight trend vs cumulative energy balance
+- [ ] Multi-hypothesis ranking (intake bias, TDEE drift, physiological masking)
+- [ ] Confidence scoring (low/moderate/high)
+- [ ] Diagnostic language (review and consider, not fix)
+
+**Success Criteria**:
+- System requires minimum data before analysis (prevents noise amplification)
+- TDEE adapts to actual weight loss rate within 3-4 weeks
+- Strong workouts import successfully (95%+ parse rate)
+- Multi-hypothesis evaluation provides actionable insights
+- Analytics remain optional and non-blocking
+- Language emphasizes uncertainty and review (not prescription)
+
+**Portfolio Impact**: ⭐⭐⭐⭐ Demonstrates:
+- Scientific rigor and thermodynamics understanding
+- Probabilistic inference and latent variable modeling
+- Adaptive algorithms (not just static formulas)
+- Data validation and quality assessment
+- LLM integration for domain-specific tasks
+- Graceful degradation with incomplete data
+
+**Cost**: ~$0.12/user/month (LLM estimates), reduces to $0.02 after month 1 with caching
+
+**Time Estimate**: 2-3 weeks
+
+**Documentation**: See [ENERGY_BALANCE_SPEC.md](ENERGY_BALANCE_SPEC.md) for complete technical specification
+
+---
+
 ### Phase 4: AI Meal Photo Logging
 
 **Goal**: Auto-log meals from photos using Google Cloud Vision API
@@ -224,7 +323,8 @@ See detailed implementation plan in later phases.
 - 🔄 Google OAuth authentication (Phase 2)
 
 **Upcoming**:
-- ⏳ Testing and stability (Phase 3)
+- ⏳ Testing and stability (Phase 3A-3B)
+- ⏳ Energy balance & analytics (Phase 3C)
 - ⏳ AI meal photo logging (Phase 4)
 User confirms or adjusts
     ↓
@@ -290,18 +390,21 @@ FoodLog created with AI data
 ---
 
 ### **Phase 3C: Energy Balance & Analytics (Weeks 13–15)**
-**Focus**: Weight loss science - thermodynamics-based energy balance tracking**
+**Status**: Planned  
+**Focus**: Science-based weight loss tracking using thermodynamics principles
 
-**Core Concept**: Track energy in vs energy out to predict and validate weight loss rates
+**Core Concept**: Track energy balance using thermodynamics as an invariant, with probabilistic analysis of discrepancies
 
-**Deliverables**:
-- [ ] TDEE (Total Daily Energy Expenditure) estimation algorithm
-- [ ] Strong app workout import (CSV/API)
-- [ ] LLM-powered calorie burn estimation for workouts
-- [ ] Energy balance calculation (TDEE - calories consumed)
-- [ ] Expected weight loss rate calculator
-- [ ] Analytics dashboard showing predicted vs actual weight loss
-- [ ] Discrepancy detection & user alerts
+**Key Features**:
+- [ ] TDEE estimation (Mifflin-St Jeor baseline + adaptive learning)
+- [ ] Strong app workout import with CSV parsing
+- [ ] LLM-powered calorie burn estimation (GPT-4/Claude)
+- [ ] Workout calorie caching (80% cost reduction)
+- [ ] Energy balance calculation and tracking
+- [ ] Multi-week trend analysis (minimum 3-4 weeks data)
+- [ ] Multi-hypothesis discrepancy evaluation
+- [ ] Analytics dashboard with probabilistic insights
+- [ ] Graceful degradation with incomplete data
 
 **Backend Features**:
 - [ ] TDEE calculation endpoint: `POST /analytics/tdee`
@@ -415,13 +518,13 @@ FoodLog created with AI data
 
 | Week | Milestone | Status | Notes |
 |------|-----------|--------|-------|
-| 1–3 | Mobile UX done, using app daily | ⏳ | You're the first user |
-| 2–3 | Deployed to Vercel | ⏳ | Live on internet |
-| 4–6 | Google SSO working | ⏳ | Friends can log in |
-| 7–8 | Stable + tested | ⏳ | Ready for AI |
-| 9–12 | AI meal photos | ⏳ | Differentiated feature |
-| 13–15 | Energy balance & analytics | ⏳ | Science-based weight loss |
-| 12+ | Portfolio-ready | ⏳ | Interview talking points |
+| 1–3 | Mobile UX done, using app daily | ✅ Complete | You're the first user |
+| 2–3 | Deployed to Vercel | ✅ Complete | Live on internet |
+| 4–6 | Google SSO working | ⏳ Next Phase | Friends can log in |
+| 7–8 | Stable + tested | ⏳ Planned | Ready for advanced features |
+| 9–12 | AI meal photos | ⏳ Planned | Differentiated feature |
+| 13–15 | Energy balance & analytics | ⏳ Planned | Science-based weight loss |
+| 15+ | Portfolio-ready | ⏳ Goal | Interview talking points |
 
 ---
 
@@ -444,12 +547,13 @@ This order ensures:
 
 ## 📚 Documentation (We've Created)
 
-1. **PHASE1_PLAN.md** — This roadmap
+1. **IMPLEMENTATION_ROADMAP.md** — This roadmap (12-week development plan)
 2. **MOBILE_UI_SPEC.md** — Mobile design specifications
 3. **DEPLOYMENT_GUIDE.md** — Vercel + Neon setup (step-by-step)
 4. **GOOGLE_OAUTH_SETUP.md** — Google OAuth setup (step-by-step)
-5. **STRATEGIC_ROADMAP.md** — High-level phases (reference)
-6. **PROJECT_ASSESSMENT.md** — Risk assessment + tech evaluation
+5. **ENERGY_BALANCE_SPEC.md** — Energy balance & analytics specification (Phase 3C)
+6. **ARCHITECTURE.md** — System architecture and technical decisions
+7. **MVP_STATUS.md** — Current status and features
 
 ---
 

@@ -197,9 +197,9 @@
 **Phase 3 - Advanced Features**:
 - Photo upload and Google Cloud Vision integration
 - AI meal photo analysis with calorie estimation
-- Energy balance tracking (TDEE, weight predictions)
-- Strong app workout import
-- Analytics dashboard
+- Energy balance tracking (TDEE, adaptive learning, analytics)
+- Strong app workout import with LLM calorie estimation
+- Multi-hypothesis discrepancy analysis
 
 **Phase 4 - Integrations**:
 - Apple Health, Strava, MyFitnessPal
