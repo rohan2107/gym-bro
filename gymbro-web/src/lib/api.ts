@@ -29,18 +29,23 @@ export type Workout = {
 // API_BASE: In development uses Vite proxy (/api -> localhost:8000)
 // In production, uses environment variable (ngrok tunnel or deployed backend)
 const API_BASE = import.meta.env.VITE_API_URL || '/api'
-// TODO: replace with real auth token/user id when auth is added.
-const USER_ID = import.meta.env.VITE_USER_ID ?? '1'
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, {
     ...options,
+    credentials: 'include', // Send cookies for authentication
     headers: {
       'Content-Type': 'application/json',
-      'X-User-Id': USER_ID,
       ...(options.headers || {}),
     },
   })
+
+  // Handle authentication errors
+  if (res.status === 401) {
+    // Redirect to login page
+    window.location.href = '/login'
+    throw new Error('Authentication required')
+  }
 
   if (!res.ok) {
     const message = await res.text()

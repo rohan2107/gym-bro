@@ -8,25 +8,27 @@
 
 ## 🔬 Scientific Foundation
 
-### Core Principle: Thermodynamics
+### Core Principle: Thermodynamics as Invariant
 - **Energy Balance** = Energy In (food) - Energy Out (TDEE)
-- **3500 calories** = 1 lb of body fat
-- **500 cal/day deficit** = 1 lb/week weight loss
-- **Validation**: If actual weight change doesn't match predicted, data has errors
+- **~3500 kcal/lb** (~7700 kcal/kg) of fat mass as **long-term energy equivalence**
+  - Valid for cumulative energy imbalance over weeks
+  - **Not** a short-term weight prediction model
+- **Weight is a noisy proxy**: Short-term fluctuations dominated by water, glycogen, and gut content
+- **Probabilistic Diagnosis**: When observed weight trajectories diverge from expected energy balance over sufficient time horizons (multi-week), the system probabilistically evaluates which assumptions (intake tracking, expenditure estimation, measurement noise, or physiological masking) are most inconsistent with the data
 
 ---
 
 ## 📊 System Architecture
 
-### 1. TDEE Estimation (Adaptive Algorithm)
+### 1. TDEE Estimation (Latent Variable Inference)
 
-**Initial Estimate (Week 1-2)**:
+**Initial Prior (Week 1-2)**:
 ```
-Mifflin-St Jeor Equation:
+Mifflin-St Jeor Equation (starting estimate):
 BMR (males) = 10×weight(kg) + 6.25×height(cm) - 5×age + 5
 BMR (females) = 10×weight(kg) + 6.25×height(cm) - 5×age - 161
 
-TDEE = BMR × Activity Multiplier:
+TDEE_prior = BMR × Activity Multiplier:
 - Sedentary (1.2): Little/no exercise
 - Light (1.375): Exercise 1-3 days/week
 - Moderate (1.55): Exercise 3-5 days/week
@@ -34,25 +36,33 @@ TDEE = BMR × Activity Multiplier:
 - Very Active (1.9): Athlete/physical job
 ```
 
-**Adaptive Learning (Week 3+)**:
+**Latent Variable Framework (Multi-Week Analysis)**:
 ```python
-# Calculate actual TDEE from observed data
-actual_weight_change_lbs = current_weight - weight_2_weeks_ago
-calories_deficit = actual_weight_change_lbs * 3500 / 14  # daily deficit
-actual_TDEE = avg_calories_consumed + calories_deficit
+# Three latent variables contributing to divergence:
+# 1. Intake bias (under/over-reporting)
+# 2. Expenditure estimation error
+# 3. Weight noise (water, glycogen, measurement)
 
-# Smooth with moving average (prevent noise)
-TDEE_estimate = 0.7 * previous_TDEE + 0.3 * actual_TDEE
+# Use smoothed, cumulative signals (minimum 3-4 weeks)
+smoothed_weight_change = moving_avg(weights, window=14) - moving_avg(weights_4wks_ago, window=14)
+cumulative_energy_balance = sum(daily_balance for 28 days)
 
-# Constrain to prevent wild swings
-TDEE_estimate = clamp(previous_TDEE * 0.9, TDEE_estimate, previous_TDEE * 1.1)
+# Expected fat mass change (long-term equivalence)
+expected_fat_change_lbs = cumulative_energy_balance / 3500
+
+# Divergence triggers probabilistic evaluation, NOT automatic correction
+divergence = smoothed_weight_change - expected_fat_change_lbs
+
+# TDEE is one possible explanation, not the primary correction target
+if abs(divergence) > threshold:
+    evaluate_hypotheses([intake_bias, tdee_error, noise, combined])
 ```
 
-**Why Adaptive**:
+**Why Latent Variables**:
 - Static formulas have ±300 cal error (15-20%)
-- Metabolism varies person-to-person
-- Non-Exercise Activity Thermogenesis (NEAT) varies widely
-- Converges to personal TDEE in 3-4 weeks
+- Intake tracking has systematic bias (typically 10-30% underreporting)
+- Weight reflects multiple physiological systems, not just fat
+- System diagnoses inconsistency, does not claim deterministic correction
 
 ---
 
@@ -154,46 +164,83 @@ expected_weight_change_lbs = weekly_deficit / 3500
 
 ---
 
-### 5. Data Validation & Alerts
+### 5. Probabilistic Consistency Analysis
 
-**Discrepancy Detection**:
+**Time Horizon Requirements**:
+- **Analysis window**: Minimum 3-4 weeks of data
+- **Daily values**: Diagnostic inputs, not evaluative outputs
+- **Comparison surface**: Cumulative energy balance vs smoothed weight trend
+- Short-term weight fluctuations (±2-4 lbs) are physiologically normal and ignored
+
+**Multi-Hypothesis Evaluation**:
 ```python
-expected_change = weekly_deficit / 3500  # lbs
-actual_change = current_weight - weight_last_week
+# Require sufficient data (minimum 3-4 weeks)
+if weeks_of_data < 3:
+    return {"status": "insufficient_data", "confidence": "low"}
 
-error_pct = abs(expected - actual) / abs(expected)
+# Smooth signals to remove noise
+smoothed_weight_trend = exponential_moving_avg(weights, alpha=0.3)
+cumulative_deficit = sum(daily_energy_balance for 28 days)
 
-if error_pct > 0.2:  # >20% off
-    if actual < expected:
-        # Losing faster than expected
-        possible_causes = [
-            "Underreporting food intake",
-            "TDEE estimate too low",
-            "Increased activity not logged"
-        ]
-    else:
-        # Losing slower than expected
-        possible_causes = [
-            "Overreporting food portions",
-            "TDEE estimate too high",
-            "Water retention (temporary)"
-        ]
-    
-    alert_user(possible_causes)
+# Expected vs observed (long-term)
+expected_fat_loss_lbs = cumulative_deficit / 3500
+observed_weight_change = smoothed_weight_trend[-1] - smoothed_weight_trend[-28]
+
+divergence = observed_weight_change - expected_fat_loss_lbs
+
+# Evaluate hypotheses (ranked by likelihood given data)
+hypotheses = [
+    {
+        "explanation": "Intake underreporting",
+        "likelihood": calculate_intake_bias_likelihood(divergence, tracking_patterns),
+        "evidence": "Typical systematic bias in food logging"
+    },
+    {
+        "explanation": "TDEE estimate drift",
+        "likelihood": calculate_tdee_error_likelihood(divergence, activity_changes),
+        "evidence": "Activity level or NEAT may have changed"
+    },
+    {
+        "explanation": "Temporary physiological masking",
+        "likelihood": calculate_noise_likelihood(divergence, weight_variance),
+        "evidence": "Water retention, hormonal cycle, or measurement variance"
+    },
+    {
+        "explanation": "Combined moderate errors",
+        "likelihood": calculate_combined_likelihood(divergence),
+        "evidence": "Multiple small biases compounding"
+    }
+]
+
+ranked_hypotheses = sort_by_likelihood(hypotheses)
+
+if max_likelihood < 0.6:
+    confidence_level = "low - continue logging"
+elif max_likelihood < 0.8:
+    confidence_level = "moderate - review suggested areas"
+else:
+    confidence_level = "high - likely explanation identified"
+
+return {
+    "hypotheses": ranked_hypotheses,
+    "confidence": confidence_level,
+    "action": "review_and_consider"  # never "correct" or "fix"
+}
 ```
 
-**Confidence Score**:
+**Data Completeness Score**:
 ```python
-# Data completeness
-days_logged = count(food_logs in week)
-workouts_logged = count(workouts in week)
-weights_logged = count(weight_checkins in week)
+# Minimum viable data for meaningful analysis
+min_days_logged = 20 / 28  # ~70% of days
+min_weights = 4 / 4  # weekly weigh-ins
 
-completeness = (days_logged + workouts_logged + weights_logged) / 21
-confidence = completeness * (1 - error_pct)
+completeness = (
+    (days_logged / 28) * 0.6 +
+    (weights_logged / 4) * 0.4
+)
 
-if confidence < 0.5:
-    warning = "Low confidence - log more data for accurate predictions"
+if completeness < 0.7:
+    return {"status": "incomplete_data", "message": "Log more consistently for insights"}
 ```
 
 ---
@@ -208,23 +255,28 @@ if confidence < 0.5:
 │  Energy Balance - Today                     │
 │  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━   │
 │  ▓▓▓▓▓▓▓▓▓▓ 1,842 cal  (Food In)           │
-│  ░░░░░░░░░░░░░ 2,100 cal (TDEE)            │
+│  ░░░░░░░░░░░░░ 2,100 cal (TDEE Est.)       │
 │  ▓ 320 cal (Workout)                        │
 │  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━   │
-│  Deficit: 578 calories ✓                    │
-│  Expected: -0.08 lbs today                  │
+│  Today's Deficit: 578 calories              │
+│                                             │
+│  Week Total: 3,346 cal deficit              │
+│  (contributes ~1.0 lb to long-term trend)   │
 └─────────────────────────────────────────────┘
 ```
 
-**Middle Section - Weekly Trend**:
+**Middle Section - Multi-Week Trend** (minimum 4 weeks data):
 ```
 ┌─────────────────────────────────────────────┐
-│  This Week (Jan 6 - Jan 13)                 │
+│  Last 4 Weeks (Dec 16 - Jan 13)             │
 │  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━   │
 │  Avg Daily Deficit: 485 cal                 │
-│  Expected Loss: 0.97 lbs                    │
-│  Actual Loss: 1.2 lbs                       │
-│  Confidence: 87% ✓                          │
+│  Cumulative Deficit: 13,580 cal             │
+│  Expected Fat Loss: 3.9 lbs                 │
+│  Smoothed Weight Change: 4.2 lbs            │
+│  Consistency: High ✓                        │
+│                                             │
+│  Note: Short-term fluctuations normal       │
 └─────────────────────────────────────────────┘
 ```
 
@@ -307,20 +359,24 @@ your actual results over the next 2-3 weeks.
 
 ### Data Validation Alerts
 
-**Discrepancy Banner**:
+**Consistency Analysis Banner**:
 ```
 ┌─────────────────────────────────────────────┐
-│  ⚠️ Data Mismatch Detected                   │
+│  💡 Insight: Trajectory Divergence           │
 │  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━   │
-│  You lost 1.8 lbs this week, but your       │
-│  energy balance suggests 1.0 lb.            │
+│  Over the last 4 weeks, your weight trend   │
+│  diverges from energy balance by ~1.2 lbs.  │
 │                                             │
-│  Possible causes:                           │
-│  • Underreporting food intake               │
-│  • TDEE estimate too low                    │
-│  • Increased activity not logged            │
+│  Likely explanations (ranked):              │
+│  • 68% - Intake tracking drift              │
+│  • 22% - Activity level increase            │
+│  • 10% - Temporary water loss               │
 │                                             │
-│  [Review Food Logs] [Adjust TDEE]           │
+│  Suggested review areas:                    │
+│  • Portion sizes in recent logs             │
+│  • Unlogged snacks or drinks                │
+│                                             │
+│  [Review Recent Logs] [Dismiss]             │
 └─────────────────────────────────────────────┘
 ```
 
@@ -446,23 +502,76 @@ CREATE TABLE workout_calorie_cache (
 
 ## 🎯 Success Metrics
 
-**Validation**:
-- [ ] Predicted weight loss within ±10% of actual (after 4 weeks of data)
-- [ ] TDEE estimate converges within ±5% by week 4
+**System Integrity**:
+- [ ] Consistency analysis requires minimum 3-4 weeks of data (prevents noise amplification)
+- [ ] Weight smoothing filters out physiological noise (±2-4 lb swings ignored)
 - [ ] Strong import successfully parses 95%+ of workouts
-- [ ] LLM calorie estimates within ±20% of measured values (heart rate monitor)
+- [ ] Multi-hypothesis evaluation provides ranked explanations
+- [ ] System gracefully degrades with incomplete data
 
 **User Experience**:
 - [ ] Setup wizard completed in <3 minutes
 - [ ] Energy balance dashboard loads in <1 second
 - [ ] Import Strong CSV in <30 seconds (100 workouts)
-- [ ] Discrepancy alerts are actionable (not false positives)
+- [ ] Insights are diagnostic and actionable (not accusatory)
+- [ ] Analytics remain optional and non-blocking to core app usage
+
+**Diagnostic Quality** (qualitative validation):
+- [ ] Hypothesis rankings align with known tracking patterns
+- [ ] System acknowledges uncertainty when data insufficient
+- [ ] Language emphasizes review and consideration, not correction
 
 **Portfolio Showcase**:
 - [ ] Demonstrate adaptive algorithm (before/after TDEE adjustment)
 - [ ] Show data validation catching tracking errors
 - [ ] Explain thermodynamics principles in interview
 - [ ] Analytics dashboard screenshot for resume/portfolio
+
+---
+
+## 🏗️ System Design Principles
+
+### Constraints That Preserve Integrity
+
+1. **Minimum Time Horizon**: No analysis with <3 weeks of data
+   - Prevents noise amplification
+   - Ensures physiological signal dominates measurement noise
+
+2. **Thermodynamics as Invariant**: Energy balance is never "wrong"
+   - Weight divergence triggers hypothesis evaluation
+   - System never claims to "know" which variable is incorrect
+
+3. **Probabilistic Output**: All insights include uncertainty
+   - Ranked explanations, not singular answers
+   - Confidence levels communicated clearly
+
+4. **Optional and Non-Blocking**: Analytics degrade gracefully
+   - Core app (logging, workouts) remains functional
+   - Insights appear when sufficient data available
+   - Missing data shows guidance, not errors
+
+5. **Diagnostic, Not Prescriptive**: Language matters
+   - "Consider reviewing" vs "You are wrong"
+   - "Likely explanation" vs "The problem is"
+   - "Insufficient data" vs "Invalid data"
+
+### What This System Does NOT Do
+
+- ❌ Claim to predict daily weight changes
+- ❌ Automatically "correct" TDEE or intake values
+- ❌ Blame users for normal physiological variance
+- ❌ Provide deterministic answers to multi-factorial questions
+- ❌ Model hormones, metabolism adaptation, or body composition
+- ❌ Require perfect logging to provide value
+
+### What This System DOES Do
+
+- ✅ Highlight inconsistencies over multi-week horizons
+- ✅ Suggest probable areas for user review
+- ✅ Acknowledge uncertainty and noise
+- ✅ Respect thermodynamics as a constraint
+- ✅ Provide value with incomplete data
+- ✅ Maintain academic and scientific defensibility
 
 ---
 
@@ -481,11 +590,17 @@ CREATE TABLE workout_calorie_cache (
 ## 🎓 Learning Outcomes
 
 By building this feature, you'll learn:
-- **Adaptive algorithms**: Self-correcting systems that learn from data
-- **Data validation**: Detecting anomalies and providing feedback
-- **Domain knowledge**: Applied thermodynamics and nutrition science
-- **LLM integration**: Using AI for domain-specific estimation tasks
-- **CSV parsing**: Handling external data imports
-- **User feedback loops**: Helping users correct their own tracking errors
+- **Probabilistic inference**: Multi-hypothesis evaluation with uncertainty quantification
+- **Latent variable modeling**: Reasoning about unmeasured factors (intake bias, TDEE drift)
+- **Constraint-aware systems**: Treating thermodynamics as a hard invariant
+- **Signal processing**: Smoothing noisy measurements to extract trends
+- **Domain knowledge**: Applied thermodynamics and physiological confounders
+- **LLM integration**: Using AI for domain-specific estimation tasks (with uncertainty)
+- **Diagnostic design**: Building systems that explain, not prescribe
+- **Graceful degradation**: Optional analytics that remain valuable with incomplete data
 
-**Portfolio value**: This is the differentiator. Shows you can build intelligent systems that validate themselves and help users improve data quality.
+**Portfolio value**: This differentiates through **scientific rigor and restraint**. Demonstrates ability to:
+- Build systems that acknowledge uncertainty
+- Apply invariant-preserving inference
+- Design diagnostic tools that avoid false confidence
+- Balance product pragmatism with academic defensibility

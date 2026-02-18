@@ -2,7 +2,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from .routers import health, food_logs, daily_checkins, weight_entries, workouts, exercise_sets
+from .routers import health, food_logs, daily_checkins, weight_entries, workouts, exercise_sets, auth
 from .db import init_db
 
 
@@ -40,6 +40,7 @@ def create_app() -> FastAPI:
 
     # Include routers
     app.include_router(health.router)
+    app.include_router(auth.router)
     app.include_router(food_logs.router)
     app.include_router(daily_checkins.router)
     app.include_router(weight_entries.router)
