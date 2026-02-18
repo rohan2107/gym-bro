@@ -1,6 +1,7 @@
 """Authentication router for Google OAuth and JWT management."""
 
 from fastapi import APIRouter, Cookie, HTTPException, Response, Depends, status
+from fastapi.responses import RedirectResponse
 from sqlmodel import Session, select
 import httpx
 from google.oauth2 import id_token
@@ -12,7 +13,7 @@ from app.models import User
 from app.auth_utils import create_jwt, verify_jwt
 from app.config import settings
 
-router = APIRouter()
+router = APIRouter(prefix="/auth", tags=["auth"])
 
 # OAuth Configuration
 GOOGLE_CLIENT_ID = settings.GOOGLE_CLIENT_ID
@@ -70,7 +71,7 @@ async def google_login():
     """
     Initiate Google OAuth flow.
     
-    Returns the Google authorization URL for redirect.
+    Redirects to Google authorization URL.
     """
     if not GOOGLE_CLIENT_ID:
         raise HTTPException(
@@ -91,14 +92,13 @@ async def google_login():
     
     google_auth_url = f"https://accounts.google.com/o/oauth2/v2/auth?{urlencode(params)}"
     
-    return {"url": google_auth_url}
+    return RedirectResponse(url=google_auth_url)
 
 
 @router.get("/google/callback")
 async def google_callback(
     code: str,
-    session: Session = Depends(get_session),
-    response: Response = None
+    session: Session = Depends(get_session)
 ):
     """
     Handle Google OAuth callback.
@@ -126,7 +126,11 @@ async def google_callback(
     
     try:
         async with httpx.AsyncClient() as client:
-            token_response = await client.post(token_url, data=token_data)
+            token_response = await client.post(
+                token_url,
+                data=token_data,
+                headers={"Content-Type": "application/x-www-form-urlencoded"}
+            )
             token_response.raise_for_status()
             tokens = token_response.json()
         
@@ -156,12 +160,17 @@ async def google_callback(
                 detail="Email not provided by Google"
             )
         
-        # Find or create user
+        # Find or create user - first check by google_id, then by email
         statement = select(User).where(User.google_id == google_id)
         user = session.exec(statement).first()
         
         if not user:
-            # Create new user
+            # Not found by google_id, check by email (account linking)
+            statement = select(User).where(User.email == email)
+            user = session.exec(statement).first()
+        
+        if not user:
+            # Create completely new user
             user = User(
                 google_id=google_id,
                 email=email,
@@ -172,7 +181,8 @@ async def google_callback(
             session.commit()
             session.refresh(user)
         else:
-            # Update existing user info
+            # Update existing user with Google info
+            user.google_id = google_id
             user.email = email
             user.display_name = display_name
             user.picture_url = picture_url
@@ -184,6 +194,19 @@ async def google_callback(
         token = create_jwt(user.id)
         is_production = "vercel.app" in FRONTEND_URL or "https://" in FRONTEND_URL
         
+        # Create response with cookie
+        from fastapi.responses import JSONResponse
+        response_data = {
+            "message": "Authentication successful",
+            "user": {
+                "id": user.id,
+                "email": user.email,
+                "display_name": user.display_name
+            },
+            "redirect_url": FRONTEND_URL
+        }
+        
+        response = JSONResponse(content=response_data)
         response.set_cookie(
             key="auth_token",
             value=token,
@@ -194,16 +217,14 @@ async def google_callback(
             path="/"
         )
         
-        return {
-            "message": "Authentication successful",
-            "user": {
-                "id": user.id,
-                "email": user.email,
-                "display_name": user.display_name
-            },
-            "redirect_url": FRONTEND_URL
-        }
+        return response
         
+    except httpx.HTTPStatusError as e:
+        error_detail = e.response.text if hasattr(e.response, 'text') else str(e)
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Failed to exchange authorization code: {error_detail}"
+        )
     except httpx.HTTPError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

@@ -1,29 +1,25 @@
 import { useEffect } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
-import { useAuth } from '../contexts/AuthContext'
 
 export default function AuthCallbackPage() {
-  const [searchParams] = useSearchParams()
-  const navigate = useNavigate()
-  const { checkAuth } = useAuth()
 
   useEffect(() => {
+    // Get code/error once on mount only
+    const code = new URLSearchParams(window.location.search).get('code')
+    const error = new URLSearchParams(window.location.search).get('error')
+
+    if (error) {
+      console.error('OAuth error:', error)
+      window.location.href = '/login?error=' + error
+      return
+    }
+
+    if (!code) {
+      console.error('No authorization code received')
+      window.location.href = '/login?error=no_code'
+      return
+    }
+
     const handleCallback = async () => {
-      const code = searchParams.get('code')
-      const error = searchParams.get('error')
-
-      if (error) {
-        console.error('OAuth error:', error)
-        navigate('/login?error=' + error)
-        return
-      }
-
-      if (!code) {
-        console.error('No authorization code received')
-        navigate('/login?error=no_code')
-        return
-      }
-
       try {
         // Call backend callback endpoint
         const res = await fetch(`/api/auth/google/callback?code=${code}`, {
@@ -34,23 +30,21 @@ export default function AuthCallbackPage() {
         })
 
         if (res.ok) {
-          // Refresh auth state
-          await checkAuth()
-          // Redirect to home
-          navigate('/')
+          // Full page reload to /profile - ensures clean state and no re-renders
+          window.location.href = '/profile'
         } else {
           const error = await res.text()
           console.error('Callback failed:', error)
-          navigate('/login?error=callback_failed')
+          window.location.href = '/login?error=callback_failed'
         }
       } catch (error) {
         console.error('Callback error:', error)
-        navigate('/login?error=network_error')
+        window.location.href = '/login?error=network_error'
       }
     }
 
     handleCallback()
-  }, [searchParams, navigate, checkAuth])
+  }, [])
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
