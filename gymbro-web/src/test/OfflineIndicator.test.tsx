@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, act } from '@testing-library/react'
 import { OfflineIndicator } from '../components/OfflineIndicator'
 
 describe('OfflineIndicator', () => {
@@ -78,7 +78,7 @@ describe('OfflineIndicator', () => {
     expect(container.firstChild).toBeNull()
     
     // Simulate going offline by dispatching event
-    await vi.waitFor(() => {
+    await act(async () => {
       window.dispatchEvent(new Event('offline'))
     })
     
@@ -100,7 +100,7 @@ describe('OfflineIndicator', () => {
     expect(screen.getByRole('alert')).toBeInTheDocument()
     
     // Simulate coming back online
-    await vi.waitFor(() => {
+    await act(async () => {
       window.dispatchEvent(new Event('online'))
     })
     
