@@ -518,10 +518,10 @@ To handle 1000+ users:
 
 ## 🔗 Related Documentation
 
-- **IMPLEMENTATION_ROADMAP.md**: 12-week plan
-- **DEPLOYMENT_GUIDE.md**: Step-by-step Vercel setup
-- **GOOGLE_OAUTH_SETUP.md**: OAuth implementation
-- **MOBILE_UI_SPEC.md**: Frontend design specifications
+- **IMPLEMENTATION_ROADMAP.md**: Development roadmap and phases
+- **GOOGLE_OAUTH_SETUP.md**: OAuth implementation guide
+- **TESTING_GUIDE.md**: Testing reference and commands
+- **docs/archive/**: Historical phase documentation
 
 ---
 

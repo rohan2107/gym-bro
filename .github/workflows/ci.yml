@@ -1,14 +1,18 @@
-name: CI
+name: CI/CD Pipeline
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, develop ]
   pull_request:
-    branches: [ main ]
+    branches: [ main, develop ]
+
+env:
+  PYTHON_VERSION: '3.11'
+  NODE_VERSION: '20'
 
 jobs:
-  backend:
-    name: Backend Checks
+  backend-tests:
+    name: Backend Tests
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -18,10 +22,10 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
       
-      - name: Setup Python 3.11
+      - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: ${{ env.PYTHON_VERSION }}
           cache: 'pip'
           cache-dependency-path: 'gymbro-api/requirements.txt'
       
@@ -29,21 +33,46 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
+          pip install pytest-cov
       
-      - name: Check Python syntax
-        run: python -m py_compile app/**/*.py
-      
-      - name: Verify imports
+      - name: Run tests with coverage
+        env:
+          JWT_SECRET_KEY: test-secret-key-for-ci
         run: |
-          python -c "from app.main import app; print('✓ App imports successfully')"
-          python -c "from app.models import User; print('✓ Models import successfully')"
-          python -c "from app.auth_utils import create_jwt; print('✓ Auth utils import successfully')"
+          pytest -v --tb=short --cov=app --cov-report=term --cov-report=xml
       
-      - name: Run tests (non-DB)
-        run: pytest tests/ -v --ignore-glob="**/test_*_integration.py" || echo "No tests to run"
+      - name: Upload coverage
+        uses: codecov/codecov-action@v4
+        with:
+          files: ./gymbro-api/coverage.xml
+          flags: backend
+          name: backend-coverage
+          fail_ci_if_error: false
 
-  frontend:
-    name: Frontend Checks
+  backend-lint:
+    name: Backend Linting
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: gymbro-api
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      
+      - name: Install ruff
+        run: pip install ruff
+      
+      - name: Run ruff
+        run: ruff check app/ tests/ --output-format=github
+
+  frontend-tests:
+    name: Frontend Tests
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -56,23 +85,105 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
           cache-dependency-path: 'gymbro-web/package-lock.json'
       
       - name: Install dependencies
         run: npm ci
       
-      - name: Type check
+      - name: Run tests
+        run: npm test -- --run --reporter=verbose
+      
+      - name: Run tests with coverage
+        run: npm test -- --run --coverage
+      
+      - name: Upload coverage
+        uses: codecov/codecov-action@v4
+        with:
+          files: ./gymbro-web/coverage/coverage-final.json
+          flags: frontend
+          name: frontend-coverage
+          fail_ci_if_error: false
+
+  frontend-lint:
+    name: Frontend Linting
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: gymbro-web
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: 'gymbro-web/package-lock.json'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Run ESLint
+        run: npm run lint
+
+  frontend-typecheck:
+    name: Frontend Type Checking
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: gymbro-web
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: 'gymbro-web/package-lock.json'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Run TypeScript compiler
+        run: npm run type-check
+
+  frontend-build:
+    name: Frontend Build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: gymbro-web
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: 'gymbro-web/package-lock.json'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Build
         run: npm run build
       
-      - name: Check for console.log
-        run: |
-          if grep -r "console.log" src/ --exclude-dir=node_modules --exclude="*.min.js" 2>/dev/null; then
-            echo "⚠️  Warning: console.log found in source files"
-          else
-            echo "✓ No console.log in source"
-          fi
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-build
+          path: gymbro-web/dist
+          retention-days: 7
 
   vercel-config:
     name: Verify Deployment Config
@@ -115,3 +226,26 @@ jobs:
           echo "Testing preview at: ${{ steps.vercel-preview.outputs.url }}"
           curl -f "${{ steps.vercel-preview.outputs.url }}/api/health" || exit 1
           echo "✓ Preview deployment is healthy"
+
+  all-checks-passed:
+    name: All Checks Passed
+    needs: [backend-tests, backend-lint, frontend-tests, frontend-lint, frontend-typecheck, frontend-build, vercel-config]
+    runs-on: ubuntu-latest
+    if: always()
+    
+    steps:
+      - name: Check if all jobs succeeded
+        run: |
+          if [[ "${{ needs.backend-tests.result }}" == "success" && \
+                "${{ needs.backend-lint.result }}" == "success" && \
+                "${{ needs.frontend-tests.result }}" == "success" && \
+                "${{ needs.frontend-lint.result }}" == "success" && \
+                "${{ needs.frontend-typecheck.result }}" == "success" && \
+                "${{ needs.frontend-build.result }}" == "success" && \
+                "${{ needs.vercel-config.result }}" == "success" ]]; then
+            echo "✅ All checks passed!"
+            exit 0
+          else
+            echo "❌ Some checks failed"
+            exit 1
+          fi
