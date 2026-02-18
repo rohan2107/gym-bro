@@ -1,39 +1,7 @@
+"""Tests for daily check-ins router."""
+
 from datetime import date
-
-import pytest
 from fastapi.testclient import TestClient
-from sqlmodel import SQLModel, Session, create_engine
-from sqlalchemy.pool import StaticPool
-
-from app.main import create_app
-from app.db import get_session
-
-
-@pytest.fixture()
-def client():
-    # Shared in-memory SQLite (single connection)
-    engine = create_engine(
-        "sqlite://",
-        connect_args={"check_same_thread": False},
-        poolclass=StaticPool,
-    )
-
-    # Import models BEFORE create_all (register tables)
-    from app import models  # noqa: F401
-
-    SQLModel.metadata.create_all(engine)
-
-    def override_get_session():
-        with Session(engine) as session:
-            yield session
-
-    app = create_app()
-    app.dependency_overrides[get_session] = override_get_session
-
-    with TestClient(app) as c:
-        yield c
-
-    SQLModel.metadata.drop_all(engine)
 
 
 def test_health(client: TestClient):

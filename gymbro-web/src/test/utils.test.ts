@@ -32,6 +32,22 @@ describe('formatRelativeDateTime', () => {
     expect(result).toContain('at')
   })
 
+  it('formats yesterday dates correctly', () => {
+    const yesterday = new Date()
+    yesterday.setDate(yesterday.getDate() - 1)
+    const result = formatRelativeDateTime(yesterday.toISOString())
+    expect(result).toContain('Yesterday at')
+  })
+
+  it('includes year for dates in different year', () => {
+    const lastYear = new Date()
+    lastYear.setFullYear(lastYear.getFullYear() - 1)
+    lastYear.setMonth(5) // June
+    const result = formatRelativeDateTime(lastYear.toISOString())
+    expect(result).toMatch(/\d{4}/) // Should contain a year
+    expect(result).toContain('at')
+  })
+
   it('formats future dates correctly', () => {
     const futureDate = new Date()
     futureDate.setFullYear(futureDate.getFullYear() + 1)

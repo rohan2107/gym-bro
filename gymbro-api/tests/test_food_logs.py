@@ -1,38 +1,6 @@
 """Tests for food logs router."""
 
-import pytest
 from fastapi.testclient import TestClient
-from sqlmodel import SQLModel, Session, create_engine
-from sqlalchemy.pool import StaticPool
-
-from app.main import create_app
-from app.db import get_session
-
-
-@pytest.fixture()
-def client():
-    """Create test client with in-memory database."""
-    engine = create_engine(
-        "sqlite://",
-        connect_args={"check_same_thread": False},
-        poolclass=StaticPool,
-    )
-
-    from app import models  # noqa: F401
-
-    SQLModel.metadata.create_all(engine)
-
-    def override_get_session():
-        with Session(engine) as session:
-            yield session
-
-    app = create_app()
-    app.dependency_overrides[get_session] = override_get_session
-
-    with TestClient(app) as c:
-        yield c
-
-    SQLModel.metadata.drop_all(engine)
 
 
 def test_create_food_log(client: TestClient):

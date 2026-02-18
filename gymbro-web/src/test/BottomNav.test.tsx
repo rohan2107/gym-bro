@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { BrowserRouter } from 'react-router-dom'
 import userEvent from '@testing-library/user-event'
@@ -38,6 +38,16 @@ describe('BottomNav', () => {
     await user.click(mealsButton)
     
     expect(window.location.pathname).toBe('/meals')
+  })
+
+  it('navigates to today page when today button clicked', async () => {
+    const user = userEvent.setup()
+    renderWithRouter(<BottomNav />, '/meals') // Start on different page
+    
+    const todayButton = screen.getByLabelText("Today's overview")
+    await user.click(todayButton)
+    
+    expect(window.location.pathname).toBe('/')
   })
 
   it('navigates to workout page when workout button clicked', async () => {

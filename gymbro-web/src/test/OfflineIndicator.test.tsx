@@ -1,9 +1,8 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
 import { OfflineIndicator } from '../components/OfflineIndicator'
 
 describe('OfflineIndicator', () => {
-  let onlineSetter: ((value: boolean) => void) | undefined
 
   beforeEach(() => {
     // Mock navigator.onLine
@@ -70,5 +69,45 @@ describe('OfflineIndicator', () => {
     
     const alert = screen.getByRole('alert')
     expect(alert).toHaveClass('fixed', 'top-0')
+  })
+
+  it('shows offline indicator when offline event fires', async () => {
+    const { container, rerender } = render(<OfflineIndicator />)
+    
+    // Initially online (no indicator)
+    expect(container.firstChild).toBeNull()
+    
+    // Simulate going offline by dispatching event
+    await vi.waitFor(() => {
+      window.dispatchEvent(new Event('offline'))
+    })
+    
+    // Force re-render to see the update
+    rerender(<OfflineIndicator />)
+    
+    // Should now show indicator
+    expect(screen.getByRole('alert')).toBeInTheDocument()
+  })
+
+  it('hides offline indicator when online event fires', async () => {
+    // Start offline
+    Object.defineProperty(navigator, 'onLine', {
+      writable: true,
+      value: false,
+    })
+    
+    const { container, rerender } = render(<OfflineIndicator />)
+    expect(screen.getByRole('alert')).toBeInTheDocument()
+    
+    // Simulate coming back online
+    await vi.waitFor(() => {
+      window.dispatchEvent(new Event('online'))
+    })
+    
+    // Force re-render to see the update
+    rerender(<OfflineIndicator />)
+    
+    // Should hide indicator
+    expect(container.firstChild).toBeNull()
   })
 })
