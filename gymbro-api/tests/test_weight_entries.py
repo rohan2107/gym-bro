@@ -1,6 +1,5 @@
 """Tests for weight entries router."""
 
-from datetime import date
 from fastapi.testclient import TestClient
 
 
@@ -238,7 +237,7 @@ def test_user_isolation(client: TestClient):
     """Test that users can only see their own weight entries."""
     # User 1 creates a weight entry
     user1_headers = {"X-User-Id": "1"}
-    create_resp = client.post("/weight-entries", json={
+    _ = client.post("/weight-entries", json={
         "for_date": "2026-02-18",
         "weight_kg": 80.0
     }, headers=user1_headers)

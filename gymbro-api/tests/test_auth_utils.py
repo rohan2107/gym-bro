@@ -1,7 +1,6 @@
 """Tests for authentication utilities."""
 
 import pytest
-from datetime import datetime, timedelta
 from fastapi import HTTPException
 
 from app.auth_utils import create_jwt, verify_jwt
