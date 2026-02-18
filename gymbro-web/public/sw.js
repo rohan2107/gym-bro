@@ -62,6 +62,11 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  // Skip OAuth/auth endpoints - they must go directly to network without caching
+  if (url.pathname.startsWith('/api/auth/')) {
+    return;
+  }
+
   // API requests: Network-first, fall back to cache
   if (url.pathname.startsWith('/api/')) {
     event.respondWith(

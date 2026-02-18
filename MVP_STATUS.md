@@ -35,8 +35,10 @@
 ⚠️ **No Real Auth**: Using header-based authentication temporarily  
 ⚠️ **Public Data**: No user isolation until OAuth is implemented
 
-## Next Phase: Google OAuth Authentication
+## Current Phase: Google OAuth Authentication (In Progress)
 
+**Started**: February 10, 2026  
+**Status**: 🔄 Implementation in progress  
 **Goal**: Enable real user authentication and multi-user support
 
 **Key Deliverables**:
@@ -47,6 +49,22 @@
 - Migration from X-User-Id to real user sessions
 
 See [IMPLEMENTATION_ROADMAP.md](IMPLEMENTATION_ROADMAP.md) and [GOOGLE_OAUTH_SETUP.md](GOOGLE_OAUTH_SETUP.md) for implementation details.
+
+## Future Phases
+
+**Phase 3A-3B**: Testing & AI meal photo logging
+- Comprehensive test coverage (unit, integration, E2E)
+- Google Cloud Vision API integration
+- Automatic meal detection from photos
+
+**Phase 3C**: Energy balance & analytics
+- TDEE estimation (Mifflin-St Jeor + adaptive learning)
+- Strong app workout import with LLM calorie estimation
+- Energy balance tracking and analytics dashboard
+- Multi-hypothesis discrepancy analysis
+- Science-based weight loss validation
+
+See [ENERGY_BALANCE_SPEC.md](ENERGY_BALANCE_SPEC.md) for detailed specification.
 
 ## Local Development
 
