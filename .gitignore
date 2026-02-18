@@ -5,12 +5,16 @@ __pycache__/
 env/
 venv/
 .pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
 
 # Project-specific
 gymbro-api/.venv/
 gymbro-api/gymbro.db
 gymbro-api/__pycache__/
 gymbro-api/.pytest_cache/
+gymbro-api/.coverage
 
 # Database files
 *.db
@@ -22,7 +26,9 @@ node_modules/
 dist/
 .cache/
 *.log
-package-lock.json
+coverage/
+gymbro-api/package.json
+gymbro-api/package-lock.json
 
 # Editor/OS
 .vscode/
