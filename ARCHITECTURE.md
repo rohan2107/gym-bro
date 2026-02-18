@@ -1,8 +1,8 @@
 # Architecture & Technical Decisions
 
-**Last Updated**: January 19, 2026  
-**Status**: ✅ Deployed to Vercel (Frontend + Backend), PostgreSQL in production  
-**Next Phase**: Google OAuth 2.0 Authentication
+**Last Updated**: February 18, 2026  
+**Status**: ✅ Deployed to Vercel (Frontend + Backend), PostgreSQL in production, Google OAuth 2.0 live  
+**Phase**: Phase 2 Complete - Multi-user OAuth authentication implemented
 
 ---
 
@@ -18,8 +18,8 @@
 | **Backend** | FastAPI 0.124 + SQLModel | ✅ Production | Full CRUD, async, type-safe |
 | **Database (Dev)** | SQLite | ✅ Active | Local development |
 | **Database (Prod)** | PostgreSQL (Neon) | ✅ Production | Serverless PostgreSQL |
-| **Auth (Current)** | X-User-Id header | ✅ Active | Temporary for MVP |
-| **Auth (Next)** | Google OAuth 2.0 + JWT | ⏳ Planned | Phase 2 |
+| **Auth** | Google OAuth 2.0 + JWT | ✅ Production | httpOnly cookies, 7-day tokens |
+| **Auth (Legacy)** | X-User-Id header | ✅ Deprecated | No longer used |
 | **Hosting (Frontend)** | Vercel | ✅ Production | Static site |
 | **Hosting (Backend)** | Vercel Functions | ✅ Production | Serverless API |
 | **Storage** | Vercel Blob | ⏳ Planned | Phase 3 (photo uploads) |
