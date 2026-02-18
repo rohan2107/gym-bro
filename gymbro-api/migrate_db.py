@@ -7,8 +7,12 @@ Run this ONCE after setting up Neon PostgreSQL:
 This will create all tables in your production database.
 """
 import os
+from dotenv import load_dotenv
 from sqlmodel import SQLModel, create_engine
 from app.models import User, FoodLog, Workout, ExerciseSet, WeightEntry, DailyCheckIn, NutrientEntry
+
+# Load environment variables from .env file
+load_dotenv()
 
 # Get database URL from environment variable
 DATABASE_URL = os.getenv("DATABASE_URL")

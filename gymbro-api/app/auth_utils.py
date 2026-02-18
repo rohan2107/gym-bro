@@ -3,10 +3,10 @@
 from datetime import datetime, timedelta, UTC
 from jose import jwt, JWTError
 from fastapi import HTTPException, status
-import os
+from app.config import settings
 
 # JWT Configuration
-JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY")
+JWT_SECRET_KEY = settings.JWT_SECRET_KEY
 JWT_ALGORITHM = "HS256"
 JWT_EXPIRATION_DAYS = 7
 

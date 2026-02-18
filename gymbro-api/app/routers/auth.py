@@ -5,19 +5,19 @@ from sqlmodel import Session, select
 import httpx
 from google.oauth2 import id_token
 from google.auth.transport import requests as google_requests
-import os
 from urllib.parse import urlencode
 
 from app.db import get_session
 from app.models import User
 from app.auth_utils import create_jwt, verify_jwt
+from app.config import settings
 
 router = APIRouter()
 
 # OAuth Configuration
-GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
-GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET")
-FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173")
+GOOGLE_CLIENT_ID = settings.GOOGLE_CLIENT_ID
+GOOGLE_CLIENT_SECRET = settings.GOOGLE_CLIENT_SECRET
+FRONTEND_URL = settings.FRONTEND_URL
 
 
 @router.get("/me")
