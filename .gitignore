@@ -39,3 +39,10 @@ gymbro-api/package-lock.json
 .env
 .env.*
 !.env.example
+
+# Phase 4: Test images (too large for git)
+gymbro-api/test_images/*.jpg
+gymbro-api/test_images/*.jpeg
+gymbro-api/test_images/*.png
+gymbro-api/test_images/*.webp
+!gymbro-api/test_images/README.md

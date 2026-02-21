@@ -18,6 +18,10 @@ class User(SQLModel, table=True):
     display_name: Optional[str] = None
     picture_url: Optional[str] = None
     created_at: datetime = Field(default_factory=utc_now, nullable=False)
+    
+    # Phase 4: Photo meal logging rate limiting
+    photo_count: int = Field(default=0)
+    last_photo_date: Optional[date] = Field(default=None)
 
 
 class FoodLog(SQLModel, table=True):
