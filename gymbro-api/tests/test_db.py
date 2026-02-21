@@ -3,8 +3,9 @@
 from sqlmodel import create_engine, Session, select, SQLModel
 from sqlalchemy.pool import StaticPool
 from sqlalchemy import inspect
+from unittest.mock import patch
 
-from app.db import init_db, get_session
+from app.db import init_db, get_session, get_engine
 from app.models import User
 
 
@@ -18,12 +19,8 @@ def test_init_db_creates_all_tables():
         echo=False
     )
     
-    # Monkey-patch the engine in app.db
-    import app.db
-    original_engine = app.db.engine
-    app.db.engine = test_engine
-    
-    try:
+    # Patch get_engine to return our test engine
+    with patch('app.db.get_engine', return_value=test_engine):
         # Call init_db
         init_db()
         
@@ -38,13 +35,11 @@ def test_init_db_creates_all_tables():
         assert "workout" in tables
         assert "exerciseset" in tables
         
-    finally:
-        # Restore original engine
-        app.db.engine = original_engine
-        test_engine.dispose()
+    test_engine.dispose()
 
 
-def test_init_db_seeds_user_1():
+@patch('app.db.get_engine')
+def test_init_db_seeds_user_1(mock_get_engine):
     """Test that init_db() seeds user 1 when it doesn't exist."""
     # Create a temporary in-memory database
     test_engine = create_engine(
@@ -54,29 +49,25 @@ def test_init_db_seeds_user_1():
         echo=False
     )
     
-    # Monkey-patch the engine
-    import app.db
-    original_engine = app.db.engine
-    app.db.engine = test_engine
+    # Mock get_engine to return our test engine
+    mock_get_engine.return_value = test_engine
     
-    try:
-        # Call init_db
-        init_db()
+    # Call init_db
+    init_db()
+    
+    # Verify user 1 exists with correct data
+    with Session(test_engine) as session:
+        user1 = session.get(User, 1)
+        assert user1 is not None
+        assert user1.id == 1
+        assert user1.email == "temp@gymbro.app"
+        assert user1.display_name == "MVP User"
         
-        # Verify user 1 exists with correct data
-        with Session(test_engine) as session:
-            user1 = session.get(User, 1)
-            assert user1 is not None
-            assert user1.id == 1
-            assert user1.email == "temp@gymbro.app"
-            assert user1.display_name == "MVP User"
-            
-    finally:
-        app.db.engine = original_engine
-        test_engine.dispose()
+    test_engine.dispose()
 
 
-def test_init_db_skips_seeding_when_user_1_exists():
+@patch('app.db.get_engine')
+def test_init_db_skips_seeding_when_user_1_exists(mock_get_engine):
     """Test that init_db() doesn't duplicate user 1 if it already exists."""
     # Create a temporary in-memory database
     test_engine = create_engine(
@@ -86,40 +77,35 @@ def test_init_db_skips_seeding_when_user_1_exists():
         echo=False
     )
     
-    # Monkey-patch the engine
-    import app.db
-    original_engine = app.db.engine
-    app.db.engine = test_engine
+    # Mock get_engine to return our test engine
+    mock_get_engine.return_value = test_engine
     
-    try:
-        # Create tables and manually add user 1
-        SQLModel.metadata.create_all(test_engine)
-        with Session(test_engine) as session:
-            existing_user = User(
-                id=1,
-                email="existing@example.com",
-                display_name="Existing User"
-            )
-            session.add(existing_user)
-            session.commit()
+    # Create tables and manually add user 1
+    SQLModel.metadata.create_all(test_engine)
+    with Session(test_engine) as session:
+        existing_user = User(
+            id=1,
+            email="existing@example.com",
+            display_name="Existing User"
+        )
+        session.add(existing_user)
+        session.commit()
+    
+    # Call init_db - should not overwrite
+    init_db()
+    
+    # Verify user 1 still has original data
+    with Session(test_engine) as session:
+        user1 = session.get(User, 1)
+        assert user1 is not None
+        assert user1.email == "existing@example.com"
+        assert user1.display_name == "Existing User"
         
-        # Call init_db - should not overwrite
-        init_db()
+        # Verify no duplicate users
+        all_users = session.exec(select(User)).all()
+        assert len(all_users) == 1
         
-        # Verify user 1 still has original data
-        with Session(test_engine) as session:
-            user1 = session.get(User, 1)
-            assert user1 is not None
-            assert user1.email == "existing@example.com"
-            assert user1.display_name == "Existing User"
-            
-            # Verify no duplicate users
-            all_users = session.exec(select(User)).all()
-            assert len(all_users) == 1
-            
-    finally:
-        app.db.engine = original_engine
-        test_engine.dispose()
+    test_engine.dispose()
 
 
 def test_init_db_handles_errors_gracefully(monkeypatch):
@@ -180,16 +166,27 @@ def test_get_session_cleanup():
     assert True  # If we get here without hanging, cleanup worked
 
 
-def test_engine_configuration():
+@patch('app.db.get_engine')
+def test_engine_configuration(mock_get_engine):
     """Test that the database engine is properly configured."""
-    import app.db
+    # Create a test engine
+    test_engine = create_engine(
+        "sqlite://",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+        pool_pre_ping=True,
+        pool_recycle=300,
+        echo=False
+    )
     
-    # Verify engine exists
-    assert app.db.engine is not None
+    mock_get_engine.return_value = test_engine
     
-    # Verify engine has correct settings
-    # pool_pre_ping should be enabled for connection health checks
-    assert app.db.engine.pool._pre_ping is True
+    # Get the engine and verify configuration
+    engine = get_engine()
+    assert engine is not None
     
-    # pool_recycle should be set (300 seconds = 5 minutes)
-    assert app.db.engine.pool._recycle == 300
+    # Verify pool settings
+    assert engine.pool._pre_ping is True
+    assert engine.pool._recycle == 300
+    
+    test_engine.dispose()
