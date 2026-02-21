@@ -221,11 +221,16 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           max_timeout: 300
       
-      - name: Smoke test preview deployment
-        run: |
-          echo "Testing preview at: ${{ steps.vercel-preview.outputs.url }}"
-          curl -f "${{ steps.vercel-preview.outputs.url }}/api/health" || exit 1
-          echo "✓ Preview deployment is healthy"
+      - name: Wait for API health check
+        uses: cygnetdigital/wait_for_response@v6
+        with:
+          url: ${{ steps.vercel-preview.outputs.url }}/api/health
+          responseCode: 200
+          timeout: 120000
+          interval: 2000
+      
+      - name: Verify preview deployment
+        run: echo "✓ Preview deployment is healthy at ${{ steps.vercel-preview.outputs.url }}"
 
   all-checks-passed:
     name: All Checks Passed
