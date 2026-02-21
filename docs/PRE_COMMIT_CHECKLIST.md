@@ -2,6 +2,38 @@
 
 Use this checklist before committing code to ensure quality and avoid CI failures.
 
+## 🎯 Modus Operandi (Standard Workflow)
+
+**Daily Development Cycle:**
+
+1. **While Coding** → Run quick lint check frequently:
+   ```powershell
+   .\scripts\lint-check.ps1
+   ```
+   - Catches syntax errors immediately
+   - Takes ~10 seconds
+   - Run after every significant change
+
+2. **Before Committing** → Run full validation:
+   ```powershell
+   .\scripts\pre-commit.ps1
+   ```
+   - Runs all tests + linting + type checking
+   - Takes ~30-60 seconds
+   - Catches 99% of CI failures
+   - **Only commit if this passes**
+
+3. **After Committing** → Monitor CI pipeline:
+   - GitHub Actions runs automatically
+   - Should pass if pre-commit passed
+   - If CI fails, fix immediately and force-push
+
+**Why This Matters:**
+- ❌ **Bad**: Commit → Push → CI fails → Fix → Commit → Push (wastes time)
+- ✅ **Good**: Lint check → Pre-commit → Commit → Push → CI passes (efficient)
+
+---
+
 ## ✅ Quick Checklist
 
 ```bash
@@ -97,55 +129,49 @@ cd gymbro-web && npm run build
   - Environment variables documented
   - Rollback plan documented
 
-## 🚀 Fast Pre-Commit Script
+## 🚀 Automated Pre-Commit Scripts
 
-Create `scripts/pre-commit.ps1`:
+Two scripts are available in `scripts/`:
 
+### Quick Lint Check (Recommended for Frequent Use)
+**Run this after every code change:**
 ```powershell
-# Quick pre-commit check script
-Write-Host "Running pre-commit checks..." -ForegroundColor Cyan
-
-# Backend tests
-Write-Host "`n📦 Backend Tests..." -ForegroundColor Yellow
-cd gymbro-api
-pytest -q
-if ($LASTEXITCODE -ne 0) {
-    Write-Host "❌ Backend tests failed!" -ForegroundColor Red
-    exit 1
-}
-
-# Frontend tests
-Write-Host "`n⚛️  Frontend Tests..." -ForegroundColor Yellow
-cd ..\gymbro-web
-npm test -- --run --reporter=basic
-if ($LASTEXITCODE -ne 0) {
-    Write-Host "❌ Frontend tests failed!" -ForegroundColor Red
-    exit 1
-}
-
-# Frontend lint
-Write-Host "`n🔍 Frontend Linting..." -ForegroundColor Yellow
-npm run lint
-if ($LASTEXITCODE -ne 0) {
-    Write-Host "❌ Linting failed!" -ForegroundColor Red
-    exit 1
-}
-
-# Frontend type check
-Write-Host "`n📘 TypeScript Check..." -ForegroundColor Yellow
-npm run type-check
-if ($LASTEXITCODE -ne 0) {
-    Write-Host "❌ Type checking failed!" -ForegroundColor Red
-    exit 1
-}
-
-Write-Host "`n✅ All checks passed! Ready to commit." -ForegroundColor Green
-cd ..
+.\scripts\lint-check.ps1
 ```
 
-Run before commit:
-```bash
-powershell -ExecutionPolicy Bypass -File scripts/pre-commit.ps1
+- ✅ Fast (~10 seconds)
+- ✅ Catches 80% of CI failures
+- ✅ Runs ruff + ESLint only
+
+### Full Pre-Commit Validation (Before Committing)
+**Run this before every commit:**
+```powershell
+.\scripts\pre-commit.ps1
+```
+
+- ✅ Complete (~30-60 seconds)
+- ✅ Runs all CI checks locally
+- ✅ Backend linting + tests
+- ✅ Frontend linting + type check + tests
+
+### Manual Commands (If Scripts Fail)
+
+If you need to run checks manually:
+
+```powershell
+# Backend linting only
+cd gymbro-api
+python -m ruff check app/ tests/ --output-format=github
+
+# Backend linting with auto-fix
+python -m ruff check app/ tests/ --fix
+
+# Frontend linting
+cd gymbro-web
+npm run lint
+
+# Frontend linting with auto-fix
+npm run lint -- --fix
 ```
 
 ## 🔧 Git Hooks (Optional)
@@ -241,7 +267,94 @@ Coverage: 47 tests passing
 - Clear node_modules and reinstall: `rm -r node_modules && npm install`
 - Check for missing files in .gitignore
 
-## 📚 Resources
+## � Common Lint Errors & Quick Fixes
+
+### Backend (Ruff)
+
+**F401: Module imported but unused**
+```python
+# ❌ Bad
+from datetime import date, datetime  # datetime unused
+from sqlmodel import Session, select  # select unused
+
+# ✅ Good - Only import what you use
+from datetime import date
+from sqlmodel import Session
+```
+
+**F841: Local variable assigned but never used**
+```python
+# ❌ Bad
+result = calculate_tdee()  # Never used
+
+# ✅ Good - Remove or use it
+_ = calculate_tdee()  # If intentionally ignored
+```
+
+**E501: Line too long**
+```python
+# ❌ Bad (>88 chars)
+def very_long_function_name_with_many_parameters(param1, param2, param3, param4, param5):
+
+# ✅ Good - Break into multiple lines
+def very_long_function_name_with_many_parameters(
+    param1, param2, param3, param4, param5
+):
+```
+
+**I001: Import block is un-sorted**
+```python
+# ❌ Bad - imports not sorted
+from typing import Dict
+from datetime import date
+import os
+
+# ✅ Good - standard lib → third party → local
+import os
+from datetime import date
+from typing import Dict
+
+from fastapi import APIRouter
+from sqlmodel import Session
+
+from ..models import User
+```
+
+### Frontend (ESLint)
+
+**Unused imports**
+```typescript
+// ❌ Bad
+import { useState, useEffect } from 'react'  // useEffect unused
+
+// ✅ Good
+import { useState } from 'react'
+```
+
+**Missing dependency in useEffect**
+```typescript
+// ❌ Bad
+useEffect(() => {
+  fetchData(userId)
+}, [])  // Missing userId dependency
+
+// ✅ Good
+useEffect(() => {
+  fetchData(userId)
+}, [userId])
+```
+
+### Auto-Fix Commands
+
+```powershell
+# Backend - auto-fix most issues
+python -m ruff check app/ tests/ --fix
+
+# Frontend - auto-fix most issues
+npm run lint -- --fix
+```
+
+## �📚 Resources
 
 - [Testing Guide](TESTING_GUIDE.md) - Detailed testing documentation
 - [Architecture](ARCHITECTURE.md) - System design and patterns

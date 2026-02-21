@@ -4,9 +4,9 @@ Tracks photo uploads per user per day and enforces a 30 photos/day limit
 to stay under Google Vision API free tier (1000 requests/month).
 """
 
-from datetime import date, datetime
+from datetime import date
 from typing import Dict
-from sqlmodel import Session, select
+from sqlmodel import Session
 
 from ..models import User
 

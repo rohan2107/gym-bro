@@ -1,0 +1,45 @@
+# Coverage.py configuration
+# https://coverage.readthedocs.io/en/latest/config.html
+
+[run]
+source = app
+omit =
+    # Test files
+    tests/*
+    */tests/*
+    
+    # Virtual environment
+    .venv/*
+    */site-packages/*
+    
+    # Phase 4: Work in Progress - Remove these in Phase 4.2 when service tests are added
+    app/services/__init__.py
+    app/services/vision.py
+    app/services/nutrition.py
+    app/services/rate_limiter.py
+    app/services/food_mapping.py
+
+[report]
+# Show missing lines
+show_missing = True
+
+# Skip fully covered files in reports
+skip_covered = True
+
+# Precision for coverage percentages
+precision = 2
+
+# Exclude lines with pragma comments
+exclude_lines =
+    # Default exclusions
+    pragma: no cover
+    def __repr__
+    raise AssertionError
+    raise NotImplementedError
+    if __name__ == .__main__.:
+    if TYPE_CHECKING:
+    @abstractmethod
+    @abc.abstractmethod
+
+[html]
+directory = htmlcov

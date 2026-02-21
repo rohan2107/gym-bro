@@ -58,6 +58,144 @@ def test_daily_checkin_today_and_upsert(client: TestClient):
     assert days[0]["checkin_date"] == today
 
 
+def test_get_today_checkin_returns_template_when_not_exists(client: TestClient):
+    """Test that /today returns non-persisted template when no check-in exists."""
+    headers = {"X-User-Id": "999"}  # Fresh user with no check-ins
+    
+    resp = client.get("/daily-checkins/today", headers=headers)
+    assert resp.status_code == 200
+    
+    body = resp.json()
+    # Template should have all default values
+    assert body["id"] is None  # Not persisted yet
+    assert body["user_id"] == 999
+    assert body["checkin_date"] == date.today().isoformat()
+    assert body["weight"] is None
+    assert body["trained"] is False
+    assert body["steps"] is None
+    assert body["protein_met"] is False
+    assert body["notes"] is None
+    assert "created_at" in body
+    assert "updated_at" in body
+
+
+def test_get_checkin_by_date_returns_template_when_not_exists(client: TestClient):
+    """Test that /{date} returns non-persisted template when no check-in exists."""
+    headers = {"X-User-Id": "1"}
+    past_date = "2026-01-15"
+    
+    resp = client.get(f"/daily-checkins/{past_date}", headers=headers)
+    assert resp.status_code == 200
+    
+    body = resp.json()
+    # Template should have all default values
+    assert body["id"] is None  # Not persisted yet
+    assert body["user_id"] == 1
+    assert body["checkin_date"] == past_date
+    assert body["weight"] is None
+    assert body["trained"] is False
+
+
+def test_upsert_creates_new_checkin_when_not_exists(client: TestClient):
+    """Test PUT creates new check-in (INSERT path) when none exists."""
+    headers = {"X-User-Id": "1"}
+    past_date = "2026-01-10"
+    
+    # Verify no check-in exists (should get template)
+    get_resp = client.get(f"/daily-checkins/{past_date}", headers=headers)
+    assert get_resp.json()["id"] is None  # Template, not persisted
+    
+    # Create new check-in via PUT (INSERT path)
+    payload = {
+        "weight": 80.5,
+        "trained": True,
+        "steps": 12000,
+        "protein_met": True,
+        "notes": "Great day"
+    }
+    put_resp = client.put(
+        f"/daily-checkins/{past_date}",
+        json=payload,
+        headers=headers
+    )
+    
+    assert put_resp.status_code == 200
+    created = put_resp.json()
+    assert created["id"] is not None  # Now persisted
+    assert created["checkin_date"] == past_date
+    assert created["weight"] == 80.5
+    assert created["trained"] is True
+    assert created["steps"] == 12000
+    assert created["protein_met"] is True
+    assert created["notes"] == "Great day"
+    
+    # Verify it's actually persisted
+    get_again = client.get(f"/daily-checkins/{past_date}", headers=headers)
+    assert get_again.json()["id"] == created["id"]
+
+
+def test_upsert_with_partial_data(client: TestClient):
+    """Test PUT with partial data (some fields null)."""
+    headers = {"X-User-Id": "1"}
+    test_date = "2026-01-20"
+    
+    # Create with only some fields
+    payload = {
+        "weight": 78.0,
+        "trained": False,
+        # steps, protein_met, notes intentionally omitted
+    }
+    
+    resp = client.put(
+        f"/daily-checkins/{test_date}",
+        json=payload,
+        headers=headers
+    )
+    
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["weight"] == 78.0
+    assert body["trained"] is False
+    assert body["steps"] is None
+    assert body["protein_met"] is False
+    assert body["notes"] is None
+
+
+def test_list_daily_checkins_with_date_range(client: TestClient):
+    """Test listing check-ins with from/to date filters."""
+    headers = {"X-User-Id": "1"}
+    
+    # Create multiple check-ins
+    dates = ["2026-02-01", "2026-02-05", "2026-02-10", "2026-02-15"]
+    for d in dates:
+        client.put(
+            f"/daily-checkins/{d}",
+            json={"weight": 75.0, "trained": True},
+            headers=headers
+        )
+    
+    # Test from filter
+    resp = client.get("/daily-checkins?from=2026-02-05", headers=headers)
+    assert resp.status_code == 200
+    results = resp.json()
+    assert len(results) >= 3  # Should include 02-05, 02-10, 02-15 (and possibly today)
+    assert all(r["checkin_date"] >= "2026-02-05" for r in results)
+    
+    # Test to filter
+    resp = client.get("/daily-checkins?to=2026-02-10", headers=headers)
+    assert resp.status_code == 200
+    results = resp.json()
+    assert all(r["checkin_date"] <= "2026-02-10" for r in results)
+    
+    # Test from and to together
+    resp = client.get("/daily-checkins?from=2026-02-05&to=2026-02-10", headers=headers)
+    assert resp.status_code == 200
+    results = resp.json()
+    assert len(results) == 2  # Should be exactly 02-05 and 02-10
+    assert results[0]["checkin_date"] == "2026-02-05"
+    assert results[1]["checkin_date"] == "2026-02-10"
+
+
 def test_food_logs_are_user_scoped(client: TestClient):
     # Create a log for user 1
     resp = client.post(
