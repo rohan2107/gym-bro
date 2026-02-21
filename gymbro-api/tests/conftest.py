@@ -12,26 +12,26 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from app.main import create_app  # noqa: E402
-from app.db import get_session  # noqa: E402
-
 
 @pytest.fixture()
 def client():
     """
     Create test client with in-memory SQLite database.
     
-    Properly manages database lifecycle:
-    - Creates engine with connection pooling
-    - Sets up test database schema
-    - Overrides app dependencies
-    - Cleans up connections after test
+    Uses create_app() to ensure test environment matches production app structure.
+    Optimized for fast test execution:
+    - In-memory SQLite with static pool
+    - Mocked init_db to prevent real database connections
+    - Proper cleanup to avoid hangs
     """
+    from unittest.mock import patch
+    
     # Create in-memory SQLite engine with static pool
     engine = create_engine(
         "sqlite://",
         connect_args={"check_same_thread": False},
         poolclass=StaticPool,
+        echo=False,  # Disable SQL logging for speed
     )
 
     # Import models to register tables
@@ -45,13 +45,22 @@ def client():
         with Session(engine) as session:
             yield session
 
-    app = create_app()
-    app.dependency_overrides[get_session] = override_get_session
+    # Mock init_db to prevent database operations during lifespan
+    with patch('app.main.init_db'):
+        # Use create_app() to get the real app with all middleware/routers
+        from app.main import create_app
+        app = create_app()
 
-    # Create test client
-    with TestClient(app) as c:
-        yield c
+        # Override dependencies
+        from app.db import get_session
+        app.dependency_overrides[get_session] = override_get_session
 
-    # Cleanup: drop tables and dispose engine
+        # Create test client
+        with TestClient(app, raise_server_exceptions=True) as c:
+            yield c
+
+        # Cleanup
+        app.dependency_overrides.clear()
+    
     SQLModel.metadata.drop_all(engine)
     engine.dispose()
