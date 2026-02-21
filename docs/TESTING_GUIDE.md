@@ -66,20 +66,21 @@ cd gymbro-api; pytest -v; cd ..\gymbro-web; npm test -- --run
 ### Backend Tests (`gymbro-api/tests/`)
 
 - `test_auth_utils.py` - JWT token creation and validation (6 tests)
-- `test_food_logs.py` - Food log CRUD operations (9 tests)
-- `test_workouts.py` - Workout CRUD operations (11 tests)
-- `test_weight_entries.py` - Weight entry CRUD operations (9 tests)
+- `test_deps.py` - Dependency injection and user ID extraction (6 tests)
 - `test_daily_checkins.py` - Daily check-in operations (6 tests)
+- `test_food_logs.py` - Food log CRUD operations (10 tests)
+- `test_workouts.py` - Workout CRUD operations (11 tests)
+- `test_weight_entries.py` - Weight entry CRUD operations (8 tests)
 
-**Total: 41 tests**
+**Total: 47 tests**
 
 ### Frontend Tests (`gymbro-web/src/test/`)
 
-- `utils.test.ts` - Utility functions (10 tests)
-- `BottomNav.test.tsx` - Navigation component (7 tests)
-- `OfflineIndicator.test.tsx` - Offline indicator (5 tests)
+- `utils.test.ts` - Utility functions (12 tests)
+- `BottomNav.test.tsx` - Navigation component (15 tests)
+- `OfflineIndicator.test.tsx` - Offline indicator (7 tests)
 
-**Total: 22 tests**
+**Total: 34 tests**
 
 ## Coverage Reports
 
@@ -175,8 +176,8 @@ describe('MyComponent', () => {
 
 ## Performance
 
-- Backend tests: ~11 seconds for 41 tests
-- Frontend tests: ~1.5 seconds for 22 tests
+- Backend tests: ~11 seconds for 47 tests
+- Frontend tests: ~1.5 seconds for 34 tests
 - Total: ~13 seconds for full test suite
 
 ## Next Steps

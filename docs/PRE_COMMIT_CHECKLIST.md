@@ -26,8 +26,8 @@ cd gymbro-web && npm run build
 ### Before Every Commit
 
 - [ ] **All tests pass**
-  - Backend: `pytest -v` (41 tests)
-  - Frontend: `npm test -- --run` (22 tests)
+  - Backend: `pytest -v` (47 tests)
+  - Frontend: `npm test -- --run` (34 tests)
 
 - [ ] **No linting errors**
   - Backend: `ruff check app/ tests/` (optional)
@@ -223,7 +223,7 @@ test(workouts): add CRUD operation tests
 Add comprehensive test coverage for workout endpoints.
 Includes user isolation and error handling tests.
 
-Coverage: 41 tests passing
+Coverage: 47 tests passing
 ```
 
 ## 🐛 Common Issues
@@ -245,5 +245,4 @@ Coverage: 41 tests passing
 
 - [Testing Guide](TESTING_GUIDE.md) - Detailed testing documentation
 - [Architecture](ARCHITECTURE.md) - System design and patterns
-- [Contributing](CONTRIBUTING.md) - Contribution guidelines
-- [CI/CD Pipeline](.github/workflows/ci.yml) - Automation configuration
+- [CI/CD Pipeline](../.github/workflows/ci.yml) - Automation configuration

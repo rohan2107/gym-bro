@@ -11,7 +11,7 @@
 | Backend | ✅ Deployed | FastAPI on Vercel Functions, PostgreSQL (Neon) |
 | Mobile UI | ✅ Complete | Bottom nav, 4 pages, responsive layout |
 | Offline Support | ✅ Complete | Service worker with cache strategy |
-| Testing | ✅ Complete | 63 tests (41 backend, 22 frontend) |
+| Testing | ✅ Complete | 81 tests (47 backend, 34 frontend) |
 | CI/CD | ✅ Complete | GitHub Actions pipeline with quality gates |
 | DevOps | ✅ Complete | GitHub → Vercel auto-deploy |
 
@@ -24,7 +24,7 @@
 ✅ **Data Persistence** - PostgreSQL backend with automatic backups  
 ✅ **Responsive Design** - Optimized for mobile, tablet, desktop  
 ✅ **Multi-User Authentication** - Google OAuth 2.0 with user data isolation  
-✅ **Test Coverage** - 63 automated tests with 85% coverage  
+✅ **Test Coverage** - 81 automated tests with 85% coverage  
 ✅ **CI/CD Pipeline** - Automated testing and deployment
 
 ## Technical Stack
@@ -52,13 +52,13 @@
 - ✅ Migration from X-User-Id to secure user sessions
 - ✅ Tested end-to-end on production (Vercel)
 
-See [GOOGLE_OAUTH_SETUP.md](GOOGLE_OAUTH_SETUP.md) for setup details and [ARCHITECTURE.md](ARCHITECTURE.md) for technical implementation.
+See [GOOGLE_OAUTH_SETUP.md](GOOGLE_OAUTH_SETUP.md) for setup details and [../ARCHITECTURE.md](../ARCHITECTURE.md) for technical implementation.
 
 ### Phase 3 - Testing & CI/CD (February 18, 2026)
 
 ✅ **Accomplished Milestones**:
-- ✅ Backend test suite: 41 tests covering all routers and auth
-- ✅ Frontend test suite: 22 tests for components and utilities
+- ✅ Backend test suite: 47 tests covering all routers and auth
+- ✅ Frontend test suite: 34 tests for components and utilities
 - ✅ Comprehensive test coverage (~85% backend, ~80% frontend)
 - ✅ GitHub Actions CI/CD pipeline with parallel jobs
 - ✅ Automated quality gates (tests, linting, type-checking, build)
@@ -66,7 +66,7 @@ See [GOOGLE_OAUTH_SETUP.md](GOOGLE_OAUTH_SETUP.md) for setup details and [ARCHIT
 - ✅ Code coverage reporting integrated
 - ✅ Documentation: Testing Guide and Pre-Commit Checklist
 
-See [TESTING_GUIDE.md](TESTING_GUIDE.md) for usage and [PRE_COMMIT_CHECKLIST.md](PRE_COMMIT_CHECKLIST.md) for quality standards.
+See [TESTING_GUIDE.md](../TESTING_GUIDE.md) for usage and [PRE_COMMIT_CHECKLIST.md](../PRE_COMMIT_CHECKLIST.md) for quality standards.
 
 ## Next Phase
 

@@ -28,7 +28,7 @@ This folder contains historical documentation from completed development phases.
 - **TESTING_OAUTH_UI.md** - OAuth UI testing procedures
 
 **Note**: Phase 2 is complete. For current OAuth documentation, see:
-- [GOOGLE_OAUTH_SETUP.md](../GOOGLE_OAUTH_SETUP.md)
+- [GOOGLE_OAUTH_SETUP.md](GOOGLE_OAUTH_SETUP.md)
 - [ARCHITECTURE.md](../ARCHITECTURE.md)
 
 ### Phase 3 - Testing & CI/CD (Completed Feb 18, 2026)

@@ -1,1 +1,87 @@
-# Gym Bro![License][license-badge]![Build][build-badge]![Python][python-badge]![FastAPI][fastapi-badge]🚀 **Live Demo**: https://gym-ba2oz8etc-rohan-anthonys-projects-a86489a8.vercel.appA modern fitness Progressive Web App (PWA) for tracking nutrition and training. Features mobile-first design, offline support, and full CRUD operations for daily check-ins, meals, and workouts.**Stack**: React + Vite + Tailwind (frontend) | FastAPI + SQLModel (backend) | PostgreSQL on Neon | Deployed on Vercel**Current Phase**: Testing & CI/CD complete. Next: AI meal photo analysis & analytics (Phase 4).## Features- ✅ Mobile-first PWA with offline support- ✅ Daily check-ins (weight, steps, training status)- ✅ Food logging with calorie/macro tracking- ✅ Workout tracking with exercise sets- ✅ Google OAuth 2.0 authentication & multi-user support- ✅ Comprehensive test suite (63 tests passing)- ✅ CI/CD pipeline with GitHub Actions- ⏳ AI meal photo analysis (Phase 4)- ⏳ Analytics dashboard with trends (Phase 4)## Monorepo Structure- `gymbro-api/`: FastAPI backend with SQLModel for persistence.- `gymbro-web/`: Frontend PWA (React + Vite + Tailwind).- `gymbro-analytics/`: Data analysis and reporting (to be added after MVP).- `infra/`: Deployment, IaC, and environment configuration (future work).## Backend (API)The API is a FastAPI service using SQLModel/SQLAlchemy for the database layer and Pydantic v2 for settings/models.- Entry: `gymbro-api/app/main.py`- Config: `gymbro-api/app/config.py` (defaults to SQLite; `.env` supported)- DB: `gymbro-api/app/db.py` (creates engine, initializes tables, provides sessions)- Routers: `gymbro-api/app/routers` (health, daily check-ins, food logs, weight entries, workouts, exercise sets)- Models: `gymbro-api/app/models.py`### Quick Start (Windows CMD)Run the API locally with SQLite (default). Postgres can be used later by setting `DATABASE_URL` in `.env`.```cd gymbro-apipython -m venv .venv.\.venv\Scripts\activatepip install -r requirements.txtuvicorn app.main:app --reload```Then visit `http://localhost:8000/docs` for interactive API docs.### Quick API ExamplesCreate a food log (once tables are initialized):```bashcurl -X POST http://127.0.0.1:8000/food-logs/ \  -H "Content-Type: application/json" \  -d '{"description":"Chicken bowl","calories":650,"protein_g":45,"carbs_g":60,"fat_g":20}'```List food logs:```bashcurl http://127.0.0.1:8000/food-logs/```### Configuration- Default dev DB: `sqlite:///./gymbro.db`- Override via `.env` in `gymbro-api/`:```DATABASE_URL=postgresql://postgres:postgres@localhost:5432/gymbro```## Local Dev Quickstart (Windows, PowerShell)From repo root:```python -m venv gymbro-api/.venv./gymbro-api/.venv/Scripts/activatepip install -r gymbro-api/requirements.txt# Frontend envSet-Content -Path gymbro-web/.env.local -Value "VITE_USER_ID=1"# Start backend + frontend (opens two terminals)powershell -ExecutionPolicy Bypass -File scripts/start-all.ps1```- Backend only: `powershell -ExecutionPolicy Bypass -File scripts/start-backend.ps1 -ApiHost 127.0.0.1 -Port 8000`- Frontend only: `powershell -ExecutionPolicy Bypass -File scripts/start-frontend.ps1` (add `-Build` to run `npm run build`).- Vite dev server proxies `/api` → `http://127.0.0.1:8000`.- If schema changes cause sqlite errors, stop services, delete `gymbro-api/gymbro.db`, and restart to regenerate tables.## Frontend (gymbro-web)- React 18 + Vite 5 + TypeScript + Tailwind.- Authentication: Google OAuth 2.0 login via `AuthCallbackPage` component- Protected routes: App only loads authenticated content after OAuth login- UI flows: daily check-in (weight/steps/trained/protein/notes), meal logging (description + optional calories), workouts (name + optional note). Lists show newest first.## Data Model (current)- `User`, `DailyCheckIn`, `FoodLog`, `WeightEntry`, `Workout`, `ExerciseSet`, `NutrientEntry`.## Deployment**Live**: https://gym-ba2oz8etc-rohan-anthonys-projects-a86489a8.vercel.app  **Status**: ✅ Production (Frontend + Backend + PostgreSQL)  **Deployment**: Automated via Vercel (push to main)## Testing```bash# Backend tests (41 passing)cd gymbro-api && pytest -v# Frontend tests (22 passing)cd gymbro-web && npm test -- --run```See [docs/TESTING_GUIDE.md](docs/TESTING_GUIDE.md) for detailed testing documentation and [docs/PRE_COMMIT_CHECKLIST.md](docs/PRE_COMMIT_CHECKLIST.md) for quality gates.## Documentation- **[docs/MVP_STATUS.md](docs/MVP_STATUS.md)** — Current features and completion status- **[docs/TESTING_GUIDE.md](docs/TESTING_GUIDE.md)** — Testing guide and commands- **[docs/PRE_COMMIT_CHECKLIST.md](docs/PRE_COMMIT_CHECKLIST.md)** — Pre-commit quality checklist- **[docs/IMPLEMENTATION_ROADMAP.md](docs/IMPLEMENTATION_ROADMAP.md)** — Development roadmap and next phases- **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** — System architecture and technical decisions- **[docs/GOOGLE_OAUTH_SETUP.md](docs/GOOGLE_OAUTH_SETUP.md)** — OAuth setup guide- **[docs/archive/](docs/archive/)** — Historical phase documentation## ContributingContributions welcome! Please see [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md).## LicenseMIT — see `LICENSE`.[license-badge]: https://img.shields.io/badge/license-MIT-green[build-badge]: https://img.shields.io/github/actions/workflow/status/rohan2107/gym-bro/ci.yml?label=ci[python-badge]: https://img.shields.io/badge/python-3.11%2B-blue[fastapi-badge]: https://img.shields.io/badge/backend-FastAPI-brightgreen[python-badge]: https://img.shields.io/badge/python-3.11%2B-blue[fastapi-badge]: https://img.shields.io/badge/backend-FastAPI-brightgreen
+# Gym Bro
+
+[![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+[![CI](https://img.shields.io/github/actions/workflow/status/rohan2107/gym-bro/ci.yml?label=ci)](https://github.com/rohan2107/gym-bro/actions)
+[![Python](https://img.shields.io/badge/python-3.11+-blue)](https://python.org)
+
+**Live Demo**: https://gym-ba2oz8etc-rohan-anthonys-projects-a86489a8.vercel.app
+
+A production-ready fitness PWA for tracking nutrition and workouts. Built with modern web technologies, deployed on Vercel with full CI/CD.
+
+**Stack**: React · TypeScript · FastAPI · PostgreSQL · Google OAuth 2.0
+
+## Features
+
+✅ Google OAuth 2.0 authentication  
+✅ Daily check-ins (weight, steps, training status)  
+✅ Meal logging with calorie & macro tracking  
+✅ Workout tracking with exercise sets  
+✅ Mobile-first PWA with offline support  
+✅ 74 automated tests with 85% coverage  
+✅ CI/CD pipeline with GitHub Actions
+
+## Architecture
+
+**Frontend**: React 18, TypeScript, Vite, Tailwind CSS  
+**Backend**: FastAPI, SQLModel, Pydantic v2  
+**Database**: PostgreSQL (Neon)  
+**Auth**: Google OAuth 2.0 + JWT (httpOnly cookies)  
+**Hosting**: Vercel (frontend + serverless functions)  
+**Testing**: pytest, Vitest, GitHub Actions
+
+## Quick Start
+
+```bash
+# Backend
+cd gymbro-api
+python -m venv .venv && .venv\Scripts\activate
+pip install -r requirements.txt
+uvicorn app.main:app --reload
+
+# Frontend
+cd gymbro-web
+npm install && npm run dev
+```
+
+Visit `http://localhost:5173` for the app and `http://localhost:8000/docs` for API docs.
+
+### Environment Setup
+
+Create `.env` files for local development:
+
+**gymbro-api/.env**:
+```bash
+DATABASE_URL=postgresql://user:pass@localhost/gymbro
+GOOGLE_CLIENT_ID=your-client-id.apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=your-secret
+JWT_SECRET_KEY=your-jwt-secret
+FRONTEND_URL=http://localhost:5173
+```
+
+**gymbro-web/.env**:
+```bash
+VITE_API_URL=http://localhost:8000
+VITE_GOOGLE_CLIENT_ID=your-client-id.apps.googleusercontent.com
+```
+
+See [OAuth Setup Guide](docs/archive/GOOGLE_OAUTH_SETUP.md) for Google OAuth configuration.
+
+## Testing
+
+```bash
+# Backend (47 tests)
+cd gymbro-api && pytest -v
+
+# Frontend (27 tests)
+cd gymbro-web && npm test
+```
+## Documentation
+
+- [Architecture](docs/ARCHITECTURE.md) — System design and technical decisions
+- [Testing Guide](docs/TESTING_GUIDE.md) — Test suite and quality gates
+- [OAuth Setup](docs/archive/GOOGLE_OAUTH_SETUP.md) — Google OAuth 2.0 configuration (archived)
+- [Roadmap](docs/IMPLEMENTATION_ROADMAP.md) — Development phases and upcoming features
+
+## License
+
+MIT — see [LICENSE](LICENSE)
