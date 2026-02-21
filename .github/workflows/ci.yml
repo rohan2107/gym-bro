@@ -225,8 +225,16 @@ jobs:
         run: |
           URL="${{ steps.vercel-preview.outputs.url }}"
           echo "Testing preview at: $URL/api/health"
-          timeout 120 bash -c "until curl -f '$URL/api/health' 2>/dev/null; do sleep 2; done"
-          echo "✓ Preview deployment is healthy"
+          for i in {1..60}; do
+            if curl -sf --max-time 5 "$URL/api/health"; then
+              echo "✓ Preview deployment is healthy"
+              exit 0
+            fi
+            echo "  Attempt $i/60: backend not ready yet, waiting..."
+            sleep 2
+          done
+          echo "✗ Health check failed after 60 attempts (non-critical check)"
+          exit 1
 
   all-checks-passed:
     name: All Checks Passed

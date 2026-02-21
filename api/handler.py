@@ -7,7 +7,9 @@ repo_root = Path(__file__).parent.parent
 gymbro_api_path = repo_root / "gymbro-api"
 sys.path.insert(0, str(gymbro_api_path))
 
-# Import the FastAPI app directly - Vercel supports it natively
-from app.main import app
+# Import and create the FastAPI app
+from app.main import create_app
 
-# Vercel uses the 'app' variable directly (no adapter needed)
+# Create the app instance for Vercel
+app = create_app()
+
