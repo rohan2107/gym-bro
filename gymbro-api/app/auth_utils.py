@@ -1,7 +1,8 @@
 """Authentication utilities for JWT token management."""
 
 from datetime import datetime, timedelta, UTC
-from jose import jwt, JWTError
+import jwt
+from jwt import InvalidTokenError
 from fastapi import HTTPException, status
 from app.config import settings
 
@@ -58,7 +59,7 @@ def verify_jwt(token: str) -> int:
                 detail="Invalid token: missing subject"
             )
         return int(user_id_str)
-    except JWTError as e:
+    except InvalidTokenError as e:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=f"Token expired or invalid: {str(e)}"

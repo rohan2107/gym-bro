@@ -3,7 +3,6 @@
 import sys
 from pathlib import Path
 import pytest
-from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from sqlmodel import SQLModel, Session, create_engine
 from sqlalchemy.pool import StaticPool
@@ -19,11 +18,14 @@ def client():
     """
     Create test client with in-memory SQLite database.
     
+    Uses create_app() to ensure test environment matches production app structure.
     Optimized for fast test execution:
     - In-memory SQLite with static pool
-    - Bypasses lifespan events
+    - Mocked init_db to prevent real database connections
     - Proper cleanup to avoid hangs
     """
+    from unittest.mock import patch
+    
     # Create in-memory SQLite engine with static pool
     engine = create_engine(
         "sqlite://",
@@ -43,40 +45,22 @@ def client():
         with Session(engine) as session:
             yield session
 
-    # Create app without lifespan to avoid async overhead in tests
-    app = FastAPI(
-        title="Gym Bro API (Test)",
-        root_path="/api",
-    )
+    # Mock init_db to prevent database operations during lifespan
+    with patch('app.main.init_db'):
+        # Use create_app() to get the real app with all middleware/routers
+        from app.main import create_app
+        app = create_app()
 
-    # Add routers (same as create_app but without lifespan)
-    from app.routers import (
-        health,
-        food_logs,
-        daily_checkins,
-        weight_entries,
-        workouts,
-        exercise_sets,
-        auth,
-    )
+        # Override dependencies
+        from app.db import get_session
+        app.dependency_overrides[get_session] = override_get_session
+
+        # Create test client
+        with TestClient(app, raise_server_exceptions=True) as c:
+            yield c
+
+        # Cleanup
+        app.dependency_overrides.clear()
     
-    app.include_router(health.router)
-    app.include_router(auth.router)
-    app.include_router(food_logs.router)
-    app.include_router(daily_checkins.router)
-    app.include_router(weight_entries.router)
-    app.include_router(workouts.router)
-    app.include_router(exercise_sets.router)
-
-    # Override dependencies
-    from app.db import get_session
-    app.dependency_overrides[get_session] = override_get_session
-
-    # Create test client without raising server exceptions
-    with TestClient(app, raise_server_exceptions=True) as c:
-        yield c
-
-    # Cleanup
-    app.dependency_overrides.clear()
     SQLModel.metadata.drop_all(engine)
     engine.dispose()
