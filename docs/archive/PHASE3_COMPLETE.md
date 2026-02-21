@@ -7,14 +7,15 @@
 
 ## ✅ Completed Work
 
-### 1. Backend Testing (41 passing tests)
+### 1. Backend Testing (47 passing tests)
 
 **Test Files Created**:
+- ✅ `test_auth_utils.py` - 6 tests covering JWT creation and validation
+- ✅ `test_deps.py` - 6 tests covering dependency injection and user ID extraction
+- ✅ `test_daily_checkins.py` - 6 tests covering check-ins and integration
 - ✅ `test_food_logs.py` - 10 tests covering CRUD operations and user isolation
 - ✅ `test_workouts.py` - 11 tests covering CRUD operations and user isolation
-- ✅ `test_weight_entries.py` - 9 tests covering CRUD, filtering, and user isolation
-- ✅ `test_auth_utils.py` - 6 tests covering JWT creation and validation
-- ✅ `test_daily_checkins.py` - 6 tests (existing, verified working)
+- ✅ `test_weight_entries.py` - 8 tests covering CRUD, filtering, and user isolation
 
 **Coverage Areas**:
 - ✅ All router endpoints (GET, POST, PUT, DELETE)
@@ -27,12 +28,12 @@
 ```bash
 cd gymbro-api
 pytest -v
-# Result: 41 passed in 11.12s
+# Result: 47 passed
 ```
 
 ---
 
-### 2. Frontend Testing (22 passing tests)
+### 2. Frontend Testing (27 passing tests)
 
 **Setup**:
 - ✅ Vitest configuration (`vitest.config.ts`)
@@ -41,16 +42,16 @@ pytest -v
 - ✅ jsdom environment for DOM testing
 
 **Test Files Created**:
-- ✅ `test/utils.test.ts` - 10 tests for utility functions
+- ✅ `test/utils.test.ts` - 12 tests for utility functions
   - Date formatting
   - Relative date/time display
   - Error handling
-- ✅ `test/BottomNav.test.tsx` - 7 tests for navigation component
+- ✅ `test/BottomNav.test.tsx` - 8 tests for navigation component
   - Rendering all buttons
   - Active route highlighting
   - Navigation functionality
   - Accessibility (ARIA labels)
-- ✅ `test/OfflineIndicator.test.tsx` - 5 tests for offline indicator
+- ✅ `test/OfflineIndicator.test.tsx` - 7 tests for offline indicator
   - Online/offline state
   - Accessibility attributes
   - Visual styling
@@ -58,8 +59,8 @@ pytest -v
 **Test Execution**:
 ```bash
 cd gymbro-web
-npm test -- --run
-# Result: 22 passed in 1.61s
+npm run test:run
+# Result: 27 passed
 ```
 
 ---
@@ -127,11 +128,11 @@ alembic history
 
 | Component | Tests | Status | Coverage |
 |-----------|-------|--------|----------|
-| Backend Routers | 35 tests | ✅ Pass | ~85% |
+| Backend Routers | 41 tests | ✅ Pass | ~85% |
 | Backend Auth | 6 tests | ✅ Pass | ~90% |
-| Frontend Utils | 10 tests | ✅ Pass | 100% |
-| Frontend Components | 12 tests | ✅ Pass | ~80% |
-| **Total** | **63 tests** | **✅ Pass** | **~85%** |
+| Frontend Utils | 12 tests | ✅ Pass | 100% |
+| Frontend Components | 15 tests | ✅ Pass | ~80% |
+| **Total** | **74 tests** | **✅ Pass** | **~85%** |
 
 ---
 
@@ -173,7 +174,7 @@ alembic history
 | Backend test coverage | >80% | ✅ ~85% |
 | Frontend test coverage | >70% | ✅ ~80% |
 | CI/CD pipeline | Automated | ✅ Complete |
-| All tests passing | 100% | ✅ 63/63 |
+| All tests passing | 100% | ✅ 74/74 |
 | Migration system | Functional | ✅ Alembic ready |
 
 ---

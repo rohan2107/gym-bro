@@ -1,536 +1,390 @@
-# Architecture & Technical Decisions
+# Architecture
 
-**Last Updated**: February 18, 2026  
-**Status**: ✅ Deployed to Vercel (Frontend + Backend), PostgreSQL in production, Google OAuth 2.0 live  
-**Phase**: Phase 2 Complete - Multi-user OAuth authentication implemented
+**Last Updated**: February 21, 2026  
+**Status**: Production (Phase 3 Complete — Testing & CI/CD)
+**Phase**: Phases 1-3 Complete, Phase 4 (AI Photo Logging) Next
 
 ---
 
-## 🏗️ System Architecture
+## Tech Stack
 
-### Tech Stack
+**Frontend**:
+- React 18, TypeScript, Vite
+- Tailwind CSS for styling
+- PWA with service worker (offline support)
+- Bottom navigation for mobile-first UX
 
-| Layer | Technology | Status | Details |
-|-------|-----------|--------|----------|
-| **Frontend** | React 18 + Vite 5 + TypeScript 5.3 | ✅ Production | Strict mode, fast refresh |
-| **Mobile UI** | Bottom nav, PWA, Tailwind 3.3 | ✅ Complete | 4 tabs, responsive |
-| **Offline** | Service Worker (Cache API) | ✅ Complete | Network-first API, cache-first assets |
-| **Backend** | FastAPI 0.124 + SQLModel | ✅ Production | Full CRUD, async, type-safe |
-| **Database (Dev)** | SQLite | ✅ Active | Local development |
-| **Database (Prod)** | PostgreSQL (Neon) | ✅ Production | Serverless PostgreSQL |
-| **Auth** | Google OAuth 2.0 + JWT | ✅ Production | httpOnly cookies, 7-day tokens |
-| **Auth (Legacy)** | X-User-Id header | ✅ Deprecated | No longer used |
-| **Hosting (Frontend)** | Vercel | ✅ Production | Static site |
-| **Hosting (Backend)** | Vercel Functions | ✅ Production | Serverless API |
-| **Storage** | Vercel Blob | ⏳ Planned | Phase 3 (photo uploads) |
-| **AI/Vision** | Google Cloud Vision API | ⏳ Planned | Phase 3 (meal photos) |
-| **Testing** | pytest (backend) | ⚠️ Partial | Core endpoints tested |
-| **CI/CD** | GitHub | ✅ Active | Manual merge, no automation yet |
+**Backend**:
+- FastAPI (async Python web framework)
+- SQLModel + Pydantic v2 (type-safe ORM)
+- PostgreSQL on Neon (serverless)
+- Google OAuth 2.0 + JWT (httpOnly cookies)
 
-### Architecture Diagram (Current - Local Development)
+**Hosting**:
+- Vercel (frontend + serverless functions)
+- Neon PostgreSQL (managed database)
+- Free tier supports MVP usage
 
-```
-┌────────────────────────────────────────────────────────────┐
-│                 User (Browser - localhost)                 │
-│               Chrome/Edge on Windows/Phone                 │
-└────────────────────────────────────────────────────────────┘
-                              ↓
-┌────────────────────────────────────────────────────────────┐
-│           Frontend (Vite Dev Server :5173)                 │
-│         React 18 + TypeScript + Tailwind + PWA             │
-│  ┌─────────────────────────────────────────────────────┐   │
-│  │ Service Worker (sw.js)                              │   │
-│  │ - Cache API responses (24h expiration)              │   │
-│  │ - Offline detection & fallback                      │   │
-│  │ - Network-first for /api, cache-first assets        │   │
-│  └─────────────────────────────────────────────────────┘   │
-│  ┌─────────────────────────────────────────────────────┐   │
-│  │ Pages (React Router)                                │   │
-│  │ - / (TodayPage) - Check-in + date picker            │   │
-│  │ - /meals (MealsPage) - Full CRUD [NEW]              │   │
-│  │ - /workout (WorkoutPage) - Full CRUD [NEW]          │   │
-│  │ - /profile (ProfilePage) - Stats placeholder        │   │
-│  └─────────────────────────────────────────────────────┘   │
-│  ┌─────────────────────────────────────────────────────┐   │
-│  │ BottomNav - Fixed tab navigation                    │   │
-│  └─────────────────────────────────────────────────────┘   │
-└────────────────────────────────────────────────────────────┘
-                         ↓ Vite proxy: /api → :8000
-┌────────────────────────────────────────────────────────────┐
-│           Backend (Uvicorn :8000 --reload)                 │
-│            FastAPI + SQLModel + Pydantic v2                │
-│  ┌─────────────────────────────────────────────────────┐   │
-│  │ Routers (app/routers/)                              │   │
-│  │ - /health - Health check                            │   │
-│  │ - /daily-checkins - GET, PUT (upsert)               │   │
-│  │   - /{date} - Get check-in by date [NEW]            │   │
-│  │ - /food-logs - Full CRUD [NEW]                      │   │
-│  │   - GET / - List all                                │   │
-│  │   - POST / - Create                                 │   │
-│  │   - GET /{id} - Get one [NEW]                       │   │
-│  │   - PUT /{id} - Update [NEW]                        │   │
-│  │   - DELETE /{id} - Delete [NEW]                     │   │
-│  │ - /workouts - Full CRUD [NEW]                       │   │
-│  │   - GET / - List all                                │   │
-│  │   - POST / - Create                                 │   │
-│  │   - PUT /{id} - Update [NEW]                        │   │
-│  │   - DELETE /{id} - Delete [NEW]                     │   │
-│  └─────────────────────────────────────────────────────┘   │
-│  ┌─────────────────────────────────────────────────────┐   │
-│  │ Dependencies (app/deps.py)                          │   │
-│  │ - get_user_id() - Reads X-User-Id header            │   │
-│  └─────────────────────────────────────────────────────┘   │
-└────────────────────────────────────────────────────────────┘
-                              ↓
-                    ┌───────────────────┐
-                    │ SQLite Database   │
-                    │   (gymbro.db)     │
-                    │   Local file      │
-                    └───────────────────┘
+**Testing & CI/CD**:
+- pytest (backend: 47 tests, 85% coverage)
+- Vitest + React Testing Library (frontend: 27 tests, 80% coverage)
+- GitHub Actions (automated quality gates)
+- Alembic (database migrations)
+
+---
+
+## System Architecture
 
 ```
-
-### Architecture Diagram (Future - Production on Vercel)
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│                        User (Phone)                         │
-└─────────────────────────────────────────────────────────────┘
-                              ↓
-┌─────────────────────────────────────────────────────────────┐
-│              Vercel CDN (Frontend Static)                   │
-│         React 18 + Vite + TypeScript + Tailwind             │
-│  + Service Worker + Offline Support                         │
-└─────────────────────────────────────────────────────────────┘
-                              ↓ /api
-┌─────────────────────────────────────────────────────────────┐
-│            Vercel Functions (Backend Serverless)            │
-│        FastAPI + SQLModel + Pydantic v2                     │
-│  + Google OAuth 2.0 + JWT Authentication                    │
-└─────────────────────────────────────────────────────────────┘
-            ↓                    ↓                    ↓
-    ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐
-    │ Neon PostgreSQL │  │  Vercel Blob    │  │  Google Cloud   │
-    │   Database      │  │ Photo Storage   │  │   Vision API    │
-    │  (3 GB free)    │  │  (1 GB free)    │  │   (1000/mo)     │
-    └─────────────────┘  └─────────────────┘  └─────────────────┘
+┌──────────────────┐
+│  User (Browser)  │
+└────────┬─────────┘
+         │
+         ↓
+┌────────────────────────────────────────┐
+│  Frontend (Vercel)                     │
+│  React + TypeScript + Tailwind         │
+│                                        │
+│  Pages:                                │
+│  - Today: Daily check-ins              │
+│  - Meals: Food logging                 │
+│  - Workout: Exercise tracking          │
+│  - Profile: User settings              │
+│                                        │
+│  Auth: AuthContext + OAuth flow        │
+└────────┬───────────────────────────────┘
+         │ HTTPS
+         ↓
+┌────────────────────────────────────────┐
+│  Backend (Vercel Functions)            │
+│  FastAPI + SQLModel                    │
+│                                        │
+│  Routers:                              │
+│  - /auth/* (OAuth + JWT)               │
+│  - /daily-checkins (upsert by date)    │
+│  - /food-logs (full CRUD)              │
+│  - /workouts (full CRUD)               │
+│  - /weight-entries (full CRUD)         │
+│  - /exercise-sets (full CRUD)          │
+│  - /health (monitoring)                │
+│                                        │
+│  Auth: JWT from httpOnly cookie        │
+│  User Isolation: All queries filtered  │
+└────────┬───────────────────────────────┘
+         │
+         ↓
+┌────────────────────────────────────────┐
+│  PostgreSQL (Neon)                     │
+│  - Serverless managed database          │
+│  - Automatic SSL + backups              │
+│                                        │
+│  Tables:                                │
+│  - users (google_id, email, name)       │
+│  - daily_checkins (weight, steps, etc)  │
+│  - food_logs (description, macros)      │
+│  - workouts (name, notes)               │
+│  - exercise_sets (workout FK, reps)     │
+│  - weight_entries (value, date)         │
+└─────────────────────────────────────────┘
 ```
 
 ---
 
-## ✅ Current Implementation Status
+## Data Model
 
-### Completed Features (as of Jan 13, 2026)
-
-**Frontend (gymbro-web/)**:
-- ✅ React 18 + Vite 5 + TypeScript 5.3 (strict mode)
-- ✅ Tailwind CSS 3.3 for styling
-- ✅ React Router 7.12 with 4 routes
-- ✅ Bottom navigation (fixed tabs: Today, Meals, Workout, Profile)
-- ✅ **TodayPage**: Daily check-in form + date picker for historical data
-  - Date navigation (Previous/Next/Today buttons)
-  - Filters meals by selected date
-  - Smart button logic (Next → Today transition)
-- ✅ **MealsPage**: Full CRUD for food logs
-  - Create, edit, delete meals
-  - Edit mode pre-fills form
-  - Confirmation dialogs for delete
-- ✅ **WorkoutPage**: Full CRUD for workouts
-  - Create, edit, delete workouts
-  - Same UX pattern as meals
-- ✅ **ProfilePage**: Placeholder stats (no API integration yet)
-- ✅ **Service Worker**: Offline support
-  - Cache-first for static assets
-  - Network-first for API calls
-  - 24-hour cache expiration
-  - Offline fallback responses
-- ✅ **OfflineIndicator**: Orange banner when offline
-- ✅ **Utilities** (src/lib/utils.ts):
-  - `toDateInputValue()` - Local timezone date formatting
-  - `formatRelativeDateTime()` - "Today at", "Yesterday at" display
-  - `handleRequestError()` - Centralized error handling
-- ✅ **PWA Manifest**: App installable on mobile
-  - Blue theme color (#2563eb)
-  - Portrait orientation
-  - App icons (192x192, 512x512)
-
-**Backend (gymbro-api/)**:
-- ✅ FastAPI 0.124 + SQLModel + Pydantic v2
-- ✅ SQLite database (local dev)
-- ✅ User scoping via `X-User-Id` header
-- ✅ **Health Router** (`/health`): Status check
-- ✅ **Daily Check-ins Router** (`/daily-checkins`):
-  - `GET /` - List check-ins with date filtering
-  - `GET /today` - Get or create today's check-in
-  - `GET /{date}` - Get check-in for specific date
-  - `PUT /{date}` - Upsert check-in
-- ✅ **Food Logs Router** (`/food-logs`):
-  - `GET /` - List all user's food logs
-  - `POST /` - Create food log
-  - `GET /{id}` - Get single food log
-  - `PUT /{id}` - Update food log
-  - `DELETE /{id}` - Delete food log
-- ✅ **Workouts Router** (`/workouts`):
-  - `GET /` - List all user's workouts
-  - `POST /` - Create workout
-  - `PUT /{id}` - Update workout
-  - `DELETE /{id}` - Delete workout
-- ✅ **Security**: Dedicated update models (prevent id/user_id modification)
-- ✅ **Validation**: Client + server validation
-- ✅ **Error Handling**: Proper 404s, validation errors
-
-**Development Workflow**:
-- ✅ PowerShell start scripts (start-all.ps1)
-- ✅ Git workflow with feature branches
-- ✅ PR reviews with GitHub Copilot
-- ✅ TypeScript strict compilation
-- ✅ Hot reload (Vite + Uvicorn --reload)
-
-### Roadmap
-
-**Phase 2 - Authentication** (Next):
-- Google OAuth 2.0 setup
-- JWT token generation/validation
-- Multi-user support with data isolation
-- Protected routes
-
-**Phase 3 - Advanced Features**:
-- Photo upload and Google Cloud Vision integration
-- AI meal photo analysis with calorie estimation
-- Energy balance tracking (TDEE, adaptive learning, analytics)
-- Strong app workout import with LLM calorie estimation
-- Multi-hypothesis discrepancy analysis
-
-**Phase 4 - Integrations**:
-- Apple Health, Strava, MyFitnessPal
-- Third-party fitness tracker sync
-
----
-
-## 🔑 Key Decisions
-
-### 1. Backend: Vercel Functions vs. Traditional Server
-
-**Decision**: Vercel Functions (serverless)
-
-**Trade-offs**:
-| Aspect | Vercel Functions | Traditional Server (Railway) |
-|--------|------------------|--------------------------|
-| Cost | $0 free tier | $5–7/month |
-| Cold starts | 1–5 sec first call | Always warm |
-| Setup | Simple (same platform) | Separate service |
-| Scaling | Automatic | Manual |
-| Best for | MVP, personal use | Production scale |
-
-**Why Functions for MVP**: Free tier covers personal usage; complexity can upgrade later.
-
----
-
-### 2. Database: Neon PostgreSQL vs. SQLite vs. Supabase
-
-**Decision**: Neon PostgreSQL
-
-**Why**:
-- Free tier: 3 GB storage, 3 projects, shared compute
-- Serverless-compatible (works with Vercel Functions)
-- Standard PostgreSQL (no vendor lock-in)
-- Easy backups
-- Upgrade path to production ($15/month for generous tier)
-
-**Alternatives considered**:
-- **SQLite**: Easy locally but doesn't persist on Vercel (ephemeral storage)
-- **Supabase**: Also good, but more expensive ($25/month), includes auth (we use Google)
-
----
-
-### 3. Photo Storage: Vercel Blob vs. Google Cloud vs. AWS S3
-
-**Decision**: Vercel Blob
-
-**Why**:
-- Free tier: 1 GB, 1000 requests/month (covers ~30 photos/day)
-- Integrated with Vercel (same dashboard)
-- Simpler than Google Cloud Storage setup
-- One less service to manage
-
-**Cost breakdown**:
-- Vercel Blob: $0 (free tier)
-- Google Cloud Vision: $0.50/100 requests (free: 1000/month)
-- Total: $0/month for MVP
-
-**Rate limiting**:
-- **Free tier limit**: 1000 requests/month (~33/day)
-- **Implementation**: Client-side debounce (500ms), backend request counter
-- **User messaging**: Show "X photos remaining today" + upgrade prompt
-- **Fallback**: Auto-switch to manual entry if quota exceeded
-- **Monitoring**: Track usage via Google Cloud Console alerts
-
----
-
-### 4. Authentication: OAuth vs. Session vs. JWT
-
-**Decision**: Google OAuth 2.0 + JWT
-
-**Why**:
-- **Google OAuth**: No password management, secure, standard
-- **JWT tokens**: Stateless, work with serverless, mobile-friendly
-- **httpOnly cookies**: Secure storage (CSRF protected)
-
-**Flow**:
-1. User clicks "Sign in with Google"
-2. Google redirects with ID token
-3. Backend verifies token with Google, creates User, returns JWT
-4. Frontend stores JWT in localStorage/cookie
-5. All API calls include `Authorization: Bearer <token>`
-
----
-
-### 5. Hosting: Vercel vs. Heroku vs. DigitalOcean vs. Self-Hosted
-
-**Decision**: Vercel
-
-**Why**:
-- Free tier (unlimited static sites, 100k functions/month)
-- Automatic deployment (GitHub → Vercel on push)
-- Built-in monitoring, logs, analytics
-- Integrates with PostgreSQL (Neon)
-- Fast CDN for frontend
-- Suitable for personal + showcase project
-
-**Cost**: $0/month (free tier covers MVP)
-
----
-
-### 6. AI Vision: Google Cloud Vision vs. OpenAI vs. On-Device
-
-**Decision**: Google Cloud Vision
-
-**Why**:
-- Integrates naturally with Google OAuth (same ecosystem)
-- Good food detection accuracy
-- Free tier: 1000 requests/month
-- API is well-documented
-- Cost: $0 for MVP usage
-
-**Alternatives**:
-- **OpenAI Vision**: $0.01/image (expensive for frequent photos)
-- **On-device TensorFlow**: Privacy but lower accuracy
-- **Clarifai**: Food-specific but smaller community
-
----
-
-### 7. Energy Balance & Analytics: Science-Based Weight Loss
-
-**Decision**: Thermodynamics-based TDEE + adaptive learning
-
-**Core Principle**: Weight loss = Energy Out - Energy In (3500 cal deficit = 1 lb fat loss)
-
-**TDEE Calculation Strategy**:
-1. **Week 1-2**: Mifflin-St Jeor equation (baseline estimate)
-   - BMR = 10×weight(kg) + 6.25×height(cm) - 5×age(y) + s
-   - s = +5 for male, -161 for female
-   - TDEE = BMR × activity multiplier (1.2–1.9)
-2. **Week 3+**: Adaptive algorithm (learns from actual data)
-   - TDEE = avg_calories_consumed + (actual_weight_change × 3500 / 7)
-   - Uses 2-week rolling average to smooth noise
-   - Adjusts ±10% max per week to prevent wild swings
-
-**Why Adaptive**:
-- Static formulas have ±20% error
-- Individual metabolisms vary significantly
-- Activity levels fluctuate
-- Adaptive approach converges to personal TDEE within 3-4 weeks
-
-**Workout Calorie Estimation**:
-| Method | Accuracy | Cost | When to Use |
-|--------|----------|------|-------------|
-| LLM (GPT-4/Claude) | 85% | $0.01/workout | Complex exercises (weightlifting) |
-| MET Database | 70% | $0 | Standard cardio (running, cycling) |
-| User Override | 100% | $0 | User has heart rate monitor data |
-
-**Decision**: Hybrid approach
-- Default: MET database (free, fast)
-- Complex workouts: LLM estimation
-- Always allow user override
-
-**Strong App Import**:
-- Parse CSV export from Strong app
-- Extract: exercise name, sets, reps, weight, duration
-- Send to LLM: "Estimate calories burned for 3 sets of 10 reps bench press at 185 lbs for 30-year-old 180 lb male"
-- Cache common exercises to reduce API calls
-
-**Data Validation Logic**:
+**User**:
 ```python
-expected_weight_change = (calories_consumed - TDEE) / 3500 * 7  # lbs/week
-actual_weight_change = current_weight - last_week_weight
-
-discrepancy = abs(expected - actual) / expected
-if discrepancy > 0.2:  # >20% off
-    if actual < expected:
-        alert("Losing faster than expected - verify food tracking")
-    else:
-        alert("Losing slower than expected - check portion sizes or TDEE")
+- id: int (primary key)
+- google_id: str (OAuth unique ID)
+- email: str
+- display_name: str  
+- picture_url: str
+- created_at: datetime
 ```
 
-**Analytics Dashboard**:
-- Daily energy balance chart (stacked bar: in vs out)
-- Expected vs actual weight loss line graph
-- Confidence indicator (based on data completeness)
-- Trend analysis (2-week, 4-week, 12-week)
+**DailyCheckIn** (one per user per date):
+```python
+- id: int
+- user_id: int (FK → users)
+- date: date (unique per user)
+- weight: float | None
+- steps: int | None
+- trained_today: bool
+- protein_target: int | None
+- notes: str | None
+```
 
-**Portfolio Value**: ⭐⭐⭐⭐
-- Shows understanding of scientific principles
-- Adaptive algorithms (not just static formulas)
-- Data validation & quality checks
-- User feedback loops (correcting errors)
+**FoodLog**:
+```python
+- id: int
+- user_id: int (FK → users)
+- description: str
+- calories: int | None
+- protein_g: float | None
+- carbs_g: float | None
+- fat_g: float | None
+- timestamp: datetime
+```
 
----
+**Workout**:
+```python
+- id: int
+- user_id: int (FK → users)
+- name: str
+- notes: str | None
+- created_at: datetime
+```
 
-## 🛡️ Security & Risk Assessment
+**ExerciseSet** (child of Workout):
+```python
+- id: int
+- workout_id: int (FK → workouts)
+- exercise_name: str
+- reps: int | None
+- weight_kg: float | None
+```
 
-### Security Measures
-
-| Risk | Mitigation |
-|------|-----------|
-| Unauth API access | JWT validation on all endpoints |
-| CSRF attacks | httpOnly cookies + CORS |
-| User data leakage | Row-level security (filter by user_id) |
-| Token theft | Short expiry (7 days), refresh tokens |
-| Photo exposure | Private storage, presigned URLs |
-| SQL injection | SQLModel + SQLAlchemy (parameterized) |
-
-### Verified Protections
-
-- ✅ User isolation: Tested (user 1 can't see user 2's data)
-- ✅ CORS: Configured for Vercel domain
-- ✅ JWT validation: Checked on all protected endpoints
-- ✅ Database: Automatic SSL (Neon)
-- ✅ API authentication: OAuth 2.0 (industry standard)
-
----
-
-## ⚠️ Known Limitations & Future Upgrades
-
-### Current Limitations
-
-| Limitation | Impact | When to Fix |
-|-----------|--------|-----------|
-| Cold starts (1–5s) | First request slower | If production scale required |
-| 10s timeout (Vercel) | Long operations fail | If batch processing needed |
-| 1 GB Blob storage | ~1000 photos max | After user base grows |
-| Shared compute (Neon) | Potential slowness | If peak load increases |
-
-### Upgrade Path
-
-| Milestone | Action | Cost |
-|-----------|--------|------|
-| MVP (now) | Current stack | $0/month |
-| Private beta (10 users) | Monitor performance | $0/month |
-| Public launch (100+ users) | Upgrade Neon + Blob | $20–30/month |
-| Scale (1000+ users) | Dedicated backend + DB | $50–200/month |
+**WeightEntry**:
+```python
+- id: int
+- user_id: int (FK → users)
+- value: float
+- date: date
+- notes: str | None
+```
 
 ---
 
-## 📊 Tech Stack Maturity
+## Authentication Flow
 
-| Component | Maturity | Production Ready |
-|-----------|----------|-----------------|
-| React 18 | ✅ Stable | Yes |
-| FastAPI | ✅ Stable | Yes |
-| PostgreSQL | ✅ Enterprise | Yes |
-| Google OAuth | ✅ Industry standard | Yes |
-| Vercel | ✅ Mature platform | Yes |
-| Tailwind | ✅ Stable | Yes |
-| TypeScript | ✅ Stable | Yes |
+1. User clicks "Sign in with Google"
+2. Frontend redirects to `/api/auth/google/login`
+3. Backend generates OAuth URL → redirects to Google
+4. Google authenticates → redirects back with code
+5. Backend exchanges code for user info (email, name, picture)
+6. Backend creates/updates user record
+7. Backend generates JWT token (HS256, 7-day expiry)
+8. Backend sets httpOnly cookie with JWT
+9. Frontend receives auth status, loads app
 
-**Overall**: All production-grade technologies.
+**JWT Validation**:
+- All protected routes validate JWT from cookie
+- `get_user_id()` dependency extracts user_id from token
+- Invalid/expired tokens → 401 Unauthorized
 
----
-
-### 5. Testing: Vitest + Playwright
-
-**Decision**: Vitest (unit) + React Testing Library + Playwright (E2E)
-
-**Why**:
-- **Vitest**: Vite-native, fast, same config as build
-- **React Testing Library**: Component testing best practices
-- **Playwright**: Cross-browser E2E (Chrome, Safari, Firefox)
-
-**Testing strategy**:
-1. **Unit tests**: Components (BottomNav, Forms), utilities (date formatting)
-2. **Integration tests**: API client, error handling
-3. **E2E tests**: Critical flows (login, log meal, workout)
-
-**Phase 1B**: Add Vitest + component tests  
-**Phase 3A**: Add Playwright E2E tests
+**User Isolation**:
+- All database queries filter by `user_id`
+- Users can only see/modify their own data
+- Enforced at dependency injection layer
 
 ---
 
-## 🎓 Skills Gained by Phase
+## API Endpoints
 
-| Phase | Skills |
-|-------|--------|
-| 1A (Mobile UX) | React patterns, Tailwind, PWA, responsive design |
-| 1B (Vercel) | Serverless deployment, PostgreSQL, CI/CD, frontend testing (Vitest) |
-| 2 (OAuth) | Google Cloud, OAuth 2.0, JWT, multi-tenant design |
-| 3A (Stabilization) | E2E testing (Playwright), monitoring, performance optimization |
-| 3B (AI) | Vision API, image processing, ML integration |
+**Auth**:
+- `GET /api/auth/google/login` — Initiate OAuth flow
+- `GET /api/auth/google/callback` — Handle OAuth response
+- `GET /api/auth/me` — Get current user info
+- `POST /api/auth/logout` — Clear JWT cookie
 
----
+**Check-ins**:
+- `GET /api/daily-checkins` — List all check-ins
+- `GET /api/daily-checkins/today` — Get today's check-in
+- `GET /api/daily-checkins/{date}` — Get by specific date
+- `PUT /api/daily-checkins/{date}` — Upsert for date
 
-## 🚀 Performance & Scalability
+**Food Logs**:
+- `GET /api/food-logs` — List all for user
+- `GET /api/food-logs/{id}` — Get single log
+- `POST /api/food-logs` — Create new
+- `PUT /api/food-logs/{id}` — Update
+- `DELETE /api/food-logs/{id}` — Delete
 
-### Current Performance Targets
+**Workouts**:
+- `GET /api/workouts` — List all for user
+- `GET /api/workouts/{id}` — Get single workout
+- `POST /api/workouts` — Create new
+- `PUT /api/workouts/{id}` — Update
+- `DELETE /api/workouts/{id}` — Delete
 
-| Metric | Target | Method |
-|--------|--------|--------|
-| Page load | <2s | Vite + CDN |
-| API response | <200ms | FastAPI async |
-| PWA score | >90 | Service worker + caching |
-| Database query | <100ms | PostgreSQL indexes |
-| Cold start | <5s | Acceptable for MVP |
+**Weight Entries**:
+- `GET /api/weight-entries?from={date}&to={date}` — List all for user (optional date range)
+- `POST /api/weight-entries` — Create new
+- `PUT /api/weight-entries/{id}` — Update entry
+- `DELETE /api/weight-entries/{id}` — Delete
 
-### Scalability (Future)
+**Exercise Sets**:
+- `GET /api/exercise-sets?workout_id={id}` — List for workout
+- `POST /api/exercise-sets` — Create new
+- `PUT /api/exercise-sets/{id}` — Update set
+- `DELETE /api/exercise-sets/{id}` — Delete
 
-To handle 1000+ users:
-- [ ] Migrate backend to dedicated server (Railway $7/mo)
-- [ ] Upgrade database (Neon $15/mo)
-- [ ] Add caching (Redis)
-- [ ] Add CDN image serving (Cloudflare)
-- [ ] Database replication/backups
-
----
-
-## 📋 Deployment Checklist (Before Production)
-
-- [ ] HTTPS enabled (automatic on Vercel)
-- [ ] CORS configured for production domain
-- [ ] Environment secrets stored securely (Vercel Secrets)
-- [ ] Database backups automated (Neon)
-- [ ] Monitoring set up (Vercel logs + error tracking)
-- [ ] Rate limiting configured (if needed)
-- [ ] Input validation hardened (already done)
-- [ ] CSRF protection enabled (httpOnly cookies)
-- [ ] Data retention policy documented
-- [ ] Privacy policy written
+**Health**:
+- `GET /api/health` — Service health check
 
 ---
 
-## 🔗 Related Documentation
+## API Versioning
 
-- **IMPLEMENTATION_ROADMAP.md**: Development roadmap and phases
-- **GOOGLE_OAUTH_SETUP.md**: OAuth implementation guide
-- **TESTING_GUIDE.md**: Testing reference and commands
-- **docs/archive/**: Historical phase documentation
+**Current Status**: All endpoints are unversioned (v1 implicit).
+
+**Strategy**:
+- Breaking changes will introduce `/v2/` prefix
+- Current endpoints remain stable for backward compatibility
+- Deprecated endpoints marked in docs 6 months before removal
+- OpenAPI spec available at `/docs` (FastAPI auto-generated)
+
+**Planned Changes**:
+- Phase 4 will add `/api/food-logs/from-photo` (non-breaking addition)
+- Phase 5 will add `/api/analytics/*` endpoints (new resource)
 
 ---
 
-## 📞 Questions?
+## Security
 
-Each technical decision above has trade-offs. If you want to:
-- **Change backend to dedicated server**: Possible, adds $5–7/month cost
-- **Change to different OAuth provider**: Doable, similar effort
-- **Upgrade to Supabase**: Works, but different setup
-- **Add Stripe for payments**: Easy (separate service)
+**Authentication**:
+- Google OAuth 2.0 (industry standard)
+- JWT tokens in httpOnly cookies (XSS protection)
+- 7-day token expiry
 
-All decisions are reversible. Start with current stack, upgrade as needed.
+**Authorization**:
+- All endpoints require valid JWT
+- User isolation enforced at query level
+- No cross-user data access possible
+
+**Database**:
+- Parameterized queries (SQLAlchemy ORM)
+- Automatic SSL (Neon managed PostgreSQL)
+- Foreign key constraints enforced
+
+**API**:
+- CORS configured for production domain
+- Input validation with Pydantic
+- Automatic request/response validation
+
+---
+
+## Performance
+
+**Current Metrics**:
+- Page load: ~1-2s (Vite + Vercel CDN)
+- API response: <200ms typical (async FastAPI)
+- Cold start: 1-3s (acceptable for MVP)
+- PWA score: >90 (offline support + caching)
+
+**Optimizations**:
+- Service worker caches API responses
+- Lazy-loaded routes (React.lazy)
+- Database indexes on user_id + date
+- Connection pooling enabled
+
+---
+
+## Testing
+
+**Backend** (pytest):
+- 47 tests, 85% coverage
+- Router tests (all CRUD endpoints)
+- Auth utility tests (JWT validation)
+- Dependency tests (user isolation)
+- Integration tests with test database
+
+**Frontend** (Vitest + React Testing Library):
+- 27 tests, 80% coverage
+- Component tests (BottomNav, OfflineIndicator)
+- Utility tests (date formatting, error handling)
+- Integration tests (API client)
+
+## Known Limitations
+
+**Cold Starts**: Vercel serverless functions have ~1-2s cold start latency on first request after idle period (mitigated by Vercel's edge network for subsequent requests).
+
+**Error Recovery**: No automatic retry logic for failed API requests; users must manually retry operations (planned for Phase 4).
+
+**Offline Editing**: Weight entries and food logs cannot be edited or created in offline mode; service worker provides read-only cache fallback for previously loaded data.
+
+**Profile Page**: Currently displays placeholder data; full settings and user preferences coming in Phase 5.
+
+**Rate Limiting**: No per-user rate limiting implemented; relies on Vercel's platform-level DDoS protection (as of February 2026).
+
+**CI/CD** (GitHub Actions):
+- Automated test runs on PR
+- Parallel jobs (backend + frontend)
+- Type checking, linting, build verification
+- All checks must pass before merge
+
+---
+
+## Deployment
+
+**Production Setup**:
+```bash
+# Frontend + Backend deployed to Vercel
+git push origin main → auto-deploys
+
+# Database migrations (Alembic)
+cd gymbro-api
+alembic upgrade head
+```
+
+**Environment Variables**:
+```
+DATABASE_URL=postgresql://...
+JWT_SECRET_KEY=...
+GOOGLE_CLIENT_ID=...
+GOOGLE_CLIENT_SECRET=...
+GOOGLE_REDIRECT_URI=https://...
+```
+
+**Monitoring**:
+- Vercel logs (application)
+- Neon metrics (database)
+- GitHub Actions (CI/CD status)
+
+**Rollback Procedures**:
+```bash
+# Rollback frontend/backend deployment (Vercel)
+# Via Vercel Dashboard: Select previous deployment → "Promote to Production"
+# Or via CLI:
+vercel rollback <deployment-url>
+
+# Rollback database migration (Alembic)
+cd gymbro-api
+alembic downgrade -1  # Rollback one migration
+# Or: alembic downgrade <revision>
+```
+
+**Troubleshooting**:
+- **Cold Start Issues**: Check Vercel logs for function timeouts
+- **Database Connection Errors**: Verify DATABASE_URL in Vercel env vars
+- **Auth Failures**: Confirm GOOGLE_CLIENT_ID matches OAuth consent screen
+- **Migration Conflicts**: Run `alembic heads` to check for multiple heads
+
+---
+
+## Future Enhancements
+
+**Phase 4**: AI Meal Photo Logging
+- Google Cloud Vision API
+- Vercel Blob storage
+- USDA FoodData nutrition lookup
+
+**Phase 5**: Energy Balance Analytics
+- TDEE calculator with adaptive algorithm
+- Weight loss validation
+- Energy balance dashboard
+
+**Infrastructure**:
+- E2E tests with Playwright
+- Error tracking (Sentry)
+- Performance monitoring (Vercel Analytics)
+
+---
+
+## Related Documentation
+
+- [Implementation Roadmap](IMPLEMENTATION_ROADMAP.md) — Development phases
+- [Testing Guide](TESTING_GUIDE.md) — Test suite and commands
+- [Phase 4 Implementation Plan](PHASE4_AI_MEAL_PLAN.md) — AI photo logging details
+
+
