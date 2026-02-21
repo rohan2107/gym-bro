@@ -27,7 +27,7 @@
 
 **Testing & CI/CD**:
 - pytest (backend: 47 tests, 85% coverage)
-- Vitest + React Testing Library (frontend: 34 tests, 80% coverage)
+- Vitest + React Testing Library (frontend: 27 tests, 80% coverage)
 - GitHub Actions (automated quality gates)
 - Alembic (database migrations)
 
@@ -245,7 +245,7 @@
 **Authentication**:
 - Google OAuth 2.0 (industry standard)
 - JWT tokens in httpOnly cookies (XSS protection)
-- 7-day token expiry with auto-refresh
+- 7-day token expiry
 
 **Authorization**:
 - All endpoints require valid JWT
@@ -268,7 +268,7 @@
 
 **Current Metrics**:
 - Page load: ~1-2s (Vite + Vercel CDN)
-- API response: <200ms (async FastAPI)
+- API response: <200ms typical (async FastAPI)
 - Cold start: 1-3s (acceptable for MVP)
 - PWA score: >90 (offline support + caching)
 
@@ -290,7 +290,7 @@
 - Integration tests with test database
 
 **Frontend** (Vitest + React Testing Library):
-- 34 tests, 80% coverage
+- 27 tests, 80% coverage
 - Component tests (BottomNav, OfflineIndicator)
 - Utility tests (date formatting, error handling)
 - Integration tests (API client)
@@ -301,7 +301,7 @@
 
 **Error Recovery**: No automatic retry logic for failed API requests; users must manually retry operations (planned for Phase 4).
 
-**Offline Editing**: Weight entries and food logs cannot be edited in offline mode; only creation is supported via IndexedDB queue.
+**Offline Editing**: Weight entries and food logs cannot be edited or created in offline mode; service worker provides read-only cache fallback for previously loaded data.
 
 **Profile Page**: Currently displays placeholder data; full settings and user preferences coming in Phase 5.
 

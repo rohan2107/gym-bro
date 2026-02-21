@@ -33,7 +33,7 @@ pytest -v
 
 ---
 
-### 2. Frontend Testing (34 passing tests)
+### 2. Frontend Testing (27 passing tests)
 
 **Setup**:
 - ✅ Vitest configuration (`vitest.config.ts`)
@@ -46,7 +46,7 @@ pytest -v
   - Date formatting
   - Relative date/time display
   - Error handling
-- ✅ `test/BottomNav.test.tsx` - 15 tests for navigation component
+- ✅ `test/BottomNav.test.tsx` - 8 tests for navigation component
   - Rendering all buttons
   - Active route highlighting
   - Navigation functionality
@@ -59,8 +59,8 @@ pytest -v
 **Test Execution**:
 ```bash
 cd gymbro-web
-npm test -- --run
-# Result: 34 passed
+npm run test:run
+# Result: 27 passed
 ```
 
 ---
@@ -131,8 +131,8 @@ alembic history
 | Backend Routers | 41 tests | ✅ Pass | ~85% |
 | Backend Auth | 6 tests | ✅ Pass | ~90% |
 | Frontend Utils | 12 tests | ✅ Pass | 100% |
-| Frontend Components | 22 tests | ✅ Pass | ~80% |
-| **Total** | **81 tests** | **✅ Pass** | **~85%** |
+| Frontend Components | 15 tests | ✅ Pass | ~80% |
+| **Total** | **74 tests** | **✅ Pass** | **~85%** |
 
 ---
 
@@ -174,7 +174,7 @@ alembic history
 | Backend test coverage | >80% | ✅ ~85% |
 | Frontend test coverage | >70% | ✅ ~80% |
 | CI/CD pipeline | Automated | ✅ Complete |
-| All tests passing | 100% | ✅ 63/63 |
+| All tests passing | 100% | ✅ 74/74 |
 | Migration system | Functional | ✅ Alembic ready |
 
 ---

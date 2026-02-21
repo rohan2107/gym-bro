@@ -73,7 +73,10 @@ See [OAuth Setup Guide](docs/archive/GOOGLE_OAUTH_SETUP.md) for Google OAuth con
 cd gymbro-api && pytest -v
 
 # Frontend (27 tests)
-cd gymbro-web && npm test
+cd gymbro-web && npm run test:run
+
+# Or for watch mode during development:
+# cd gymbro-web && npm test
 ```
 ## Documentation
 

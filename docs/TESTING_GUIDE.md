@@ -77,10 +77,10 @@ cd gymbro-api; pytest -v; cd ..\gymbro-web; npm test -- --run
 ### Frontend Tests (`gymbro-web/src/test/`)
 
 - `utils.test.ts` - Utility functions (12 tests)
-- `BottomNav.test.tsx` - Navigation component (15 tests)
+- `BottomNav.test.tsx` - Navigation component (8 tests)
 - `OfflineIndicator.test.tsx` - Offline indicator (7 tests)
 
-**Total: 34 tests**
+**Total: 27 tests**
 
 ## Coverage Reports
 
@@ -177,8 +177,8 @@ describe('MyComponent', () => {
 ## Performance
 
 - Backend tests: ~11 seconds for 47 tests
-- Frontend tests: ~1.5 seconds for 34 tests
-- Total: ~13 seconds for full test suite
+- Frontend tests: ~1.5 seconds for 27 tests
+- Total: ~13 seconds for full test suite (74 tests)
 
 ## Next Steps
 

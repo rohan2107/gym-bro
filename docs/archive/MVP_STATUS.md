@@ -11,7 +11,7 @@
 | Backend | ✅ Deployed | FastAPI on Vercel Functions, PostgreSQL (Neon) |
 | Mobile UI | ✅ Complete | Bottom nav, 4 pages, responsive layout |
 | Offline Support | ✅ Complete | Service worker with cache strategy |
-| Testing | ✅ Complete | 81 tests (47 backend, 34 frontend) |
+| Testing | ✅ Complete | 74 tests (47 backend, 27 frontend) |
 | CI/CD | ✅ Complete | GitHub Actions pipeline with quality gates |
 | DevOps | ✅ Complete | GitHub → Vercel auto-deploy |
 
@@ -24,7 +24,7 @@
 ✅ **Data Persistence** - PostgreSQL backend with automatic backups  
 ✅ **Responsive Design** - Optimized for mobile, tablet, desktop  
 ✅ **Multi-User Authentication** - Google OAuth 2.0 with user data isolation  
-✅ **Test Coverage** - 81 automated tests with 85% coverage  
+✅ **Test Coverage** - 74 automated tests with 85% coverage  
 ✅ **CI/CD Pipeline** - Automated testing and deployment
 
 ## Technical Stack
@@ -58,7 +58,7 @@ See [GOOGLE_OAUTH_SETUP.md](GOOGLE_OAUTH_SETUP.md) for setup details and [../ARC
 
 ✅ **Accomplished Milestones**:
 - ✅ Backend test suite: 47 tests covering all routers and auth
-- ✅ Frontend test suite: 34 tests for components and utilities
+- ✅ Frontend test suite: 27 tests for components and utilities
 - ✅ Comprehensive test coverage (~85% backend, ~80% frontend)
 - ✅ GitHub Actions CI/CD pipeline with parallel jobs
 - ✅ Automated quality gates (tests, linting, type-checking, build)

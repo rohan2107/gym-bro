@@ -27,7 +27,7 @@ cd gymbro-web && npm run build
 
 - [ ] **All tests pass**
   - Backend: `pytest -v` (47 tests)
-  - Frontend: `npm test -- --run` (34 tests)
+  - Frontend: `npm run test:run` (27 tests)
 
 - [ ] **No linting errors**
   - Backend: `ruff check app/ tests/` (optional)
