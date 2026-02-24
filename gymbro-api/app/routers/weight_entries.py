@@ -65,7 +65,7 @@ def update_weight_entry(
         )
     ).first()
     if not entry:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Entry not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Weight entry not found.")
     entry.weight_kg = payload.weight_kg
     entry.for_date = payload.for_date
     entry.note = payload.note
@@ -87,6 +87,6 @@ def delete_weight_entry(
         )
     ).first()
     if not entry:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Entry not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Weight entry not found.")
     session.delete(entry)
     session.commit()

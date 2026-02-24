@@ -81,7 +81,7 @@ def test_get_workout_not_found(client: TestClient):
     
     resp = client.get("/workouts/999", headers=headers)
     assert resp.status_code == 404
-    assert resp.json()["detail"] == "Workout not found"
+    assert resp.json()["detail"] == "Workout not found."
 
 
 def test_update_workout(client: TestClient):

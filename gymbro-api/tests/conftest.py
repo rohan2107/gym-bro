@@ -64,3 +64,79 @@ def client():
     
     SQLModel.metadata.drop_all(engine)
     engine.dispose()
+
+
+@pytest.fixture()
+def session():
+    """
+    Create a test database session for unit tests.
+    
+    This is a standalone session fixture for tests that need database access
+    without the full FastAPI app context.
+    """
+    # Create in-memory SQLite engine with static pool
+    engine = create_engine(
+        "sqlite://",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+        echo=False,
+    )
+
+    # Import models to register tables
+    from app import models  # noqa: F401
+
+    # Create all tables
+    SQLModel.metadata.create_all(engine)
+
+    # Create and yield session
+    with Session(engine) as test_session:
+        yield test_session
+
+    # Cleanup
+    SQLModel.metadata.drop_all(engine)
+    engine.dispose()
+
+
+@pytest.fixture()
+def user_token():
+    """
+    Create a valid JWT token for test user (user_id=1).
+    
+    This allows testing authenticated endpoints that expect JWT tokens.
+    """
+    from app.auth_utils import create_jwt
+    return create_jwt(user_id=1)
+
+
+@pytest.fixture()
+def test_user_in_db(client: TestClient):
+    """
+    Create a test user in the database.
+    
+    This ensures user_id=1 exists for tests that need a full user record
+    (not just authentication).
+    """
+    from app.models import User
+    from app.db import get_session
+    
+    # Get the test database session
+    session_gen = client.app.dependency_overrides[get_session]()
+    session = next(session_gen)
+    
+    try:
+        # Create user if doesn't exist
+        user = session.get(User, 1)
+        if not user:
+            user = User(
+                id=1,
+                email="test@example.com",
+                hashed_password="fake_hash",
+                photo_count=0,
+                last_photo_date=None
+            )
+            session.add(user)
+            session.commit()
+            session.refresh(user)
+        yield user
+    finally:
+        pass

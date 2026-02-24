@@ -1,6 +1,14 @@
 #!/usr/bin/env pwsh
 # Quick lint check - runs just linting checks (faster than full pre-commit)
 # Run this frequently during development
+#
+# Usage:
+#   .\scripts\lint-check.ps1        # Check only (exit 1 on errors)
+#   .\scripts\lint-check.ps1 -Fix   # Auto-fix issues where possible
+
+param(
+    [switch]$Fix = $false
+)
 
 $ErrorActionPreference = "Stop"
 
@@ -9,18 +17,32 @@ Write-Host "`n🔍 Quick Lint Check`n" -ForegroundColor Cyan
 $failures = @()
 
 # Backend Linting
-Write-Host "Backend (ruff)..." -ForegroundColor Yellow
+if ($Fix) {
+    Write-Host "Backend (ruff --fix)..." -ForegroundColor Yellow
+} else {
+    Write-Host "Backend (ruff)..." -ForegroundColor Yellow
+}
 Push-Location gymbro-api
 try {
     # Install ruff if needed
     python -m pip install ruff --quiet 2>$null
     
     # Run ruff via Python module (works even if not in PATH)
-    python -m ruff check app/ tests/ --output-format=github
-    if ($LASTEXITCODE -eq 0) {
-        Write-Host "✅ Backend lint passed" -ForegroundColor Green
+    if ($Fix) {
+        python -m ruff check app/ tests/ --fix
+        if ($LASTEXITCODE -eq 0) {
+            Write-Host "✅ Backend lint fixed and passed" -ForegroundColor Green
+        } else {
+            $failures += "Backend"
+        }
     } else {
-        $failures += "Backend"
+        python -m ruff check app/ tests/ --output-format=github
+        if ($LASTEXITCODE -eq 0) {
+            Write-Host "✅ Backend lint passed" -ForegroundColor Green
+        } else {
+            Write-Host "   💡 Tip: Run with -Fix flag to auto-fix issues" -ForegroundColor DarkGray
+            $failures += "Backend"
+        }
     }
 } finally {
     Pop-Location

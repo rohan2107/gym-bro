@@ -44,7 +44,7 @@ def create_exercise_set(
         )
     ).first()
     if not workout:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Workout not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Workout not found.")
     exercise_set = ExerciseSet(
         workout_id=payload.workout_id,
         exercise_name=payload.exercise_name,
@@ -71,7 +71,7 @@ def update_exercise_set(
         )
     ).first()
     if not exercise_set:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Exercise set not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Exercise set not found.")
     exercise_set.exercise_name = payload.exercise_name
     exercise_set.reps = payload.reps
     exercise_set.weight_kg = payload.weight_kg
@@ -94,6 +94,6 @@ def delete_exercise_set(
         )
     ).first()
     if not exercise_set:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Exercise set not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Exercise set not found.")
     session.delete(exercise_set)
     session.commit()

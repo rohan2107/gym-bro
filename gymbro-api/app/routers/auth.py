@@ -34,7 +34,7 @@ def get_current_user(
     if not auth_token:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Not authenticated"
+            detail="Authentication required."
         )
     
     user_id = verify_jwt(auth_token)

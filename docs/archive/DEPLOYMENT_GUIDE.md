@@ -1,7 +1,7 @@
 # Deployment Guide: Vercel + Neon PostgreSQL
 
 **Status**: ✅ Production deployment complete (January 19, 2026)  
-**Live URL**: https://gym-ba2oz8etc-rohan-anthonys-projects-a86489a8.vercel.app  
+**Live URL**: https://gym-bro-chi.vercel.app/  
 **Cost**: $0 (Vercel + Neon free tiers)  
 
 This guide documents the actual deployment process used for Gym Bro on Vercel.

@@ -54,7 +54,7 @@ def get_workout(
         )
     ).first()
     if not workout:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Workout not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Workout not found.")
     return workout
 
 
@@ -71,7 +71,7 @@ def update_workout(
         )
     ).first()
     if not workout:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Workout not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Workout not found.")
     workout.name = payload.name
     workout.note = payload.note
     session.add(workout)
@@ -92,6 +92,6 @@ def delete_workout(
         )
     ).first()
     if not workout:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Workout not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Workout not found.")
     session.delete(workout)
     session.commit()

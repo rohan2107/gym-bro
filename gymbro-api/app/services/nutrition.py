@@ -4,9 +4,13 @@ This service queries the USDA FoodData Central database to get
 nutrition information for food items detected by the Vision API.
 """
 
+import logging
 import os
 from typing import Dict, List, Optional
 import httpx
+
+
+logger = logging.getLogger(__name__)
 
 
 class NutritionService:
@@ -14,16 +18,25 @@ class NutritionService:
 
     BASE_URL = "https://api.nal.usda.gov/fdc/v1"
 
-    def __init__(self):
+    def __init__(self, mock_mode: bool = None):
         """Initialize the USDA API client.
         
-        Requires USDA_API_KEY environment variable.
+        Args:
+            mock_mode: Force mock mode (True) or prod mode (False).
+                      If None, auto-detect based on API key presence.
         """
         self.api_key = os.getenv("USDA_API_KEY")
-        if not self.api_key:
+        
+        # Auto-detect mock mode if not explicitly set
+        if mock_mode is None:
+            mock_mode = not self.api_key
+        
+        self.mock_mode = mock_mode
+        
+        if not mock_mode and not self.api_key:
             raise ValueError(
                 "USDA_API_KEY not found in environment. "
-                "Please configure this key before using photo meal logging."
+                "Please configure this key before using photo meal logging in production."
             )
 
     async def search_food(
@@ -73,8 +86,8 @@ class NutritionService:
                 food = data["foods"][0]
                 return self._extract_nutrition(food)
                 
-        except httpx.HTTPError as e:
-            print(f"USDA API error for '{query}': {e}")
+        except Exception as e:
+            logger.warning(f"USDA API error for '{query}': {e}")
             return None
 
     def _extract_nutrition(self, food_data: dict) -> Dict[str, any]:
@@ -120,8 +133,8 @@ class NutritionService:
                 food_data = response.json()
                 return self._extract_nutrition(food_data)
                 
-        except httpx.HTTPError as e:
-            print(f"USDA API error for FDC ID {fdc_id}: {e}")
+        except Exception as e:
+            logger.warning(f"USDA API error for FDC ID {fdc_id}: {e}")
             return None
 
     async def batch_search(self, queries: List[str]) -> List[Optional[Dict[str, any]]]:

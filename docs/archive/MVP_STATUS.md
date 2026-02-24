@@ -1,7 +1,7 @@
 # MVP Status
 
 **Status**: ✅ Production-Ready with Full Test Coverage (February 18, 2026)  
-**Live URL**: https://gym-ba2oz8etc-rohan-anthonys-projects-a86489a8.vercel.app
+**Live URL**: https://gym-bro-chi.vercel.app/
 
 ## Production Summary
 

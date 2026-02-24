@@ -39,7 +39,7 @@ Replace temporary `X-User-Id` header with production-ready Google OAuth using mo
 - [ ] Name: "Gym Bro Web Client"
 - [ ] Authorized redirect URIs:
   - `http://localhost:5173/auth/callback` (development)
-  - `https://gym-ba2oz8etc-rohan-anthonys-projects-a86489a8.vercel.app/auth/callback` (production)
+  - `https://gym-bro-chi.vercel.app/auth/callback` (production)
 - [ ] Download credentials (client ID + secret)
 
 ### 1.5 Store Credentials Securely

@@ -12,11 +12,8 @@ omit =
     .venv/*
     */site-packages/*
     
-    # Phase 4: Work in Progress - Remove these in Phase 4.2 when service tests are added
-    app/services/__init__.py
-    app/services/vision.py
-    app/services/nutrition.py
-    app/services/rate_limiter.py
+    # Phase 4 services now have full test coverage (Phase 4.2 complete)
+    # Only excluding food_mapping.py (static configuration file, no logic to test)
     app/services/food_mapping.py
 
 [report]

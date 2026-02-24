@@ -13,7 +13,8 @@ Complete documentation for the Gym Bro fitness tracking application.
 - [Pre-Commit Checklist](PRE_COMMIT_CHECKLIST.md) — Quality gates before commits
 
 **Planning**:
-- [Phase 4 Implementation Plan](PHASE4_AI_MEAL_PLAN.md) — AI meal photo logging (next phase)
+- [Phase 4.2 Complete](PHASE4.2_COMPLETE.md) — AI meal photo logging backend (✅ complete)
+- [Phase 4 Implementation Plan](PHASE4_AI_MEAL_PLAN.md) — Original plan and frontend roadmap
 
 ## Archived Documentation
 
@@ -23,4 +24,4 @@ Completed phase documentation and detailed setup guides:
 ## Quick Links
 
 - [Main Project README](../README.md) — Quick start guide
-- [Live Demo](https://gym-ba2oz8etc-rohan-anthonys-projects-a86489a8.vercel.app) — Production deployment
+- [Live Demo](https://gym-bro-chi.vercel.app/) — Production deployment

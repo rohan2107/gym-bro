@@ -4,7 +4,7 @@
 [![CI](https://img.shields.io/github/actions/workflow/status/rohan2107/gym-bro/ci.yml?label=ci)](https://github.com/rohan2107/gym-bro/actions)
 [![Python](https://img.shields.io/badge/python-3.11+-blue)](https://python.org)
 
-**Live Demo**: https://gym-ba2oz8etc-rohan-anthonys-projects-a86489a8.vercel.app
+**Live Demo**: https://gym-bro-chi.vercel.app/
 
 A production-ready fitness PWA for tracking nutrition and workouts. Built with modern web technologies, deployed on Vercel with full CI/CD.
 
@@ -78,6 +78,21 @@ cd gymbro-web && npm run test:run
 # Or for watch mode during development:
 # cd gymbro-web && npm test
 ```
+
+## Linting
+
+```bash
+# Quick lint check (both backend & frontend)
+.\scripts\lint-check.ps1
+
+# Auto-fix lint issues
+.\scripts\lint-check.ps1 -Fix
+
+# Manual linting
+cd gymbro-api && ruff check --fix .    # Backend
+cd gymbro-web && npm run lint -- --fix  # Frontend
+```
+
 ## Documentation
 
 - [Architecture](docs/ARCHITECTURE.md) — System design and technical decisions

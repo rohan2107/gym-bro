@@ -13,14 +13,14 @@ def test_get_user_id_with_valid_jwt(client: TestClient):
     token = create_jwt(1)
     
     # Simulate the dependency with JWT cookie
-    user_id = get_user_id(auth_token=token, x_user_id=None)
+    user_id = get_user_id(auth_token=token, authorization=None, x_user_id=None)
     assert user_id == 1
 
 
 def test_get_user_id_with_x_user_id_header(client: TestClient):
     """Test get_user_id with legacy X-User-Id header."""
     # No JWT, only header
-    user_id = get_user_id(auth_token=None, x_user_id=42)
+    user_id = get_user_id(auth_token=None, authorization=None, x_user_id=42)
     assert user_id == 42
 
 
@@ -29,32 +29,32 @@ def test_get_user_id_jwt_takes_precedence(client: TestClient):
     token = create_jwt(1)
     
     # Both provided - JWT should win
-    user_id = get_user_id(auth_token=token, x_user_id=99)
+    user_id = get_user_id(auth_token=token, authorization=None, x_user_id=99)
     assert user_id == 1
 
 
 def test_get_user_id_fallback_to_header_on_invalid_jwt(client: TestClient):
     """Test fallback to X-User-Id when JWT is invalid."""
     # Invalid JWT should fall back to header
-    user_id = get_user_id(auth_token="invalid-token", x_user_id=42)
+    user_id = get_user_id(auth_token="invalid-token", authorization=None, x_user_id=42)
     assert user_id == 42
 
 
 def test_get_user_id_rejects_invalid_x_user_id(client: TestClient):
     """Test that negative or zero X-User-Id is rejected."""
     with pytest.raises(HTTPException) as exc_info:
-        get_user_id(auth_token=None, x_user_id=0)
+        get_user_id(auth_token=None, authorization=None, x_user_id=0)
     assert exc_info.value.status_code == 401
     
     with pytest.raises(HTTPException) as exc_info:
-        get_user_id(auth_token=None, x_user_id=-1)
+        get_user_id(auth_token=None, authorization=None, x_user_id=-1)
     assert exc_info.value.status_code == 401
 
 
 def test_get_user_id_no_authentication(client: TestClient):
     """Test that missing authentication raises 401."""
     with pytest.raises(HTTPException) as exc_info:
-        get_user_id(auth_token=None, x_user_id=None)
+        get_user_id(auth_token=None, authorization=None, x_user_id=None)
     
     assert exc_info.value.status_code == 401
     assert "Authentication required" in exc_info.value.detail

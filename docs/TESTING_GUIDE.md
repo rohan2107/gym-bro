@@ -54,6 +54,26 @@ npm run test:ui
 npm test -- --run --reporter=verbose
 ```
 
+### Linting
+
+```bash
+# Quick lint check (from project root)
+.\scripts\lint-check.ps1
+
+# Auto-fix lint issues
+.\scripts\lint-check.ps1 -Fix
+
+# Manual backend linting
+cd gymbro-api
+ruff check app/ tests/              # Check only
+ruff check app/ tests/ --fix        # Auto-fix
+
+# Manual frontend linting
+cd gymbro-web
+npm run lint                         # Check only
+npm run lint -- --fix                # Auto-fix
+```
+
 ### Run Everything
 
 ```bash

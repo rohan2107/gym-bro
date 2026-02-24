@@ -15,23 +15,32 @@ from typing import Any, Dict, List
 class VisionService:
     """Service for detecting food items in images using Google Cloud Vision API."""
 
-    def __init__(self):
+    def __init__(self, mock_mode: bool = None):
         """Initialize the Vision API client.
         
-        Requires GOOGLE_VISION_API_KEY environment variable.
+        Args:
+            mock_mode: Force mock mode (True) or prod mode (False).
+                      If None, auto-detect based on API key presence.
+        
+        In mock mode, returns dummy predictions for testing.
         """
         self.api_key = os.getenv("GOOGLE_VISION_API_KEY")
-        if not self.api_key:
+        
+        # Auto-detect mock mode if not explicitly set
+        if mock_mode is None:
+            mock_mode = not self.api_key
+        
+        self.mock_mode = mock_mode
+        
+        if not mock_mode and not self.api_key:
             raise ValueError(
                 "GOOGLE_VISION_API_KEY not found in environment. "
-                "Please configure this key before using photo meal logging."
+                "Please configure this key before using photo meal logging in production."
             )
         
-        # Initialize client when ready (uncomment after API setup)
-        # self.client = vision.ImageAnnotatorClient(
-        #     client_options={"api_key": self.api_key}
-        # )
-        self.client = None  # Placeholder
+        # TODO: Initialize real Vision API client when API key is configured
+        # Uncomment lines 10-11 (import statements) and replace this:
+        self.client = None
 
     def detect_food(self, image_bytes: bytes) -> List[Dict[str, Any]]:
         """Detect food items in image with confidence scores.
