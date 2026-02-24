@@ -98,7 +98,9 @@ class RateLimiter:
         **Transaction Safety:**
         - SELECT FOR UPDATE acquires row lock (PostgreSQL/MySQL)
         - Reset, check, and increment all in single transaction
-        - No other code path modifies photo_count without this method
+        - This is the primary method for rate limiting; increment() exists for
+          non-atomic use cases but should be avoided in request paths that need
+          strict limit enforcement
         """
         # Lock the user row for the entire transaction
         # On PostgreSQL: Acquires exclusive row lock, blocks other transactions
@@ -177,6 +179,36 @@ class RateLimiter:
         user.photo_count += 1
         self.session.add(user)
         self.session.commit()
+        
+        return user.photo_count
+
+    def decrement(self, user_id: int) -> int:
+        """Decrement photo count for user (refund).
+        
+        Used to refund a user's quota when a photo upload fails after
+        the rate limit was already incremented.
+        
+        Args:
+            user_id: User ID to decrement
+            
+        Returns:
+            New photo count for today
+            
+        Raises:
+            ValueError: If user not found
+        """
+        user = self.session.exec(
+            select(User).where(User.id == user_id).with_for_update()
+        ).first()
+        
+        if not user:
+            raise ValueError(f"User {user_id} not found")
+        
+        # Only decrement if count is > 0
+        if user.photo_count > 0:
+            user.photo_count -= 1
+            self.session.add(user)
+            self.session.commit()
         
         return user.photo_count
 

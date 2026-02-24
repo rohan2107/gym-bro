@@ -35,15 +35,16 @@ def get_user_id(
         HTTPException: 401 if no valid authentication provided
     """
     # Try Authorization header first (REST API standard)
-    if authorization and authorization.startswith("Bearer "):
-        parts = authorization.split(" ")
-        if len(parts) == 2:
-            token = parts[1]
-            try:
-                return verify_jwt(token)
-            except HTTPException:
-                # JWT invalid - fall through to try other methods
-                pass
+    if authorization:
+        scheme, _, param = authorization.partition(" ")
+        if scheme.lower() == "bearer":
+            token = param.strip()
+            if token:
+                try:
+                    return verify_jwt(token)
+                except HTTPException:
+                    # JWT invalid - fall through to try other methods
+                    pass
     
     # Try JWT cookie (for browser clients)
     if auth_token:

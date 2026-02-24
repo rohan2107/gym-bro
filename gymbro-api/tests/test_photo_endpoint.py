@@ -383,3 +383,114 @@ class TestPhotoMealLogging:
         # Should have at least one prediction (the successful one)
         assert len(data["predictions"]) >= 1
         assert data["predictions"][0]["label"] == "pizza"
+
+    def test_upload_photo_refunds_quota_on_vision_error(
+        self,
+        client: TestClient,
+        user_token: str,
+        test_user_in_db,
+        valid_image_file
+    ):
+        """Test that quota is refunded when Vision API fails."""
+        # Check initial count
+        from app.models import User
+        from app.db import get_session
+        session_gen = client.app.dependency_overrides[get_session]()
+        session = next(session_gen)
+        user = session.get(User, 1)
+        initial_count = user.photo_count
+        session_gen.close()
+        
+        # Mock vision service to raise error
+        with patch('app.services.vision.VisionService.detect_food') as mock_detect:
+            mock_detect.side_effect = Exception("Vision API error")
+            
+            response = client.post(
+                "/food-logs/from-photo",
+                files={"photo": valid_image_file},
+                headers={"Authorization": f"Bearer {user_token}"}
+            )
+        
+        assert response.status_code == 503
+        
+        # Verify count was refunded (should be same as initial)
+        session_gen = client.app.dependency_overrides[get_session]()
+        session = next(session_gen)
+        user = session.get(User, 1)
+        assert user.photo_count == initial_count
+        session_gen.close()
+
+    def test_upload_photo_refunds_quota_on_no_food_detected(
+        self,
+        client: TestClient,
+        user_token: str,
+        test_user_in_db,
+        valid_image_file
+    ):
+        """Test that quota is refunded when no food is detected."""
+        # Check initial count
+        from app.models import User
+        from app.db import get_session
+        session_gen = client.app.dependency_overrides[get_session]()
+        session = next(session_gen)
+        user = session.get(User, 1)
+        initial_count = user.photo_count
+        session_gen.close()
+        
+        # Mock vision service to return empty list
+        with patch('app.services.vision.VisionService.detect_food') as mock_detect:
+            mock_detect.return_value = []
+            
+            response = client.post(
+                "/food-logs/from-photo",
+                files={"photo": valid_image_file},
+                headers={"Authorization": f"Bearer {user_token}"}
+            )
+        
+        assert response.status_code == 404
+        
+        # Verify count was refunded
+        session_gen = client.app.dependency_overrides[get_session]()
+        session = next(session_gen)
+        user = session.get(User, 1)
+        assert user.photo_count == initial_count
+        session_gen.close()
+
+    def test_upload_photo_refunds_quota_on_no_nutrition_found(
+        self,
+        client: TestClient,
+        user_token: str,
+        test_user_in_db,
+        valid_image_file
+    ):
+        """Test that quota is refunded when no nutrition data is found."""
+        # Check initial count
+        from app.models import User
+        from app.db import get_session
+        session_gen = client.app.dependency_overrides[get_session]()
+        session = next(session_gen)
+        user = session.get(User, 1)
+        initial_count = user.photo_count
+        session_gen.close()
+        
+        # Mock services
+        with patch('app.services.vision.VisionService.detect_food') as mock_detect, \
+             patch('app.services.nutrition.NutritionService.search_food') as mock_search:
+            
+            mock_detect.return_value = [{"label": "pizza", "confidence": 0.85, "source": "mock"}]
+            mock_search.return_value = None  # No nutrition found
+            
+            response = client.post(
+                "/food-logs/from-photo",
+                files={"photo": valid_image_file},
+                headers={"Authorization": f"Bearer {user_token}"}
+            )
+        
+        assert response.status_code == 404
+        
+        # Verify count was refunded
+        session_gen = client.app.dependency_overrides[get_session]()
+        session = next(session_gen)
+        user = session.get(User, 1)
+        assert user.photo_count == initial_count
+        session_gen.close()

@@ -89,7 +89,7 @@ async def create_food_log_from_photo(
                 "used_today": 1
             },
             "image_info": {
-                "format": "JPEG",
+                "format": "jpeg",
                 "size_kb": 125
             }
         }
@@ -148,21 +148,24 @@ async def create_food_log_from_photo(
     try:
         food_labels = vision_service.detect_food(image_bytes)
     except ValueError as e:
-        # Invalid image format or data
+        # Invalid image format or data - user error, no refund
         logger.warning(f"Invalid image for food detection: {e}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid image format. Please upload a valid photo."
         )
     except Exception as e:
-        # Vision API or unexpected errors
+        # Vision API or unexpected errors - refund the quota
         logger.error(f"Food detection service error: {e}", exc_info=True)
+        rate_limiter.decrement(user_id)
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Food detection service temporarily unavailable. Please try again."
         )
     
     if not food_labels:
+        # No food detected - refund the quota
+        rate_limiter.decrement(user_id)
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="No food items detected in image. Try a clearer photo or enter manually."
@@ -194,6 +197,8 @@ async def create_food_log_from_photo(
     
     # If no nutrition data found for any labels
     if not predictions:
+        # Nutrition lookup failed - refund the quota
+        rate_limiter.decrement(user_id)
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Could not find nutrition data for detected foods. Try manual entry."

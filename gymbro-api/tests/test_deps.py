@@ -58,3 +58,53 @@ def test_get_user_id_no_authentication(client: TestClient):
     
     assert exc_info.value.status_code == 401
     assert "Authentication required" in exc_info.value.detail
+
+
+def test_get_user_id_with_authorization_header(client: TestClient):
+    """Test get_user_id with Authorization header (Bearer token)."""
+    token = create_jwt(1)
+    
+    user_id = get_user_id(
+        auth_token=None,
+        authorization=f"Bearer {token}",
+        x_user_id=None
+    )
+    assert user_id == 1
+
+
+def test_get_user_id_authorization_header_multiple_spaces(client: TestClient):
+    """Test Authorization header parsing with multiple spaces."""
+    token = create_jwt(1)
+    
+    # Multiple spaces between "Bearer" and token
+    user_id = get_user_id(
+        auth_token=None,
+        authorization=f"Bearer   {token}",  # 3 spaces
+        x_user_id=None
+    )
+    assert user_id == 1
+
+
+def test_get_user_id_authorization_header_trailing_space(client: TestClient):
+    """Test Authorization header parsing with trailing space."""
+    token = create_jwt(1)
+    
+    # Trailing space after token
+    user_id = get_user_id(
+        auth_token=None,
+        authorization=f"Bearer {token} ",  # trailing space
+        x_user_id=None
+    )
+    assert user_id == 1
+
+
+def test_get_user_id_authorization_header_case_insensitive(client: TestClient):
+    """Test that 'bearer' (lowercase) also works."""
+    token = create_jwt(1)
+    
+    user_id = get_user_id(
+        auth_token=None,
+        authorization=f"bearer {token}",  # lowercase
+        x_user_id=None
+    )
+    assert user_id == 1

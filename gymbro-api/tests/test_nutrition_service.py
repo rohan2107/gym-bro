@@ -8,8 +8,11 @@ from app.services.nutrition import NutritionService
 
 @pytest.fixture
 def nutrition_service():
-    """Create NutritionService instance for testing."""
-    return NutritionService()
+    """Create NutritionService instance for testing.
+    
+    Mock mode is disabled to allow HTTP mocking in tests.
+    """
+    return NutritionService(mock_mode=False)
 
 
 @pytest.fixture
@@ -54,8 +57,8 @@ class TestNutritionService:
     def test_initialization(self, nutrition_service):
         """Test NutritionService initializes correctly."""
         assert nutrition_service is not None
-        # In mock mode (no API key), should still initialize successfully
-        assert nutrition_service.mock_mode is True or nutrition_service.api_key is not None
+        # Tests explicitly set mock_mode=False to allow HTTP mocking
+        assert nutrition_service.mock_mode is False
         assert nutrition_service.BASE_URL == "https://api.nal.usda.gov/fdc/v1"
 
     @pytest.mark.asyncio

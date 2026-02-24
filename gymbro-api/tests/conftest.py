@@ -139,4 +139,5 @@ def test_user_in_db(client: TestClient):
             session.refresh(user)
         yield user
     finally:
-        pass
+        # Close generator to ensure cleanup runs
+        session_gen.close()
