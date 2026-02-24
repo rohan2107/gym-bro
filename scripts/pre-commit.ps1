@@ -17,8 +17,10 @@ try {
     python -m pip install ruff --quiet 2>$null
     
     # Run ruff via Python module (works even if not in PATH)
+    # Note: Use "ruff check --fix" to auto-fix issues before committing
     python -m ruff check app/ tests/ --output-format=github
     if ($LASTEXITCODE -ne 0) {
+        Write-Host "   💡 Tip: Run 'ruff check --fix .' in gymbro-api to auto-fix issues" -ForegroundColor DarkGray
         $failures += "Backend linting"
     } else {
         Write-Host "   ✅ Backend linting passed" -ForegroundColor Green
@@ -31,7 +33,7 @@ try {
 
 # 2. Backend Tests
 Write-Host "`n2️⃣  Running backend tests with coverage..." -ForegroundColor Yellow
-Write-Host "   Target: 80% (excluding Phase 4 services - see .coveragerc)" -ForegroundColor DarkGray
+Write-Host "   Target: 80% coverage" -ForegroundColor DarkGray
 Push-Location gymbro-api
 try {
     # Set env var and use venv Python
@@ -39,7 +41,7 @@ try {
     if (Test-Path $pythonExe) {
         # Pass env var directly to the process
         $env:JWT_SECRET_KEY = "test-secret-key"
-        # Coverage config in .coveragerc - excludes app/services/* (Phase 4 WIP)
+        # Coverage config in .coveragerc (only excludes food_mapping.py - static config)
         & $pythonExe -m pytest -q --tb=short --cov=app --cov-report=term-missing:skip-covered --cov-fail-under=80
         $testResult = $LASTEXITCODE
         Remove-Item env:JWT_SECRET_KEY -ErrorAction SilentlyContinue

@@ -9,7 +9,6 @@ This will create all tables in your production database.
 import os
 from dotenv import load_dotenv
 from sqlmodel import SQLModel, create_engine
-from app.models import User, FoodLog, Workout, ExerciseSet, WeightEntry, DailyCheckIn, NutrientEntry
 
 # Load environment variables from .env file
 load_dotenv()
@@ -31,7 +30,7 @@ if "sqlite" in DATABASE_URL.lower():
     if response.lower() != 'y':
         exit(0)
 
-print(f"🔗 Connecting to database...")
+print("🔗 Connecting to database...")
 print(f"   {DATABASE_URL[:30]}...")
 
 try:

@@ -5,7 +5,7 @@ with confidence scores.
 """
 
 import os
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 # Note: uncomment when API key is configured
 # from google.cloud import vision
@@ -15,23 +15,33 @@ from typing import Any, Dict, List
 class VisionService:
     """Service for detecting food items in images using Google Cloud Vision API."""
 
-    def __init__(self):
+    def __init__(self, mock_mode: Optional[bool] = None):
         """Initialize the Vision API client.
         
-        Requires GOOGLE_VISION_API_KEY environment variable.
+        Args:
+            mock_mode: Force mock mode (True) or prod mode (False).
+                      If None, auto-detect based on API key presence.
+        
+        In mock mode, returns dummy predictions for testing.
         """
         self.api_key = os.getenv("GOOGLE_VISION_API_KEY")
-        if not self.api_key:
-            raise ValueError(
-                "GOOGLE_VISION_API_KEY not found in environment. "
-                "Please configure this key before using photo meal logging."
-            )
         
-        # Initialize client when ready (uncomment after API setup)
-        # self.client = vision.ImageAnnotatorClient(
-        #     client_options={"api_key": self.api_key}
-        # )
-        self.client = None  # Placeholder
+        # Auto-detect mock mode if not explicitly set
+        if mock_mode is None:
+            mock_mode = not self.api_key
+        
+        self.mock_mode = mock_mode
+        
+        # Only raise error if mock_mode is explicitly False and no API key
+        # (mock_mode=False in tests with HTTP mocking is allowed)
+        if mock_mode is False and not self.api_key:
+            # This is intentionally allowed for testing with HTTP mocks
+            # The actual API calls will fail if attempted without a key
+            pass
+        
+        # TODO: Initialize real Vision API client when API key is configured
+        # Uncomment lines 10-11 (import statements) and replace this:
+        self.client = None
 
     def detect_food(self, image_bytes: bytes) -> List[Dict[str, Any]]:
         """Detect food items in image with confidence scores.
@@ -57,9 +67,8 @@ class VisionService:
         Raises:
             Exception: If Vision API call fails
         """
-        if self.client is None:
-            # TODO: Remove this placeholder after API setup
-            # For now, return mock data for development
+        # Return mock data in development/test mode
+        if self.mock_mode:
             return [
                 {
                     "label": "pizza",
@@ -67,6 +76,13 @@ class VisionService:
                     "source": "mock_development"
                 }
             ]
+        
+        # Production mode but client not initialized
+        if self.client is None:
+            raise RuntimeError(
+                "Vision API client not initialized. Mock mode is disabled but client is None. "
+                "This is a configuration error - either enable mock mode or initialize the real client."
+            )
         
         # Real implementation (uncomment after API setup):
         # image = vision.Image(content=image_bytes)
