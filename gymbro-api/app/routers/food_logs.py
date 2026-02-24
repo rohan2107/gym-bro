@@ -101,9 +101,22 @@ async def create_food_log_from_photo(
             detail="Invalid file type. Please upload an image file."
         )
     
-    # Read image bytes
+    # Read image bytes with streaming size limit to prevent memory exhaustion
+    MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB in bytes
+    image_bytes = b""
     try:
-        image_bytes = await photo.read()
+        while True:
+            chunk = await photo.read(1024 * 64)  # 64KB chunks
+            if not chunk:
+                break
+            image_bytes += chunk
+            if len(image_bytes) > MAX_FILE_SIZE:
+                raise HTTPException(
+                    status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                    detail=f"File size exceeds maximum allowed size of {MAX_FILE_SIZE // (1024 * 1024)}MB."
+                )
+    except HTTPException:
+        raise
     except (OSError, ValueError) as e:
         logger.warning(f"Failed to read uploaded image: {e}")
         raise HTTPException(
@@ -115,14 +128,6 @@ async def create_food_log_from_photo(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to process uploaded file. Please try again."
-        )
-    
-    # Validate file size (10MB limit)
-    MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB in bytes
-    if len(image_bytes) > MAX_FILE_SIZE:
-        raise HTTPException(
-            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
-            detail=f"File size exceeds maximum allowed size of {MAX_FILE_SIZE // (1024 * 1024)}MB."
         )
     
     # Validate image
@@ -172,7 +177,7 @@ async def create_food_log_from_photo(
         )
     
     # Map labels to USDA queries and fetch nutrition
-    predictions = []
+    predictions: List[Dict[str, Any]] = []
     for label_data in food_labels:
         label = label_data["label"]
         confidence = label_data["confidence"]

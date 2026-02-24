@@ -104,7 +104,7 @@ class NutritionService:
             logger.warning(f"USDA API error for '{query}': {e}")
             return None
 
-    def _extract_nutrition(self, food_data: dict) -> Dict[str, Any]:
+    def _extract_nutrition(self, food_data: Dict[str, Any]) -> Dict[str, Any]:
         """Extract nutrition information from USDA food data.
         
         Args:
@@ -179,7 +179,7 @@ class NutritionService:
         results = await asyncio.gather(*tasks, return_exceptions=True)
         
         # Convert exceptions to None
-        return [r if not isinstance(r, Exception) else None for r in results]
+        return [None if isinstance(r, BaseException) else r for r in results]
 
     def get_food_mapping(self, vision_label: str) -> Optional[str]:
         """Map Vision API label to USDA search query.

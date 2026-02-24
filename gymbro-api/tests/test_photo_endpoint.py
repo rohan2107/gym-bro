@@ -1,16 +1,21 @@
 """Tests for photo meal logging endpoint."""
 
+from typing import Any, Generator, cast
+
 import pytest
 from io import BytesIO
 from PIL import Image
 from unittest.mock import patch, AsyncMock
 
+from fastapi import FastAPI
 from fastapi.testclient import TestClient
+from sqlmodel import Session
+
 from app.models import User
 
 
 @pytest.fixture
-def valid_image_file():
+def valid_image_file() -> tuple[str, BytesIO, str]:
     """Create a valid test image file."""
     image = Image.new('RGB', (500, 500), color='red')
     buffer = BytesIO()
@@ -20,7 +25,7 @@ def valid_image_file():
 
 
 @pytest.fixture
-def small_image_file():
+def small_image_file() -> tuple[str, BytesIO, str]:
     """Create an image that's too small."""
     image = Image.new('RGB', (100, 100), color='blue')
     buffer = BytesIO()
@@ -30,7 +35,7 @@ def small_image_file():
 
 
 @pytest.fixture
-def mock_vision_predictions():
+def mock_vision_predictions() -> list[dict[str, Any]]:
     """Mock Vision API predictions."""
     return [
         {
@@ -42,7 +47,7 @@ def mock_vision_predictions():
 
 
 @pytest.fixture
-def mock_nutrition_data():
+def mock_nutrition_data() -> dict[str, Any]:
     """Mock USDA nutrition data."""
     return {
         "name": "Pizza, cheese, regular crust",
@@ -56,6 +61,13 @@ def mock_nutrition_data():
     }
 
 
+def _get_session_gen(client: TestClient) -> Generator[Session, None, None]:
+    """Get a typed session generator from client's dependency overrides."""
+    from app.db import get_session
+    _app = cast(FastAPI, client.app)
+    return cast(Generator[Session, None, None], _app.dependency_overrides[get_session]())
+
+
 class TestPhotoMealLogging:
     """Test suite for photo meal logging endpoint."""
 
@@ -63,11 +75,11 @@ class TestPhotoMealLogging:
         self, 
         client: TestClient, 
         user_token: str,
-        test_user_in_db,
-        valid_image_file,
-        mock_vision_predictions,
-        mock_nutrition_data
-    ):
+        test_user_in_db: User,
+        valid_image_file: tuple[str, BytesIO, str],
+        mock_vision_predictions: list[dict[str, Any]],
+        mock_nutrition_data: dict[str, Any]
+    ) -> None:
         """Test successful photo upload and food detection."""
         # Mock the nutrition service to return data
         with patch('app.services.nutrition.NutritionService.search_food', new_callable=AsyncMock) as mock_search:
@@ -109,7 +121,7 @@ class TestPhotoMealLogging:
         self,
         client: TestClient,
         user_token: str
-    ):
+    ) -> None:
         """Test upload with invalid image data."""
         invalid_file = ("test.txt", BytesIO(b"not an image"), "text/plain")
         
@@ -126,8 +138,8 @@ class TestPhotoMealLogging:
         self,
         client: TestClient,
         user_token: str,
-        small_image_file
-    ):
+        small_image_file: tuple[str, BytesIO, str]
+    ) -> None:
         """Test upload with image that's too small."""
         response = client.post(
             "/food-logs/from-photo",
@@ -142,21 +154,21 @@ class TestPhotoMealLogging:
         self,
         client: TestClient,
         user_token: str,
-        test_user_in_db,
-        valid_image_file
-    ):
+        test_user_in_db: User,
+        valid_image_file: tuple[str, BytesIO, str]
+    ) -> None:
         """Test upload when rate limit is exceeded."""
         # Directly modify the test_user_in_db fixture since it's already in the correct session
         from datetime import date
         
         # Access the session through app overrides
-        from app.db import get_session
-        session_gen = client.app.dependency_overrides[get_session]()
+        session_gen = _get_session_gen(client)
         try:
             session = next(session_gen)
             
             # Get user from this session and modify
             user = session.get(User, 1)
+            assert user is not None
             user.photo_count = 30
             user.last_photo_date = date.today()
             session.commit()
@@ -177,9 +189,9 @@ class TestPhotoMealLogging:
         self,
         client: TestClient,
         user_token: str,
-        test_user_in_db,
-        valid_image_file
-    ):
+        test_user_in_db: User,
+        valid_image_file: tuple[str, BytesIO, str]
+    ) -> None:
         """Test upload when no food is detected in image."""
         # Mock vision service to return empty list
         with patch('app.services.vision.VisionService.detect_food') as mock_detect:
@@ -198,9 +210,9 @@ class TestPhotoMealLogging:
         self,
         client: TestClient,
         user_token: str,
-        test_user_in_db,
-        valid_image_file
-    ):
+        test_user_in_db: User,
+        valid_image_file: tuple[str, BytesIO, str]
+    ) -> None:
         """Test upload when nutrition data can't be found."""
         # Mock nutrition service to return None
         with patch('app.services.nutrition.NutritionService.search_food', new_callable=AsyncMock) as mock_search:
@@ -218,8 +230,8 @@ class TestPhotoMealLogging:
     def test_upload_photo_unauthorized(
         self,
         client: TestClient,
-        valid_image_file
-    ):
+        valid_image_file: tuple[str, BytesIO, str]
+    ) -> None:
         """Test upload without authentication."""
         response = client.post(
             "/food-logs/from-photo",
@@ -232,10 +244,10 @@ class TestPhotoMealLogging:
         self,
         client: TestClient,
         user_token: str,
-        test_user_in_db,
-        valid_image_file,
-        mock_nutrition_data
-    ):
+        test_user_in_db: User,
+        valid_image_file: tuple[str, BytesIO, str],
+        mock_nutrition_data: dict[str, Any]
+    ) -> None:
         """Test upload with multiple food items detected."""
         # Mock vision service to return multiple items
         with patch('app.services.vision.VisionService.detect_food') as mock_vision:
@@ -264,9 +276,9 @@ class TestPhotoMealLogging:
         self,
         client: TestClient,
         user_token: str,
-        test_user_in_db,
-        valid_image_file
-    ):
+        test_user_in_db: User,
+        valid_image_file: tuple[str, BytesIO, str]
+    ) -> None:
         """Test upload when Vision API fails."""
         with patch('app.services.vision.VisionService.detect_food') as mock_detect:
             mock_detect.side_effect = Exception("Vision API error")
@@ -284,18 +296,18 @@ class TestPhotoMealLogging:
         self,
         client: TestClient,
         user_token: str,
-        test_user_in_db,
-        valid_image_file,
-        mock_nutrition_data
-    ):
+        test_user_in_db: User,
+        valid_image_file: tuple[str, BytesIO, str],
+        mock_nutrition_data: dict[str, Any]
+    ) -> None:
         """Test that successful upload increments rate limit counter."""
         # Get user from the client's session
-        from app.db import get_session
-        session_gen = client.app.dependency_overrides[get_session]()
+        session_gen = _get_session_gen(client)
         try:
             session = next(session_gen)
             
             user = session.get(User, 1)
+            assert user is not None
             initial_count = user.photo_count if user.photo_count else 0
         finally:
             session_gen.close()
@@ -313,10 +325,11 @@ class TestPhotoMealLogging:
         assert response.status_code == 200
         
         # Verify count was incremented - refresh from session
-        session_gen2 = client.app.dependency_overrides[get_session]()
+        session_gen2 = _get_session_gen(client)
         try:
             session2 = next(session_gen2)
             user_after = session2.get(User, 1)
+            assert user_after is not None
             assert user_after.photo_count == initial_count + 1
         finally:
             session_gen2.close()
@@ -325,10 +338,10 @@ class TestPhotoMealLogging:
         self,
         client: TestClient,
         user_token: str,
-        test_user_in_db,
-        valid_image_file,
-        mock_nutrition_data
-    ):
+        test_user_in_db: User,
+        valid_image_file: tuple[str, BytesIO, str],
+        mock_nutrition_data: dict[str, Any]
+    ) -> None:
         """Test that response includes image validation info."""
         with patch('app.services.nutrition.NutritionService.search_food', new_callable=AsyncMock) as mock_search:
             mock_search.return_value = mock_nutrition_data
@@ -352,7 +365,7 @@ class TestPhotoMealLogging:
         self,
         client: TestClient,
         user_token: str
-    ):
+    ) -> None:
         """Test upload without providing a file."""
         response = client.post(
             "/food-logs/from-photo",
@@ -365,10 +378,10 @@ class TestPhotoMealLogging:
         self,
         client: TestClient,
         user_token: str,
-        test_user_in_db,
-        valid_image_file,
-        mock_nutrition_data
-    ):
+        test_user_in_db: User,
+        valid_image_file: tuple[str, BytesIO, str],
+        mock_nutrition_data: dict[str, Any]
+    ) -> None:
         """Test that upload succeeds even if some nutrition lookups fail."""
         with patch('app.services.vision.VisionService.detect_food') as mock_vision:
             mock_vision.return_value = [
@@ -397,17 +410,17 @@ class TestPhotoMealLogging:
         self,
         client: TestClient,
         user_token: str,
-        test_user_in_db,
-        valid_image_file
-    ):
+        test_user_in_db: User,
+        valid_image_file: tuple[str, BytesIO, str]
+    ) -> None:
         """Test that quota is refunded when Vision API fails."""
         # Check initial count
         from app.models import User
-        from app.db import get_session
-        session_gen = client.app.dependency_overrides[get_session]()
+        session_gen = _get_session_gen(client)
         try:
             session = next(session_gen)
             user = session.get(User, 1)
+            assert user is not None
             initial_count = user.photo_count
         finally:
             session_gen.close()
@@ -425,10 +438,11 @@ class TestPhotoMealLogging:
         assert response.status_code == 503
         
         # Verify count was refunded (should be same as initial)
-        session_gen = client.app.dependency_overrides[get_session]()
+        session_gen = _get_session_gen(client)
         try:
             session = next(session_gen)
             user = session.get(User, 1)
+            assert user is not None
             assert user.photo_count == initial_count
         finally:
             session_gen.close()
@@ -437,17 +451,17 @@ class TestPhotoMealLogging:
         self,
         client: TestClient,
         user_token: str,
-        test_user_in_db,
-        valid_image_file
-    ):
+        test_user_in_db: User,
+        valid_image_file: tuple[str, BytesIO, str]
+    ) -> None:
         """Test that quota is refunded when no food is detected."""
         # Check initial count
         from app.models import User
-        from app.db import get_session
-        session_gen = client.app.dependency_overrides[get_session]()
+        session_gen = _get_session_gen(client)
         try:
             session = next(session_gen)
             user = session.get(User, 1)
+            assert user is not None
             initial_count = user.photo_count
         finally:
             session_gen.close()
@@ -465,10 +479,11 @@ class TestPhotoMealLogging:
         assert response.status_code == 404
         
         # Verify count was refunded
-        session_gen = client.app.dependency_overrides[get_session]()
+        session_gen = _get_session_gen(client)
         try:
             session = next(session_gen)
             user = session.get(User, 1)
+            assert user is not None
             assert user.photo_count == initial_count
         finally:
             session_gen.close()
@@ -477,17 +492,17 @@ class TestPhotoMealLogging:
         self,
         client: TestClient,
         user_token: str,
-        test_user_in_db,
-        valid_image_file
-    ):
+        test_user_in_db: User,
+        valid_image_file: tuple[str, BytesIO, str]
+    ) -> None:
         """Test that quota is refunded when no nutrition data is found."""
         # Check initial count
         from app.models import User
-        from app.db import get_session
-        session_gen = client.app.dependency_overrides[get_session]()
+        session_gen = _get_session_gen(client)
         try:
             session = next(session_gen)
             user = session.get(User, 1)
+            assert user is not None
             initial_count = user.photo_count
         finally:
             session_gen.close()
@@ -508,10 +523,11 @@ class TestPhotoMealLogging:
         assert response.status_code == 404
         
         # Verify count was refunded
-        session_gen = client.app.dependency_overrides[get_session]()
+        session_gen = _get_session_gen(client)
         try:
             session = next(session_gen)
             user = session.get(User, 1)
+            assert user is not None
             assert user.photo_count == initial_count
         finally:
             session_gen.close()

@@ -1,5 +1,7 @@
 """Tests for Nutrition service (USDA FoodData Central API integration)."""
 
+from typing import Any
+
 import pytest
 from unittest.mock import AsyncMock, patch, MagicMock
 
@@ -7,7 +9,7 @@ from app.services.nutrition import NutritionService
 
 
 @pytest.fixture
-def nutrition_service():
+def nutrition_service() -> NutritionService:
     """Create NutritionService instance for testing.
     
     Mock mode is disabled to allow HTTP mocking in tests.
@@ -16,7 +18,7 @@ def nutrition_service():
 
 
 @pytest.fixture
-def mock_usda_response():
+def mock_usda_response() -> dict[str, Any]:
     """Mock USDA API response."""
     return {
         "foods": [
@@ -36,7 +38,7 @@ def mock_usda_response():
 
 
 @pytest.fixture
-def mock_food_detail_response():
+def mock_food_detail_response() -> dict[str, Any]:
     """Mock USDA API food detail response."""
     return {
         "fdcId": 174987,
@@ -54,7 +56,7 @@ def mock_food_detail_response():
 class TestNutritionService:
     """Test suite for NutritionService."""
 
-    def test_initialization(self, nutrition_service):
+    def test_initialization(self, nutrition_service: NutritionService) -> None:
         """Test NutritionService initializes correctly."""
         assert nutrition_service is not None
         # Tests explicitly set mock_mode=False to allow HTTP mocking
@@ -62,7 +64,7 @@ class TestNutritionService:
         assert nutrition_service.BASE_URL == "https://api.nal.usda.gov/fdc/v1"
 
     @pytest.mark.asyncio
-    async def test_search_food_success(self, nutrition_service, mock_usda_response):
+    async def test_search_food_success(self, nutrition_service: NutritionService, mock_usda_response: dict[str, Any]) -> None:
         """Test successful food search."""
         with patch('httpx.AsyncClient') as mock_client:
             # Setup mock
@@ -89,7 +91,7 @@ class TestNutritionService:
             assert result["confidence"] == "high"
 
     @pytest.mark.asyncio
-    async def test_search_food_no_results(self, nutrition_service):
+    async def test_search_food_no_results(self, nutrition_service: NutritionService) -> None:
         """Test food search with no results."""
         with patch('httpx.AsyncClient') as mock_client:
             # Setup mock with empty results
@@ -108,7 +110,7 @@ class TestNutritionService:
             assert result is None
 
     @pytest.mark.asyncio
-    async def test_search_food_api_error(self, nutrition_service):
+    async def test_search_food_api_error(self, nutrition_service: NutritionService) -> None:
         """Test food search handles API errors gracefully."""
         with patch('httpx.AsyncClient') as mock_client:
             # Setup mock to raise error
@@ -122,7 +124,7 @@ class TestNutritionService:
             assert result is None
 
     @pytest.mark.asyncio
-    async def test_lookup_by_fdc_id_success(self, nutrition_service, mock_food_detail_response):
+    async def test_lookup_by_fdc_id_success(self, nutrition_service: NutritionService, mock_food_detail_response: dict[str, Any]) -> None:
         """Test successful FDC ID lookup."""
         with patch('httpx.AsyncClient') as mock_client:
             # Setup mock
@@ -143,7 +145,7 @@ class TestNutritionService:
             assert result["name"] == "Pizza, cheese, regular crust"
 
     @pytest.mark.asyncio
-    async def test_lookup_by_fdc_id_not_found(self, nutrition_service):
+    async def test_lookup_by_fdc_id_not_found(self, nutrition_service: NutritionService) -> None:
         """Test FDC ID lookup when not found."""
         with patch('httpx.AsyncClient') as mock_client:
             # Setup mock to raise HTTP error
@@ -157,7 +159,7 @@ class TestNutritionService:
             assert result is None
 
     @pytest.mark.asyncio
-    async def test_batch_search_multiple_foods(self, nutrition_service, mock_usda_response):
+    async def test_batch_search_multiple_foods(self, nutrition_service: NutritionService, mock_usda_response: dict[str, Any]) -> None:
         """Test batch search for multiple foods."""
         with patch('httpx.AsyncClient') as mock_client:
             # Setup mock
@@ -180,7 +182,7 @@ class TestNutritionService:
                 assert result is None or isinstance(result, dict)
 
     @pytest.mark.asyncio
-    async def test_batch_search_handles_errors(self, nutrition_service):
+    async def test_batch_search_handles_errors(self, nutrition_service: NutritionService) -> None:
         """Test batch search handles individual errors gracefully."""
         with patch('httpx.AsyncClient') as mock_client:
             # First call succeeds, second fails, third succeeds
@@ -200,9 +202,9 @@ class TestNutritionService:
             # Second result should be None due to error
             assert results[1] is None
 
-    def test_extract_nutrition_complete_data(self, nutrition_service):
+    def test_extract_nutrition_complete_data(self, nutrition_service: NutritionService) -> None:
         """Test nutrition extraction with complete data."""
-        food_data = {
+        food_data: dict[str, Any] = {
             "fdcId": 12345,
             "description": "Test Food",
             "dataType": "Survey (FNDDS)",
@@ -214,7 +216,7 @@ class TestNutritionService:
             ]
         }
         
-        result = nutrition_service._extract_nutrition(food_data)
+        result = nutrition_service._extract_nutrition(food_data)  # pyright: ignore[reportPrivateUsage]
         
         assert result["name"] == "Test Food"
         assert result["fdc_id"] == 12345
@@ -224,16 +226,16 @@ class TestNutritionService:
         assert result["fat_g"] == 8
         assert result["confidence"] == "high"
 
-    def test_extract_nutrition_missing_nutrients(self, nutrition_service):
+    def test_extract_nutrition_missing_nutrients(self, nutrition_service: NutritionService) -> None:
         """Test nutrition extraction with missing nutrient data."""
-        food_data = {
+        food_data: dict[str, Any] = {
             "fdcId": 12345,
             "description": "Incomplete Food",
             "dataType": "Branded",
             "foodNutrients": []
         }
         
-        result = nutrition_service._extract_nutrition(food_data)
+        result = nutrition_service._extract_nutrition(food_data)  # pyright: ignore[reportPrivateUsage]
         
         assert result["name"] == "Incomplete Food"
         assert result["calories"] == 0
@@ -242,7 +244,7 @@ class TestNutritionService:
         assert result["fat_g"] == 0
         assert result["confidence"] == "medium"  # Not FNDDS data
 
-    def test_get_food_mapping(self, nutrition_service):
+    def test_get_food_mapping(self, nutrition_service: NutritionService) -> None:
         """Test food mapping loads correctly."""
         # Test a mapped food
         result = nutrition_service.get_food_mapping("burger")
@@ -253,14 +255,14 @@ class TestNutritionService:
         assert result == "unknownfood"
 
     @pytest.mark.asyncio
-    async def test_search_food_with_max_results(self, nutrition_service, mock_usda_response):
+    async def test_search_food_with_max_results(self, nutrition_service: NutritionService, mock_usda_response: dict[str, Any]) -> None:
         """Test search_food respects max_results parameter."""
         with patch('httpx.AsyncClient') as mock_client:
             # Setup mock
             mock_response = MagicMock()
             mock_response.status_code = 200
             # Return multiple foods
-            multi_food_response = {
+            multi_food_response: dict[str, Any] = {
                 "foods": [
                     mock_usda_response["foods"][0],
                     {

@@ -2,7 +2,9 @@
 
 import sys
 from pathlib import Path
+from typing import Generator, cast
 import pytest
+from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from sqlmodel import SQLModel, Session, create_engine
 from sqlalchemy.pool import StaticPool
@@ -35,7 +37,7 @@ def client():
     )
 
     # Import models to register tables
-    from app import models  # noqa: F401
+    import app.models  # noqa: F401  # pyright: ignore[reportUnusedImport]
 
     # Create all tables
     SQLModel.metadata.create_all(engine)
@@ -83,7 +85,7 @@ def session():
     )
 
     # Import models to register tables
-    from app import models  # noqa: F401
+    import app.models  # noqa: F401  # pyright: ignore[reportUnusedImport]
 
     # Create all tables
     SQLModel.metadata.create_all(engine)
@@ -120,7 +122,8 @@ def test_user_in_db(client: TestClient):
     from app.db import get_session
     
     # Get the test database session
-    session_gen = client.app.dependency_overrides[get_session]()
+    app = cast(FastAPI, client.app)
+    session_gen = cast(Generator[Session, None, None], app.dependency_overrides[get_session]())
     session = next(session_gen)
     
     try:

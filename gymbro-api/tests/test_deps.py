@@ -2,6 +2,7 @@
 
 from fastapi.testclient import TestClient
 from fastapi import HTTPException
+from unittest.mock import patch
 import pytest
 from app.deps import get_user_id
 from app.auth_utils import create_jwt
@@ -108,3 +109,25 @@ def test_get_user_id_authorization_header_case_insensitive(client: TestClient):
         x_user_id=None
     )
     assert user_id == 1
+
+
+def test_get_user_id_x_user_id_blocked_in_production(client: TestClient):
+    """Test that X-User-Id header is rejected in production."""
+    with patch.dict("os.environ", {"ENVIRONMENT": "production"}):
+        with pytest.raises(HTTPException) as exc_info:
+            get_user_id(auth_token=None, authorization=None, x_user_id=42)
+        assert exc_info.value.status_code == 401
+
+
+def test_get_user_id_x_user_id_allowed_in_development(client: TestClient):
+    """Test that X-User-Id header works in development."""
+    with patch.dict("os.environ", {"ENVIRONMENT": "development"}):
+        user_id = get_user_id(auth_token=None, authorization=None, x_user_id=42)
+        assert user_id == 42
+
+
+def test_get_user_id_x_user_id_allowed_in_test(client: TestClient):
+    """Test that X-User-Id header works in test environment."""
+    with patch.dict("os.environ", {"ENVIRONMENT": "test"}):
+        user_id = get_user_id(auth_token=None, authorization=None, x_user_id=42)
+        assert user_id == 42

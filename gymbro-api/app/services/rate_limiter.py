@@ -59,12 +59,13 @@ class RateLimiter:
             self.session.commit()
         
         remaining = max(0, self.MAX_PHOTOS_PER_DAY - user.photo_count)
+        tomorrow = today + timedelta(days=1)
         
         return {
             "allowed": remaining > 0,
             "remaining": remaining,
             "limit": self.MAX_PHOTOS_PER_DAY,
-            "resets_at": str(today),
+            "resets_at": str(tomorrow),
         }
 
     def try_increment(self, user_id: int) -> Dict[str, Any]:

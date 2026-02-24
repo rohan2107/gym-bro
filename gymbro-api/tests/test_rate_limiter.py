@@ -8,6 +8,12 @@ from app.services.rate_limiter import RateLimiter
 from app.models import User
 
 
+def _uid(user: User) -> int:
+    """Extract user ID, asserting it is not None (all test users have explicit IDs)."""
+    assert user.id is not None
+    return user.id
+
+
 @pytest.fixture
 def test_user(session: Session):
     """Create a test user."""
@@ -32,21 +38,22 @@ def rate_limiter(session: Session):
 class TestRateLimiter:
     """Test suite for RateLimiter service."""
 
-    def test_initialization(self, rate_limiter):
+    def test_initialization(self, rate_limiter: RateLimiter) -> None:
         """Test RateLimiter initializes correctly."""
         assert rate_limiter is not None
         assert rate_limiter.MAX_PHOTOS_PER_DAY == 30
 
-    def test_check_limit_new_user(self, rate_limiter, test_user, session):
+    def test_check_limit_new_user(self, rate_limiter: RateLimiter, test_user: User, session: Session) -> None:
         """Test check_limit for user who hasn't uploaded photos yet."""
-        result = rate_limiter.check_limit(test_user.id)
+        result = rate_limiter.check_limit(_uid(test_user))
         
         assert result["allowed"] is True
         assert result["remaining"] == 30
         assert result["limit"] == 30
-        assert result["resets_at"] == str(date.today())
+        tomorrow = date.today() + timedelta(days=1)
+        assert result["resets_at"] == str(tomorrow)
 
-    def test_check_limit_within_limit(self, rate_limiter, test_user, session):
+    def test_check_limit_within_limit(self, rate_limiter: RateLimiter, test_user: User, session: Session) -> None:
         """Test check_limit when user is within daily limit."""
         # Set user to have uploaded 10 photos today
         test_user.photo_count = 10
@@ -54,13 +61,13 @@ class TestRateLimiter:
         session.add(test_user)
         session.commit()
         
-        result = rate_limiter.check_limit(test_user.id)
+        result = rate_limiter.check_limit(_uid(test_user))
         
         assert result["allowed"] is True
         assert result["remaining"] == 20
         assert result["limit"] == 30
 
-    def test_check_limit_at_limit(self, rate_limiter, test_user, session):
+    def test_check_limit_at_limit(self, rate_limiter: RateLimiter, test_user: User, session: Session) -> None:
         """Test check_limit when user has reached daily limit."""
         # Set user to have uploaded 30 photos today
         test_user.photo_count = 30
@@ -68,13 +75,13 @@ class TestRateLimiter:
         session.add(test_user)
         session.commit()
         
-        result = rate_limiter.check_limit(test_user.id)
+        result = rate_limiter.check_limit(_uid(test_user))
         
         assert result["allowed"] is False
         assert result["remaining"] == 0
         assert result["limit"] == 30
 
-    def test_check_limit_over_limit(self, rate_limiter, test_user, session):
+    def test_check_limit_over_limit(self, rate_limiter: RateLimiter, test_user: User, session: Session) -> None:
         """Test check_limit when user is over daily limit (shouldn't happen but test anyway)."""
         # Set user to have uploaded 35 photos today (edge case)
         test_user.photo_count = 35
@@ -82,12 +89,12 @@ class TestRateLimiter:
         session.add(test_user)
         session.commit()
         
-        result = rate_limiter.check_limit(test_user.id)
+        result = rate_limiter.check_limit(_uid(test_user))
         
         assert result["allowed"] is False
         assert result["remaining"] == 0  # Can't be negative
 
-    def test_check_limit_resets_on_new_day(self, rate_limiter, test_user, session):
+    def test_check_limit_resets_on_new_day(self, rate_limiter: RateLimiter, test_user: User, session: Session) -> None:
         """Test that check_limit resets counter on a new day."""
         # Set user to have uploaded 25 photos yesterday
         yesterday = date.today() - timedelta(days=1)
@@ -96,7 +103,7 @@ class TestRateLimiter:
         session.add(test_user)
         session.commit()
         
-        result = rate_limiter.check_limit(test_user.id)
+        result = rate_limiter.check_limit(_uid(test_user))
         
         # Should be reset
         assert result["allowed"] is True
@@ -107,12 +114,12 @@ class TestRateLimiter:
         assert test_user.photo_count == 0
         assert test_user.last_photo_date == date.today()
 
-    def test_check_limit_user_not_found(self, rate_limiter):
+    def test_check_limit_user_not_found(self, rate_limiter: RateLimiter) -> None:
         """Test check_limit raises error for non-existent user."""
         with pytest.raises(ValueError, match="User .* not found"):
             rate_limiter.check_limit(99999)
 
-    def test_increment_success(self, rate_limiter, test_user, session):
+    def test_increment_success(self, rate_limiter: RateLimiter, test_user: User, session: Session) -> None:
         """Test successful increment of photo count."""
         # Start with 0 photos
         test_user.photo_count = 0
@@ -120,7 +127,7 @@ class TestRateLimiter:
         session.add(test_user)
         session.commit()
         
-        new_count = rate_limiter.increment(test_user.id)
+        new_count = rate_limiter.increment(_uid(test_user))
         
         assert new_count == 1
         
@@ -128,7 +135,7 @@ class TestRateLimiter:
         session.refresh(test_user)
         assert test_user.photo_count == 1
 
-    def test_increment_multiple_times(self, rate_limiter, test_user, session):
+    def test_increment_multiple_times(self, rate_limiter: RateLimiter, test_user: User, session: Session) -> None:
         """Test incrementing photo count multiple times."""
         # Start with 0 photos
         test_user.photo_count = 0
@@ -138,10 +145,10 @@ class TestRateLimiter:
         
         # Increment 3 times
         for i in range(1, 4):
-            count = rate_limiter.increment(test_user.id)
+            count = rate_limiter.increment(_uid(test_user))
             assert count == i
 
-    def test_increment_fails_at_limit(self, rate_limiter, test_user, session):
+    def test_increment_fails_at_limit(self, rate_limiter: RateLimiter, test_user: User, session: Session) -> None:
         """Test increment raises error when at limit."""
         # Set user at limit
         test_user.photo_count = 30
@@ -150,9 +157,9 @@ class TestRateLimiter:
         session.commit()
         
         with pytest.raises(ValueError, match="Daily photo limit reached"):
-            rate_limiter.increment(test_user.id)
+            rate_limiter.increment(_uid(test_user))
 
-    def test_increment_fails_over_limit(self, rate_limiter, test_user, session):
+    def test_increment_fails_over_limit(self, rate_limiter: RateLimiter, test_user: User, session: Session) -> None:
         """Test increment raises error when over limit."""
         # Set user over limit (edge case)
         test_user.photo_count = 35
@@ -161,9 +168,9 @@ class TestRateLimiter:
         session.commit()
         
         with pytest.raises(ValueError, match="Daily photo limit reached"):
-            rate_limiter.increment(test_user.id)
+            rate_limiter.increment(_uid(test_user))
 
-    def test_increment_resets_on_new_day(self, rate_limiter, test_user, session):
+    def test_increment_resets_on_new_day(self, rate_limiter: RateLimiter, test_user: User, session: Session) -> None:
         """Test increment works after daily reset."""
         # Set user at limit yesterday
         yesterday = date.today() - timedelta(days=1)
@@ -173,7 +180,7 @@ class TestRateLimiter:
         session.commit()
         
         # Should succeed because it's a new day
-        new_count = rate_limiter.increment(test_user.id)
+        new_count = rate_limiter.increment(_uid(test_user))
         
         assert new_count == 1
         
@@ -182,7 +189,7 @@ class TestRateLimiter:
         assert test_user.photo_count == 1
         assert test_user.last_photo_date == date.today()
 
-    def test_full_day_cycle(self, rate_limiter, test_user, session):
+    def test_full_day_cycle(self, rate_limiter: RateLimiter, test_user: User, session: Session) -> None:
         """Test a full day of photo uploads."""
         # Start fresh
         test_user.photo_count = 0
@@ -192,22 +199,22 @@ class TestRateLimiter:
         
         # Upload 30 photos (the limit)
         for i in range(1, 31):
-            status = rate_limiter.check_limit(test_user.id)
+            status = rate_limiter.check_limit(_uid(test_user))
             assert status["allowed"] is True
             assert status["remaining"] == 30 - (i - 1)
             
-            count = rate_limiter.increment(test_user.id)
+            count = rate_limiter.increment(_uid(test_user))
             assert count == i
         
         # 31st should fail
-        status = rate_limiter.check_limit(test_user.id)
+        status = rate_limiter.check_limit(_uid(test_user))
         assert status["allowed"] is False
         assert status["remaining"] == 0
         
         with pytest.raises(ValueError):
-            rate_limiter.increment(test_user.id)
+            rate_limiter.increment(_uid(test_user))
 
-    def test_concurrent_users(self, rate_limiter, session):
+    def test_concurrent_users(self, rate_limiter: RateLimiter, session: Session) -> None:
         """Test rate limiting works independently for different users."""
         # Create two users
         user1 = User(
@@ -227,29 +234,29 @@ class TestRateLimiter:
         session.commit()
         
         # Check limits independently
-        status1 = rate_limiter.check_limit(user1.id)
-        status2 = rate_limiter.check_limit(user2.id)
+        status1 = rate_limiter.check_limit(_uid(user1))
+        status2 = rate_limiter.check_limit(_uid(user2))
         
         assert status1["remaining"] == 20
         assert status2["remaining"] == 5
         
         # Increment user1 doesn't affect user2
-        rate_limiter.increment(user1.id)
+        rate_limiter.increment(_uid(user1))
         
-        status1 = rate_limiter.check_limit(user1.id)
-        status2 = rate_limiter.check_limit(user2.id)
+        status1 = rate_limiter.check_limit(_uid(user1))
+        status2 = rate_limiter.check_limit(_uid(user2))
         
         assert status1["remaining"] == 19
         assert status2["remaining"] == 5  # Unchanged
 
-    def test_edge_case_null_last_photo_date(self, rate_limiter, test_user, session):
+    def test_edge_case_null_last_photo_date(self, rate_limiter: RateLimiter, test_user: User, session: Session) -> None:
         """Test handling of null last_photo_date (new user)."""
         test_user.last_photo_date = None
         test_user.photo_count = 0
         session.add(test_user)
         session.commit()
         
-        result = rate_limiter.check_limit(test_user.id)
+        result = rate_limiter.check_limit(_uid(test_user))
         
         assert result["allowed"] is True
         assert result["remaining"] == 30
@@ -258,7 +265,7 @@ class TestRateLimiter:
         session.refresh(test_user)
         assert test_user.last_photo_date == date.today()
 
-    def test_try_increment_atomic_success(self, session: Session, test_user: User):
+    def test_try_increment_atomic_success(self, session: Session, test_user: User) -> None:
         """Test atomic try_increment succeeds when under limit."""
         rate_limiter = RateLimiter(session)
         
@@ -269,7 +276,7 @@ class TestRateLimiter:
         session.commit()
         
         # Try increment should succeed
-        result = rate_limiter.try_increment(test_user.id)
+        result = rate_limiter.try_increment(_uid(test_user))
         
         assert result["allowed"] is True
         assert result["new_count"] == 1
@@ -280,7 +287,7 @@ class TestRateLimiter:
         session.refresh(test_user)
         assert test_user.photo_count == 1
 
-    def test_try_increment_atomic_at_limit(self, session: Session, test_user: User):
+    def test_try_increment_atomic_at_limit(self, session: Session, test_user: User) -> None:
         """Test atomic try_increment fails when at limit."""
         rate_limiter = RateLimiter(session)
         
@@ -292,7 +299,7 @@ class TestRateLimiter:
         
         # Try increment should fail
         with pytest.raises(ValueError) as exc_info:
-            rate_limiter.try_increment(test_user.id)
+            rate_limiter.try_increment(_uid(test_user))
         
         assert "limit reached" in str(exc_info.value).lower()
         

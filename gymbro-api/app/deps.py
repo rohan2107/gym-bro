@@ -1,5 +1,7 @@
 """Dependencies for request handling."""
 
+import os
+
 from fastapi import Header, Cookie, HTTPException, status, Depends
 from typing import Optional
 from sqlmodel import Session
@@ -18,10 +20,10 @@ def get_user_id(
     """
     Extract user_id from JWT (cookie or Authorization header) or legacy X-User-Id header.
     
-    Supports multiple authentication methods for backward compatibility:
+    Supports multiple authentication methods:
     1. Authorization: Bearer <token> header (REST API standard)
     2. Cookie-based JWT (for browser clients) 
-    3. X-User-Id header (legacy, for testing/development)
+    3. X-User-Id header (dev/test only, disabled in production)
     
     Args:
         auth_token: JWT token from cookie (if authenticated)
@@ -54,9 +56,11 @@ def get_user_id(
             # JWT invalid - fall through to check header
             pass
     
-    # Fall back to X-User-Id header (for backward compatibility)
+    # Fall back to X-User-Id header (dev/test only, disabled in production)
     if x_user_id and x_user_id > 0:
-        return x_user_id
+        env = os.getenv("ENVIRONMENT", "development")
+        if env in ("development", "test"):
+            return x_user_id
     
     # No valid authentication
     raise HTTPException(
