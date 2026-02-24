@@ -86,7 +86,11 @@ async def create_food_log_from_photo(
             "rate_limit": {
                 "remaining": 29,
                 "limit": 30,
-                "resets_at": "2026-02-24"
+                "used_today": 1
+            },
+            "image_info": {
+                "format": "JPEG",
+                "size_kb": 125
             }
         }
     """

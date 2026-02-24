@@ -76,7 +76,7 @@ export default function LoginPage() {
 
         {/* Bottom Note */}
         <p className="text-center text-sm text-gray-600 mt-8">
-          Built with ❤️ for fitness enthusiasts
+          Built for fitness enthusiasts
         </p>
       </div>
     </div>

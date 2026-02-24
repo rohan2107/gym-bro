@@ -6,7 +6,7 @@ nutrition information for food items detected by the Vision API.
 
 import logging
 import os
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 import httpx
 
 
@@ -18,7 +18,7 @@ class NutritionService:
 
     BASE_URL = "https://api.nal.usda.gov/fdc/v1"
 
-    def __init__(self, mock_mode: bool = None):
+    def __init__(self, mock_mode: Optional[bool] = None):
         """Initialize the USDA API client.
         
         Args:
@@ -41,7 +41,7 @@ class NutritionService:
 
     async def search_food(
         self, query: str, max_results: int = 1
-    ) -> Optional[Dict[str, any]]:
+    ) -> Optional[Dict[str, Any]]:
         """Search USDA database for food item.
         
         Args:
@@ -90,7 +90,7 @@ class NutritionService:
             logger.warning(f"USDA API error for '{query}': {e}")
             return None
 
-    def _extract_nutrition(self, food_data: dict) -> Dict[str, any]:
+    def _extract_nutrition(self, food_data: dict) -> Dict[str, Any]:
         """Extract nutrition information from USDA food data.
         
         Args:
@@ -113,7 +113,7 @@ class NutritionService:
             "confidence": "high" if food_data.get("dataType") == "Survey (FNDDS)" else "medium",
         }
 
-    async def lookup_by_fdc_id(self, fdc_id: int) -> Optional[Dict[str, any]]:
+    async def lookup_by_fdc_id(self, fdc_id: int) -> Optional[Dict[str, Any]]:
         """Look up food by FDC ID (for mapped foods).
         
         Args:
@@ -137,7 +137,7 @@ class NutritionService:
             logger.warning(f"USDA API error for FDC ID {fdc_id}: {e}")
             return None
 
-    async def batch_search(self, queries: List[str]) -> List[Optional[Dict[str, any]]]:
+    async def batch_search(self, queries: List[str]) -> List[Optional[Dict[str, Any]]]:
         """Search for multiple foods in one batch.
         
         Args:

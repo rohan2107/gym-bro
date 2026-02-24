@@ -51,8 +51,6 @@
 
 ### Phase 4.3: Frontend Implementation (In Planning)
 
-### Phase 4.3: Frontend Implementation (In Planning)
-
 **Goal**: Complete the photo logging user interface
 
 **User Flow**:

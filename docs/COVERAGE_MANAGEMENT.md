@@ -88,19 +88,19 @@ Only one file is excluded from coverage:
 | File | Status |
 |------|--------|
 | app/services/food_mapping.py | 📝 Static configuration mappings (no logic to test) |
-2 (Complete)
+
+## Coverage Goals
+
+### Phase 4.2 (Complete)
 - ✅ **Achieved: 83.81%** - Exceeded target with comprehensive service tests
 - ✅ 123 tests passing (added 53 new tests for Phase 4.2)
 - ✅ Phase 4 services now fully tested and included in coverage
-- ✅ **Achieved: 82.51%** - Exceeded target with edge case tests
-- ✅ Added 24 new tests (daily check-ins, db init, app structure)
-- ✅ Exclude Phase 4 services via .coveragerc
 - ✅ Pre-commit checks enforce 80% threshold
 
-### Phase 4.2 (Next)
-- 🎯 **Target: 85%+** - Add tests for Phase 4 services
-- Remove exclusions from .coveragerc as services are tested
-- Add OAuth endpoint tests for full coverage
+### Phase 4.3+ (Future)
+- 🎯 **Target: 85%+** - Improve legacy low-coverage areas
+- Priority 1: app/routers/auth.py (OAuth endpoints - currently 25.84%)
+- Priority 2: Increase coverage of edge cases in existing endpoints
 
 ### Phase 5+ (Future)
 - 🎯 **Target: 85%+** - Improve legacy low-coverage areas

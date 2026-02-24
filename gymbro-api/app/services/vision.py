@@ -5,7 +5,7 @@ with confidence scores.
 """
 
 import os
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 # Note: uncomment when API key is configured
 # from google.cloud import vision
@@ -15,7 +15,7 @@ from typing import Any, Dict, List
 class VisionService:
     """Service for detecting food items in images using Google Cloud Vision API."""
 
-    def __init__(self, mock_mode: bool = None):
+    def __init__(self, mock_mode: Optional[bool] = None):
         """Initialize the Vision API client.
         
         Args:
