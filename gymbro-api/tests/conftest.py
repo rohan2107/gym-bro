@@ -130,7 +130,6 @@ def test_user_in_db(client: TestClient):
             user = User(
                 id=1,
                 email="test@example.com",
-                hashed_password="fake_hash",
                 photo_count=0,
                 last_photo_date=None
             )

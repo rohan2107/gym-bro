@@ -14,7 +14,6 @@ def test_user(session: Session):
     user = User(
         id=999,
         email="test@example.com",
-        hashed_password="fake_hash",
         photo_count=0,
         last_photo_date=None
     )
@@ -214,14 +213,12 @@ class TestRateLimiter:
         user1 = User(
             id=1001,
             email="user1@example.com",
-            hashed_password="hash1",
             photo_count=10,
             last_photo_date=date.today()
         )
         user2 = User(
             id=1002,
             email="user2@example.com",
-            hashed_password="hash2",
             photo_count=25,
             last_photo_date=date.today()
         )

@@ -152,13 +152,16 @@ class TestPhotoMealLogging:
         # Access the session through app overrides
         from app.db import get_session
         session_gen = client.app.dependency_overrides[get_session]()
-        session = next(session_gen)
-        
-        # Get user from this session and modify
-        user = session.get(User, 1)
-        user.photo_count = 30
-        user.last_photo_date = date.today()
-        session.commit()
+        try:
+            session = next(session_gen)
+            
+            # Get user from this session and modify
+            user = session.get(User, 1)
+            user.photo_count = 30
+            user.last_photo_date = date.today()
+            session.commit()
+        finally:
+            session_gen.close()
         
         # Try to upload
         response = client.post(
@@ -289,10 +292,13 @@ class TestPhotoMealLogging:
         # Get user from the client's session
         from app.db import get_session
         session_gen = client.app.dependency_overrides[get_session]()
-        session = next(session_gen)
-        
-        user = session.get(User, 1)
-        initial_count = user.photo_count if user.photo_count else 0
+        try:
+            session = next(session_gen)
+            
+            user = session.get(User, 1)
+            initial_count = user.photo_count if user.photo_count else 0
+        finally:
+            session_gen.close()
         
         # Mock nutrition service
         with patch('app.services.nutrition.NutritionService.search_food', new_callable=AsyncMock) as mock_search:
@@ -308,9 +314,12 @@ class TestPhotoMealLogging:
         
         # Verify count was incremented - refresh from session
         session_gen2 = client.app.dependency_overrides[get_session]()
-        session2 = next(session_gen2)
-        user_after = session2.get(User, 1)
-        assert user_after.photo_count == initial_count + 1
+        try:
+            session2 = next(session_gen2)
+            user_after = session2.get(User, 1)
+            assert user_after.photo_count == initial_count + 1
+        finally:
+            session_gen2.close()
 
     def test_upload_photo_returns_image_info(
         self,
@@ -396,10 +405,12 @@ class TestPhotoMealLogging:
         from app.models import User
         from app.db import get_session
         session_gen = client.app.dependency_overrides[get_session]()
-        session = next(session_gen)
-        user = session.get(User, 1)
-        initial_count = user.photo_count
-        session_gen.close()
+        try:
+            session = next(session_gen)
+            user = session.get(User, 1)
+            initial_count = user.photo_count
+        finally:
+            session_gen.close()
         
         # Mock vision service to raise error
         with patch('app.services.vision.VisionService.detect_food') as mock_detect:
@@ -415,10 +426,12 @@ class TestPhotoMealLogging:
         
         # Verify count was refunded (should be same as initial)
         session_gen = client.app.dependency_overrides[get_session]()
-        session = next(session_gen)
-        user = session.get(User, 1)
-        assert user.photo_count == initial_count
-        session_gen.close()
+        try:
+            session = next(session_gen)
+            user = session.get(User, 1)
+            assert user.photo_count == initial_count
+        finally:
+            session_gen.close()
 
     def test_upload_photo_refunds_quota_on_no_food_detected(
         self,
@@ -432,10 +445,12 @@ class TestPhotoMealLogging:
         from app.models import User
         from app.db import get_session
         session_gen = client.app.dependency_overrides[get_session]()
-        session = next(session_gen)
-        user = session.get(User, 1)
-        initial_count = user.photo_count
-        session_gen.close()
+        try:
+            session = next(session_gen)
+            user = session.get(User, 1)
+            initial_count = user.photo_count
+        finally:
+            session_gen.close()
         
         # Mock vision service to return empty list
         with patch('app.services.vision.VisionService.detect_food') as mock_detect:
@@ -451,10 +466,12 @@ class TestPhotoMealLogging:
         
         # Verify count was refunded
         session_gen = client.app.dependency_overrides[get_session]()
-        session = next(session_gen)
-        user = session.get(User, 1)
-        assert user.photo_count == initial_count
-        session_gen.close()
+        try:
+            session = next(session_gen)
+            user = session.get(User, 1)
+            assert user.photo_count == initial_count
+        finally:
+            session_gen.close()
 
     def test_upload_photo_refunds_quota_on_no_nutrition_found(
         self,
@@ -468,10 +485,12 @@ class TestPhotoMealLogging:
         from app.models import User
         from app.db import get_session
         session_gen = client.app.dependency_overrides[get_session]()
-        session = next(session_gen)
-        user = session.get(User, 1)
-        initial_count = user.photo_count
-        session_gen.close()
+        try:
+            session = next(session_gen)
+            user = session.get(User, 1)
+            initial_count = user.photo_count
+        finally:
+            session_gen.close()
         
         # Mock services
         with patch('app.services.vision.VisionService.detect_food') as mock_detect, \
@@ -490,7 +509,9 @@ class TestPhotoMealLogging:
         
         # Verify count was refunded
         session_gen = client.app.dependency_overrides[get_session]()
-        session = next(session_gen)
-        user = session.get(User, 1)
-        assert user.photo_count == initial_count
-        session_gen.close()
+        try:
+            session = next(session_gen)
+            user = session.get(User, 1)
+            assert user.photo_count == initial_count
+        finally:
+            session_gen.close()
