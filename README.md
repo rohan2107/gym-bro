@@ -19,7 +19,7 @@ A full-stack fitness PWA with AI meal photo analysis, offline support, and a mob
 ✅ Workout tracking with exercise sets  
 ✅ Mobile-first PWA with offline support  
 ✅ 160 automated tests, 84% backend coverage  
-✅ CI/CD pipeline with GitHub Actions (7 parallel jobs)
+✅ CI/CD pipeline with GitHub Actions (7 required jobs + Vercel preview smoke test on PRs)
 
 ## Architecture
 

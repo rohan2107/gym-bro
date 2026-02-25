@@ -7,9 +7,9 @@ Production fitness PWA. FastAPI + SQLModel backend, React/TypeScript frontend, d
 
 ## Quality Gates (all required before claiming done)
 ```
-cd gymbro-api && pytest tests/ -q --tb=no     # must show 0 failed, 0 skipped
-cd gymbro-api && ruff check app/ tests/        # must show 0 errors
-cd gymbro-web && npm run lint -- --fix
+(cd gymbro-api && pytest tests/ -q --tb=no)     # must show 0 failed, 0 skipped
+(cd gymbro-api && ruff check app/ tests/)       # must show 0 errors
+(cd gymbro-web && npm run lint -- --fix)
 git status --short                              # no unintended files
 ```
 Test count must not decrease. Add tests for all new behaviour.
@@ -57,7 +57,7 @@ except Exception as e:
 ---
 
 ## Docs That Must Stay Current
-Only 3 active docs exist (everything else is in `docs/archive/`). Update these when your changes affect what they describe:
+These are the three primary status docs that must stay in sync (especially test counts and phase status). Update these when your changes affect what they describe:
 
 | Doc | Update when… |
 |-----|-------------|
