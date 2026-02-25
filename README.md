@@ -1,24 +1,25 @@
 # Gym Bro
 
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
-[![CI](https://img.shields.io/github/actions/workflow/status/rohan2107/gym-bro/ci.yml?label=ci)](https://github.com/rohan2107/gym-bro/actions)
+[![CI](https://img.shields.io/github/actions/workflow/status/rohan2107/gym-bro/ci.yml?branch=main&label=ci)](https://github.com/rohan2107/gym-bro/actions)
 [![Python](https://img.shields.io/badge/python-3.11+-blue)](https://python.org)
 
 **Live Demo**: https://gym-bro-chi.vercel.app/
 
-A production-ready fitness PWA for tracking nutrition and workouts. Built with modern web technologies, deployed on Vercel with full CI/CD.
+A full-stack fitness PWA with AI meal photo analysis, offline support, and a mobile-first UI. Built with FastAPI, React, and deployed on Vercel with CI/CD.
 
-**Stack**: React · TypeScript · FastAPI · PostgreSQL · Google OAuth 2.0
+**Stack**: React · TypeScript · FastAPI · PostgreSQL · Google Cloud Vision · USDA API
 
 ## Features
 
+✅ **AI meal logging** — snap a photo, get calories & macros via Google Vision + USDA  
 ✅ Google OAuth 2.0 authentication  
 ✅ Daily check-ins (weight, steps, training status)  
 ✅ Meal logging with calorie & macro tracking  
 ✅ Workout tracking with exercise sets  
 ✅ Mobile-first PWA with offline support  
-✅ 74 automated tests with 85% coverage  
-✅ CI/CD pipeline with GitHub Actions
+✅ 160 automated tests, 84% backend coverage  
+✅ CI/CD pipeline with GitHub Actions (7 parallel jobs)
 
 ## Architecture
 
@@ -26,8 +27,9 @@ A production-ready fitness PWA for tracking nutrition and workouts. Built with m
 **Backend**: FastAPI, SQLModel, Pydantic v2  
 **Database**: PostgreSQL (Neon)  
 **Auth**: Google OAuth 2.0 + JWT (httpOnly cookies)  
+**AI**: Google Cloud Vision API + USDA FoodData Central  
 **Hosting**: Vercel (frontend + serverless functions)  
-**Testing**: pytest, Vitest, GitHub Actions
+**Testing**: pytest (133 tests), Vitest (27 tests), GitHub Actions
 
 ## Quick Start
 
@@ -69,14 +71,14 @@ See [OAuth Setup Guide](docs/archive/GOOGLE_OAUTH_SETUP.md) for Google OAuth con
 ## Testing
 
 ```bash
-# Backend (47 tests)
+# Backend (133 tests)
 cd gymbro-api && pytest -v
 
 # Frontend (27 tests)
 cd gymbro-web && npm run test:run
 
-# Or for watch mode during development:
-# cd gymbro-web && npm test
+# Full validation before committing
+.\scripts\pre-commit.ps1
 ```
 
 ## Linting
@@ -95,9 +97,7 @@ cd gymbro-web && npm run lint -- --fix  # Frontend
 
 ## Documentation
 
-- [Architecture](docs/ARCHITECTURE.md) — System design and technical decisions
-- [Testing Guide](docs/TESTING_GUIDE.md) — Test suite and quality gates
-- [OAuth Setup](docs/archive/GOOGLE_OAUTH_SETUP.md) — Google OAuth 2.0 configuration (archived)
+- [Architecture](docs/ARCHITECTURE.md) — System design, API endpoints, security model
 - [Roadmap](docs/IMPLEMENTATION_ROADMAP.md) — Development phases and upcoming features
 
 ## License
