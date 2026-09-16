@@ -151,7 +151,7 @@ async def create_food_log_from_photo(
     
     # Detect food items
     try:
-        food_labels = vision_service.detect_food(image_bytes)
+        food_labels = await vision_service.detect_food(image_bytes)
     except ValueError as e:
         # Invalid image format or data - user error, no refund
         logger.warning(f"Invalid image for food detection: {e}")

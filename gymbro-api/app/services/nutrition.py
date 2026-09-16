@@ -5,9 +5,10 @@ nutrition information for food items detected by the Vision API.
 """
 
 import logging
-import os
 from typing import Any, Dict, List, Optional
 import httpx
+
+from ..config import settings
 
 
 logger = logging.getLogger(__name__)
@@ -20,25 +21,17 @@ class NutritionService:
 
     def __init__(self, mock_mode: Optional[bool] = None):
         """Initialize the USDA API client.
-        
+
         Args:
-            mock_mode: Force mock mode (True) or prod mode (False).
-                      If None, auto-detect based on API key presence.
+            mock_mode: Force mock mode (True) or real API calls (False). When
+                None, mock mode is enabled if no API key is configured.
         """
-        self.api_key = os.getenv("USDA_API_KEY")
-        
-        # Auto-detect mock mode if not explicitly set
+        self.api_key = settings.USDA_API_KEY or None
+
         if mock_mode is None:
             mock_mode = not self.api_key
-        
+
         self.mock_mode = mock_mode
-        
-        # Only raise error if mock_mode is explicitly False and no API key
-        # (mock_mode=False in tests with HTTP mocking is allowed)
-        if mock_mode is False and not self.api_key:
-            # This is intentionally allowed for testing with HTTP mocks
-            # The actual API calls will fail if attempted without a key
-            pass
 
     async def search_food(
         self, query: str, max_results: int = 1

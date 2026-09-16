@@ -1,180 +1,261 @@
-"""Google Cloud Vision API integration for food detection.
+"""Google Cloud Vision integration for food detection.
 
-This service uses Google Cloud Vision API to detect food items in images
-with confidence scores.
+Calls the Vision REST API (``images:annotate``) directly with an API key rather
+than using the ``google-cloud-vision`` client library. Three reasons:
+
+1. The client library authenticates with service-account credentials, not API
+   keys — but an API key (``GOOGLE_VISION_API_KEY``) is what this app is
+   configured and deployed with.
+2. It pulls in gRPC and protobuf, which is a large dependency to ship into a
+   Vercel serverless function for what is one HTTP POST.
+3. ``httpx`` is already a dependency and already async, so this matches how
+   ``NutritionService`` talks to USDA.
 """
 
-import os
+import base64
+import io
+import logging
 from typing import Any, Dict, List, Optional
 
-# Note: uncomment when API key is configured
-# from google.cloud import vision
-# from google.cloud.vision_v1 import types
+import httpx
+from PIL import Image
+
+from ..config import settings
+
+
+logger = logging.getLogger(__name__)
+
+# Generic labels Vision returns for almost every food photo. They are true but
+# useless as USDA search terms ("food" matches nothing meaningful), so they are
+# dropped before nutrition lookup.
+NON_FOOD_LABELS = frozenset(
+    {
+        "baked goods",
+        "comfort food",
+        "cuisine",
+        "cutlery",
+        "delicacy",
+        "dish",
+        "dishware",
+        "drinkware",
+        "fast food",
+        "finger food",
+        "food",
+        "food group",
+        "foodie",
+        "fork",
+        "garnish",
+        "ingredient",
+        "junk food",
+        "kitchen utensil",
+        "knife",
+        "meal",
+        "natural foods",
+        "plate",
+        "produce",
+        "recipe",
+        "serveware",
+        "side dish",
+        "spoon",
+        "staple food",
+        "styles",
+        "super food",
+        "table",
+        "tableware",
+        "vegan nutrition",
+        "vegetarian food",
+        "whole food",
+    }
+)
 
 
 class VisionService:
-    """Service for detecting food items in images using Google Cloud Vision API."""
+    """Detects food items in images using the Google Cloud Vision API."""
+
+    BASE_URL = "https://vision.googleapis.com/v1"
+    TIMEOUT_SECONDS = 10.0
+
+    # Vision label scores are probabilities in [0, 1].
+    LABEL_CONFIDENCE_THRESHOLD = 0.70
+    # Web-entity scores are unbounded relevance scores, not probabilities, and
+    # routinely exceed 1.0. They are thresholded on the raw value and clamped
+    # before being reported as a confidence.
+    WEB_ENTITY_SCORE_THRESHOLD = 0.60
+    MAX_PREDICTIONS = 3
 
     def __init__(self, mock_mode: Optional[bool] = None):
         """Initialize the Vision API client.
-        
+
         Args:
-            mock_mode: Force mock mode (True) or prod mode (False).
-                      If None, auto-detect based on API key presence.
-        
-        In mock mode, returns dummy predictions for testing.
+            mock_mode: Force mock mode (True) or real API calls (False). When
+                None, mock mode is enabled if no API key is configured.
         """
-        self.api_key = os.getenv("GOOGLE_VISION_API_KEY")
-        
-        # Auto-detect mock mode if not explicitly set
+        self.api_key = settings.GOOGLE_VISION_API_KEY or None
+
         if mock_mode is None:
             mock_mode = not self.api_key
-        
-        self.mock_mode = mock_mode
-        
-        # Only raise error if mock_mode is explicitly False and no API key
-        # (mock_mode=False in tests with HTTP mocking is allowed)
-        if mock_mode is False and not self.api_key:
-            # This is intentionally allowed for testing with HTTP mocks
-            # The actual API calls will fail if attempted without a key
-            pass
-        
-        # TODO: Initialize real Vision API client when API key is configured
-        # Uncomment lines 10-11 (import statements) and replace this:
-        self.client = None
 
-    def detect_food(self, image_bytes: bytes) -> List[Dict[str, Any]]:
-        """Detect food items in image with confidence scores.
-        
+        self.mock_mode = mock_mode
+
+    async def detect_food(self, image_bytes: bytes) -> List[Dict[str, Any]]:
+        """Detect food items in an image, most confident first.
+
         Args:
-            image_bytes: Raw image data as bytes
-            
+            image_bytes: Raw image data.
+
         Returns:
-            List of predictions with format:
-            [
-                {
-                    "label": "pizza",
-                    "confidence": 0.92,
-                    "source": "vision_label"
-                },
-                {
-                    "label": "salad",
-                    "confidence": 0.78,
-                    "source": "web_entity"
-                }
-            ]
-            
+            Up to ``MAX_PREDICTIONS`` predictions, e.g.::
+
+                [{"label": "pizza", "confidence": 0.92, "source": "vision_label"}]
+
+            An empty list means nothing recognisable as a specific food was
+            found; the caller decides how to handle that.
+
         Raises:
-            Exception: If Vision API call fails
+            RuntimeError: If real mode is requested without an API key.
+            httpx.HTTPError: If the Vision API call fails.
         """
-        # Return mock data in development/test mode
         if self.mock_mode:
             return [
                 {
                     "label": "pizza",
                     "confidence": 0.85,
-                    "source": "mock_development"
+                    "source": "mock_development",
                 }
             ]
-        
-        # Production mode but client not initialized
-        if self.client is None:
+
+        if not self.api_key:
             raise RuntimeError(
-                "Vision API client not initialized. Mock mode is disabled but client is None. "
-                "This is a configuration error - either enable mock mode or initialize the real client."
+                "Vision API key not configured but mock mode is disabled. "
+                "Set GOOGLE_VISION_API_KEY or enable mock mode."
             )
-        
-        # Real implementation (uncomment after API setup):
-        # image = vision.Image(content=image_bytes)
-        # 
-        # # Use label detection + web detection for best results
-        # labels_response = self.client.label_detection(image=image)
-        # web_response = self.client.web_detection(image=image)
-        # 
-        # predictions = []
-        # 
-        # # Extract food-related labels with confidence > 70%
-        # for label in labels_response.label_annotations:
-        #     if label.score > 0.70:
-        #         predictions.append({
-        #             "label": label.description.lower(),
-        #             "confidence": label.score,
-        #             "source": "vision_label"
-        #         })
-        # 
-        # # Add web entities (often more specific, lower threshold)
-        # for entity in web_response.web_detection.web_entities:
-        #     if entity.score > 0.60:
-        #         predictions.append({
-        #             "label": entity.description.lower(),
-        #             "confidence": entity.score,
-        #             "source": "web_entity"
-        #         })
-        # 
-        # # Sort by confidence, deduplicate, return top 3
-        # seen = set()
-        # unique_predictions = []
-        # for pred in sorted(predictions, key=lambda x: x["confidence"], reverse=True):
-        #     if pred["label"] not in seen:
-        #         seen.add(pred["label"])
-        #         unique_predictions.append(pred)
-        #         if len(unique_predictions) >= 3:
-        #             break
-        # 
-        # return unique_predictions
+
+        payload = {
+            "requests": [
+                {
+                    "image": {"content": base64.b64encode(image_bytes).decode("ascii")},
+                    "features": [
+                        {"type": "LABEL_DETECTION", "maxResults": 20},
+                        {"type": "WEB_DETECTION", "maxResults": 20},
+                    ],
+                }
+            ]
+        }
+
+        async with httpx.AsyncClient(timeout=self.TIMEOUT_SECONDS) as client:
+            response = await client.post(
+                f"{self.BASE_URL}/images:annotate",
+                params={"key": self.api_key},
+                json=payload,
+            )
+            response.raise_for_status()
+            data = response.json()
+
+        return self._extract_predictions(data)
+
+    def _extract_predictions(self, data: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """Turn a Vision annotate response into ranked, deduplicated predictions.
+
+        Vision reports per-image failures inside a 200 response, so the error
+        field is checked here rather than relying on the HTTP status.
+        """
+        responses = data.get("responses") or []
+        if not responses:
+            return []
+
+        annotation = responses[0]
+
+        error = annotation.get("error")
+        if error:
+            message = error.get("message", "unknown error")
+            raise httpx.HTTPError(f"Vision API returned an error: {message}")
+
+        candidates: List[Dict[str, Any]] = []
+
+        for label in annotation.get("labelAnnotations") or []:
+            score = label.get("score") or 0.0
+            description = (label.get("description") or "").strip().lower()
+            if not description or score < self.LABEL_CONFIDENCE_THRESHOLD:
+                continue
+            candidates.append(
+                {
+                    "label": description,
+                    "confidence": round(min(float(score), 1.0), 4),
+                    "source": "vision_label",
+                }
+            )
+
+        web_entities = (annotation.get("webDetection") or {}).get("webEntities") or []
+        for entity in web_entities:
+            score = entity.get("score") or 0.0
+            description = (entity.get("description") or "").strip().lower()
+            if not description or score < self.WEB_ENTITY_SCORE_THRESHOLD:
+                continue
+            candidates.append(
+                {
+                    "label": description,
+                    # Clamped: web-entity scores are relevance, not probability.
+                    "confidence": round(min(float(score), 1.0), 4),
+                    "source": "web_entity",
+                }
+            )
+
+        # Highest confidence wins for a given label; generic terms are dropped.
+        best_by_label: Dict[str, Dict[str, Any]] = {}
+        for candidate in sorted(
+            candidates, key=lambda c: c["confidence"], reverse=True
+        ):
+            label = candidate["label"]
+            if label in NON_FOOD_LABELS or label in best_by_label:
+                continue
+            best_by_label[label] = candidate
+
+        return list(best_by_label.values())[: self.MAX_PREDICTIONS]
 
     def validate_image(self, image_bytes: bytes) -> Dict[str, Any]:
-        """Validate that image is suitable for food detection.
-        
+        """Check that an image is suitable for food detection.
+
         Args:
-            image_bytes: Raw image data
-            
+            image_bytes: Raw image data.
+
         Returns:
-            Dict with validation results:
-            {
-                "valid": True/False,
-                "error": "error message if invalid",
-                "format": "jpeg/png/etc",
-                "size_kb": 123
-            }
+            ``{"valid": True, "format": ..., "size_kb": ..., "dimensions": ...}``
+            or ``{"valid": False, "error": ...}``.
         """
-        import io
-        from PIL import Image
-        
         try:
             image = Image.open(io.BytesIO(image_bytes))
             size_kb = len(image_bytes) / 1024
-            
+
             # Check file size (max 10MB)
             if size_kb > 10 * 1024:
                 return {
                     "valid": False,
                     "error": "Image too large. Maximum size is 10MB.",
                 }
-            
+
             # Check format
             if image.format.lower() not in ["jpeg", "jpg", "png", "webp"]:
                 return {
                     "valid": False,
                     "error": f"Unsupported format: {image.format}. Use JPEG, PNG, or WebP.",
                 }
-            
+
             # Check dimensions (reasonable size)
             if image.width < 200 or image.height < 200:
                 return {
                     "valid": False,
                     "error": "Image too small. Minimum size is 200x200 pixels.",
                 }
-            
+
             return {
                 "valid": True,
                 "format": image.format.lower(),
                 "size_kb": round(size_kb, 2),
-                "dimensions": f"{image.width}x{image.height}"
+                "dimensions": f"{image.width}x{image.height}",
             }
-            
+
         except Exception as e:
             return {
                 "valid": False,
-                "error": f"Invalid image file: {str(e)}"
+                "error": f"Invalid image file: {str(e)}",
             }
