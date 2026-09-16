@@ -107,20 +107,6 @@ def test_cors_allows_localhost_preview(test_client):
     assert resp.headers.get("access-control-allow-origin") == "http://localhost:4173"
 
 
-def test_cors_allows_this_projects_vercel_previews(test_client):
-    """Preview deployments of *this* project are allowed."""
-    resp = test_client.options(
-        "/health",
-        headers={
-            "Origin": "https://gym-bro-git-feature-branch-rohan2107.vercel.app",
-            "Access-Control-Request-Method": "GET"
-        }
-    )
-
-    assert resp.status_code == 200
-    assert resp.headers.get("access-control-allow-origin") is not None
-
-
 def test_cors_allows_production_origin(test_client):
     """The configured production origin is allowed."""
     resp = test_client.options(
@@ -144,6 +130,10 @@ def test_cors_rejects_unrelated_vercel_origins(test_client):
     for origin in (
         "https://attacker.vercel.app",
         "https://gymbro-preview-abc123.vercel.app",  # different project slug
+        # Anyone can deploy a Vercel project named "gym-bro-<anything>", so a
+        # bare project-prefix regex is not an ownership check.
+        "https://gym-bro-evil.vercel.app",
+        "https://gym-bro-git-main-attacker.vercel.app",
         "https://gym-bro-chi.vercel.app.attacker.com",
         "http://gym-bro-chi.vercel.app",  # not https
     ):

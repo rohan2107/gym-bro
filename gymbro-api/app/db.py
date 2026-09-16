@@ -1,5 +1,9 @@
+import logging
+
 from sqlmodel import create_engine, Session
 from .config import settings
+
+logger = logging.getLogger(__name__)
 
 # Lazy initialization of engine
 _engine = None
@@ -16,9 +20,8 @@ def get_engine():
                 pool_pre_ping=True,  # Verify connections before using
                 pool_recycle=300,  # Recycle connections after 5 minutes
             )
-        except Exception as e:
-            print(f"Warning: Failed to create database engine: {e}")
-            # Return None or raise - depends on whether this is critical
+        except Exception:
+            logger.error("Failed to create database engine", exc_info=True)
             raise
     return _engine
 
@@ -44,8 +47,8 @@ def check_db_connection() -> bool:
         with db_engine.connect() as connection:
             connection.execute(text("SELECT 1"))
         return True
-    except Exception as e:
-        print(f"Warning: database connection check failed: {e}")
+    except Exception:
+        logger.warning("Database connection check failed at startup", exc_info=True)
         return False
 
 

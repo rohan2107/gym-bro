@@ -142,10 +142,14 @@ class VisionService:
             ]
         }
 
+        # The key goes in a header, not a query parameter. httpx puts the full
+        # request URL into HTTPStatusError's message, and this endpoint's caller
+        # logs that exception with exc_info=True - a `?key=` would put the
+        # credential straight into application logs.
         async with httpx.AsyncClient(timeout=self.TIMEOUT_SECONDS) as client:
             response = await client.post(
                 f"{self.BASE_URL}/images:annotate",
-                params={"key": self.api_key},
+                headers={"X-Goog-Api-Key": self.api_key},
                 json=payload,
             )
             response.raise_for_status()

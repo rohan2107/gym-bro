@@ -231,10 +231,14 @@ thresholded at 0.60 on the raw value and clamped to 1.0 before being reported.
 - **Validation**: Pydantic input validation, content-type checks on uploads
 - **Upload limits**: 10MB file size, streaming in 64KB chunks to prevent memory exhaustion
 - **Rate limiting**: Atomic per-user quotas with row-level locking
-- **CORS**: Explicit allow-list (localhost dev origins plus the configured production origin),
-  with preview deployments matched by a regex anchored to this project's own deployment-URL
-  prefix. It is deliberately *not* `https://.*\.vercel\.app`, which would make every site
-  deployed on vercel.app an allowed credentialed origin.
+- **CORS**: Explicit allow-list — localhost dev origins plus the configured production
+  origin. Deliberately *not* `https://.*\.vercel\.app`, which would make every site deployed
+  on vercel.app an allowed credentialed origin. `CORS_PREVIEW_ORIGIN_REGEX` allows additional
+  origins but is unset by default, since on Vercel the frontend and API share an origin and
+  CORS is never consulted.
+- **Credentials in logs**: the Vision API key is sent as an `X-Goog-Api-Key` header rather
+  than a query parameter, because httpx embeds the request URL in `HTTPStatusError` and the
+  photo endpoint logs that exception with `exc_info=True`.
 - **API protection**: 10s timeout on all external calls
 - **Error handling**: Generic user-facing messages, detailed internal logging with `exc_info=True`
 
@@ -281,7 +285,7 @@ git push origin main  # Auto-deploys to Vercel
 **Environment variables** (Vercel):
 ```
 DATABASE_URL, JWT_SECRET_KEY, GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET,
-GOOGLE_REDIRECT_URI, GOOGLE_VISION_API_KEY, USDA_API_KEY,
+FRONTEND_URL, GOOGLE_VISION_API_KEY, USDA_API_KEY,
 CORS_ALLOWED_ORIGINS (optional), CORS_PREVIEW_ORIGIN_REGEX (optional)
 ```
 
@@ -299,6 +303,11 @@ photo endpoint in production while CI stayed green.
 - **Vision integration unverified against the live API**: implemented and unit-tested against a
   mocked `images:annotate` endpoint, but not yet exercised with a real `GOOGLE_VISION_API_KEY`.
   Real label vocabulary may need additions to `NON_FOOD_LABELS` and `FOOD_MAPPING`.
+- **Blocking database calls in async handlers**: the app uses synchronous SQLModel sessions
+  throughout, including inside `async def` endpoints, so database latency occupies the event
+  loop. This predates the photo endpoint and affects every router; resolving it means moving
+  the data layer to async SQLAlchemy, tracked as its own piece of work rather than done
+  piecemeal.
 - **Cold starts**: Vercel serverless functions have ~1-2s cold start on first request after idle
 - **Streaming**: Long-running streamed responses are not viable through the Mangum-wrapped app
   on Vercel functions — a constraint the [AI Roadmap](AI_ROADMAP.md) has to resolve before

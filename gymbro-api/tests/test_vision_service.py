@@ -148,7 +148,7 @@ class TestVisionServiceRealMode:
 
     @respx.mock
     async def test_sends_base64_image_and_api_key(self, real_vision_service, valid_image_bytes):
-        """The request carries the key as a query param and the image as base64."""
+        """The request carries the key as a header and the image as base64."""
         import base64
 
         route = respx.post(ANNOTATE_URL).mock(
@@ -159,7 +159,7 @@ class TestVisionServiceRealMode:
 
         assert route.called
         request = route.calls.last.request
-        assert request.url.params["key"] == "test-api-key"
+        assert request.headers["X-Goog-Api-Key"] == "test-api-key"
 
         import json
 
@@ -309,6 +309,38 @@ class TestVisionServiceRealMode:
 
         with pytest.raises(httpx.HTTPError, match="Bad image data"):
             await real_vision_service.detect_food(valid_image_bytes)
+
+    @respx.mock
+    async def test_api_key_never_appears_in_the_request_url(
+        self, real_vision_service, valid_image_bytes
+    ):
+        """The key must not reach the URL.
+
+        httpx embeds the request URL in HTTPStatusError's message, and the photo
+        endpoint logs that exception with exc_info=True, so a key in the query
+        string would be written to application logs verbatim.
+        """
+        route = respx.post(ANNOTATE_URL).mock(
+            return_value=httpx.Response(200, json=annotate_response(labels=[("pizza", 0.95)]))
+        )
+
+        await real_vision_service.detect_food(valid_image_bytes)
+
+        url = str(route.calls.last.request.url)
+        assert "test-api-key" not in url
+        assert "key=" not in url
+
+    @respx.mock
+    async def test_http_error_message_does_not_leak_the_api_key(
+        self, real_vision_service, valid_image_bytes
+    ):
+        """The raised exception is safe to log."""
+        respx.post(ANNOTATE_URL).mock(return_value=httpx.Response(403, json={}))
+
+        with pytest.raises(httpx.HTTPStatusError) as exc_info:
+            await real_vision_service.detect_food(valid_image_bytes)
+
+        assert "test-api-key" not in str(exc_info.value)
 
     @respx.mock
     async def test_raises_on_http_error(self, real_vision_service, valid_image_bytes):

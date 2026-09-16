@@ -23,12 +23,12 @@ def create_app() -> FastAPI:
         root_path="/api",  # Vercel routes /api/* to this app
     )
 
-    # CORS: explicit origins for local dev and production, plus a regex scoped
-    # to this project's own Vercel preview URLs.
+    # CORS: an explicit allow-list. The optional regex is unset by default -
+    # see CORS_PREVIEW_ORIGIN_REGEX in config.py for why.
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_allowed_origins,
-        allow_origin_regex=settings.CORS_PREVIEW_ORIGIN_REGEX,
+        allow_origin_regex=settings.cors_preview_origin_regex,
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],

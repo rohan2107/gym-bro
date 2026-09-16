@@ -21,8 +21,21 @@ exposed that.
 
 This now creates the real baseline schema. The revision id is deliberately
 unchanged: a database already stamped at a later revision (such as production)
-sees no new work and is unaffected. The photo rate-limiting columns stay in
-573ff5ce6812 so that revision remains valid.
+sees no new work on ``upgrade`` and needs no manual stamping. The photo
+rate-limiting columns stay in 573ff5ce6812 so that revision remains valid.
+
+Rewriting an applied revision breaks the usual immutability rule, and it does
+change one thing for an existing database: ``downgrade`` here now drops every
+table, where before it only restored an index. That is the honest behaviour for
+a baseline revision - ``downgrade base`` means "no schema" - but it makes
+``alembic downgrade base`` destructive on a populated database where previously
+it was merely incoherent, leaving every table in place while telling Alembic the
+database was empty, so the next ``upgrade`` would fail. Nothing in CI runs
+``downgrade``; take a backup before running it anywhere holding real data.
+
+The alternative was squashing to a new revision id, which would have required a
+manual ``alembic stamp`` against production before this could merge. That was
+judged the worse trade.
 """
 from typing import Sequence, Union
 

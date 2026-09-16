@@ -378,6 +378,12 @@ Vercel functions to a long-running host, or accepting non-streaming responses. *
 before Phase 1 rather than discovering it mid-implementation**, and record the reasoning
 whichever way it goes.
 
+**The data layer is synchronous.** Every router uses blocking SQLModel sessions inside
+`async def` endpoints, so database latency occupies the event loop. It is tolerable today
+because queries are small and per-instance concurrency is low, but an agent turn that makes
+several tool calls against Postgres will make it matter. Moving to async SQLAlchemy belongs in
+Phase 2, before the agent starts issuing multi-step tool calls — not bolted on during Phase 3.
+
 **No real users, therefore no organic eval data.** The golden set has to be authored by
 hand — 50–100 questions with ground-truth citations. This is the Phase 1 bottleneck and the
 most likely reason for it to stall; budget it explicitly rather than treating it as setup.
