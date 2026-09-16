@@ -8,16 +8,10 @@ from fastapi.testclient import TestClient
 from app.main import create_app
 
 
-# Mock init_db at module level to prevent database connections during test fixture setup
-def _mock_init_db():
-    """No-op replacement for init_db during tests."""
-    pass
-
-
 @pytest.fixture(scope="module", autouse=True)
-def mock_init_db():
-    """Mock init_db to avoid database operations in app structure tests."""
-    with patch('app.main.init_db', _mock_init_db):
+def mock_db_check():
+    """Skip the startup DB check in app structure tests."""
+    with patch('app.main.check_db_connection', return_value=True):
         yield
 
 
@@ -113,22 +107,46 @@ def test_cors_allows_localhost_preview(test_client):
     assert resp.headers.get("access-control-allow-origin") == "http://localhost:4173"
 
 
-def test_cors_allows_vercel_preview_urls(test_client):
-    """Test that CORS allows Vercel preview URLs (regex pattern)."""
-    # Test Vercel preview URL
+def test_cors_allows_production_origin(test_client):
+    """The configured production origin is allowed."""
     resp = test_client.options(
         "/health",
         headers={
-            "Origin": "https://gymbro-preview-abc123.vercel.app",
+            "Origin": "https://gym-bro-chi.vercel.app",
             "Access-Control-Request-Method": "GET"
         }
     )
-    
-    # Should match the regex pattern and be allowed
+
     assert resp.status_code == 200
-    origin = resp.headers.get("access-control-allow-origin")
-    # CORS middleware either echoes the origin or sets it explicitly
-    assert origin is not None
+    assert resp.headers.get("access-control-allow-origin") == "https://gym-bro-chi.vercel.app"
+
+
+def test_cors_rejects_unrelated_vercel_origins(test_client):
+    r"""A site on vercel.app that is not this project must not be a credentialed origin.
+
+    The previous regex was r"https://.*\.vercel\.app", which made every
+    deployment on vercel.app an allowed origin with allow_credentials=True.
+    """
+    for origin in (
+        "https://attacker.vercel.app",
+        "https://gymbro-preview-abc123.vercel.app",  # different project slug
+        # Anyone can deploy a Vercel project named "gym-bro-<anything>", so a
+        # bare project-prefix regex is not an ownership check.
+        "https://gym-bro-evil.vercel.app",
+        "https://gym-bro-git-main-attacker.vercel.app",
+        "https://gym-bro-chi.vercel.app.attacker.com",
+        "http://gym-bro-chi.vercel.app",  # not https
+    ):
+        resp = test_client.options(
+            "/health",
+            headers={
+                "Origin": origin,
+                "Access-Control-Request-Method": "GET"
+            }
+        )
+        assert resp.headers.get("access-control-allow-origin") is None, (
+            f"{origin} should not be an allowed CORS origin"
+        )
 
 
 def test_app_module_level_instance():

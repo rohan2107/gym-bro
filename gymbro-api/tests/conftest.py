@@ -15,6 +15,20 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 
+@pytest.fixture(autouse=True)
+def no_external_api_keys(monkeypatch):
+    """Force every service into mock mode for the whole test suite.
+
+    Services read their keys from Settings, which loads .env - so without this a
+    developer with real keys in gymbro-api/.env would have the test suite make
+    live, billable API calls.
+    """
+    from app.config import settings
+
+    monkeypatch.setattr(settings, "GOOGLE_VISION_API_KEY", "", raising=False)
+    monkeypatch.setattr(settings, "USDA_API_KEY", "", raising=False)
+
+
 @pytest.fixture()
 def client():
     """
@@ -23,7 +37,7 @@ def client():
     Uses create_app() to ensure test environment matches production app structure.
     Optimized for fast test execution:
     - In-memory SQLite with static pool
-    - Mocked init_db to prevent real database connections
+    - Mocked check_db_connection to prevent real database connections
     - Proper cleanup to avoid hangs
     """
     from unittest.mock import patch
@@ -47,8 +61,8 @@ def client():
         with Session(engine) as session:
             yield session
 
-    # Mock init_db to prevent database operations during lifespan
-    with patch('app.main.init_db'):
+    # Mock the startup connection check to avoid touching a real database
+    with patch('app.main.check_db_connection'):
         # Use create_app() to get the real app with all middleware/routers
         from app.main import create_app
         app = create_app()

@@ -3,17 +3,15 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from .routers import health, food_logs, daily_checkins, weight_entries, workouts, exercise_sets, auth
-from .db import init_db
+from .config import settings
+from .db import check_db_connection
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup: Initialize database tables (safe for serverless)
-    try:
-        init_db()
-    except Exception as e:
-        # Log but don't crash - tables might already exist
-        print(f"Warning: init_db failed (tables may already exist): {e}")
+    # Startup: verify the database is reachable. Schema changes are applied by
+    # Alembic, not here - see check_db_connection().
+    check_db_connection()
     yield
     # Shutdown: cleanup if needed
 
@@ -25,14 +23,12 @@ def create_app() -> FastAPI:
         root_path="/api",  # Vercel routes /api/* to this app
     )
 
-    # CORS: Allow frontend from Vercel and local development
+    # CORS: an explicit allow-list. The optional regex is unset by default -
+    # see CORS_PREVIEW_ORIGIN_REGEX in config.py for why.
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=[
-            "http://localhost:5173",  # Vite dev server
-            "http://localhost:4173",  # Vite preview
-        ],
-        allow_origin_regex=r"https://.*\.vercel\.app",  # Vercel production & preview
+        allow_origins=settings.cors_allowed_origins,
+        allow_origin_regex=settings.cors_preview_origin_regex,
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],

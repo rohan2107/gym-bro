@@ -1,63 +1,79 @@
-# Gym Bro Web Frontend
+# Gym Bro — Web Frontend
 
-React 18 + Vite 5 + TypeScript + TailwindCSS PWA. Logs fitness data: daily check-ins, meals, workouts.
+React 18 + Vite 5 + TypeScript + Tailwind PWA. See the [repo README](../README.md) for the
+full stack and the [architecture doc](../docs/ARCHITECTURE.md) for system design.
 
-## Setup & Dev
+## Development
 
-From repo root:
+Requires Node 20+. From the repo root, `./scripts/start-all.sh` runs the API and this app
+together. To run only the frontend:
 
 ```bash
-# Ensure backend env is set
-python -m venv gymbro-api/.venv
-./gymbro-api/.venv/Scripts/activate
-pip install -r gymbro-api/requirements.txt
-
-# Frontend env
-Set-Content -Path gymbro-web/.env.local -Value "VITE_USER_ID=1"
-cd gymbro-web
 npm install
 npm run dev
 ```
 
-Visit `http://localhost:5173`. The dev server proxies `/api/*` to `http://127.0.0.1:8000`.
+Visit `http://localhost:5173`. The dev server proxies `/api/*` to `http://localhost:8000`,
+so the backend needs to be running for anything beyond the login screen.
 
-### With Scripts
-
-From repo root:
-
-```powershell
-# Backend + frontend in separate terminals
-powershell -ExecutionPolicy Bypass -File scripts/start-all.ps1
-
-# Or individually:
-powershell -ExecutionPolicy Bypass -File scripts/start-backend.ps1
-powershell -ExecutionPolicy Bypass -File scripts/start-frontend.ps1
-```
-
-## Build & Preview
+## Environment
 
 ```bash
-npm run build
-npm run preview
+# gymbro-web/.env
+VITE_API_URL=http://localhost:8000
+VITE_GOOGLE_CLIENT_ID=your-client-id.apps.googleusercontent.com
 ```
+
+`VITE_API_URL` is optional in development — without it the client falls back to `/api` and
+relies on the Vite proxy.
+
+## Scripts
+
+| Command | Does |
+|---|---|
+| `npm run dev` | Dev server with HMR |
+| `npm run build` | Type-check and build to `dist/` |
+| `npm run preview` | Serve the production build |
+| `npm run test` | Vitest in watch mode |
+| `npm run test:run` | Vitest once (46 tests) |
+| `npm run coverage` | Vitest with a coverage report |
+| `npm run lint` | ESLint, zero-warning policy |
+| `npm run type-check` | `tsc --noEmit` |
 
 ## Structure
 
-- `src/main.tsx` — Entry point.
-- `src/App.tsx` — Main app component (daily check-in, meals, workouts).
-- `src/lib/api.ts` — API client with X-User-Id header.
-- `src/components/Forms.tsx` — Form components (check-in, food, workout).
-- `src/index.css` — Global styles (Tailwind).
-- `public/manifest.json` — PWA manifest.
-- `public/sw.js` — Service Worker (basic offline support).
+```
+src/
+├── main.tsx              Entry point, router
+├── App.tsx               Shell and route definitions
+├── contexts/
+│   └── AuthContext.tsx   OAuth session state
+├── pages/
+│   ├── TodayPage.tsx     Daily check-in
+│   ├── MealsPage.tsx     Meal logging, manual and from photo
+│   ├── WorkoutPage.tsx   Workouts and exercise sets
+│   ├── ProfilePage.tsx   User settings
+│   ├── LoginPage.tsx     Google sign-in
+│   └── AuthCallbackPage.tsx
+├── components/
+│   ├── BottomNav.tsx     Mobile navigation
+│   ├── Forms.tsx         Check-in, food and workout forms
+│   ├── PhotoCapture.tsx  Meal photo capture and quota display
+│   ├── MealReview.tsx    Review and edit AI predictions before saving
+│   └── OfflineIndicator.tsx
+└── lib/
+    ├── api.ts            Typed API client, cookie-based auth
+    └── utils.ts          Date formatting, error handling
+```
 
-## Env
+## Auth
 
-- `VITE_USER_ID` — User ID for X-User-Id header (defaults to `1` if not set).
+Authentication is Google OAuth 2.0. The API sets a JWT in an httpOnly cookie, so the client
+sends `credentials: 'include'` and never handles the token itself. A `401` from any request
+redirects to `/login`.
 
-## Features (MVP)
+## PWA
 
-- **Daily Check-in**: Log weight, steps, trained, protein met, notes. Upsert via PUT.
-- **Meals**: Log description + optional calories. List shows newest first.
-- **Workouts**: Log name + optional note. List shows newest first.
-- Error banner on API failures; disabled buttons while saving.
+`public/manifest.json` and `public/sw.js` provide installability and a read-only offline
+cache. Offline writes are not supported — `OfflineIndicator` tells the user when they are
+disconnected.

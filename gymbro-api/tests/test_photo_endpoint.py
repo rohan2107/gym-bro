@@ -194,7 +194,7 @@ class TestPhotoMealLogging:
     ) -> None:
         """Test upload when no food is detected in image."""
         # Mock vision service to return empty list
-        with patch('app.services.vision.VisionService.detect_food') as mock_detect:
+        with patch('app.services.vision.VisionService.detect_food', new_callable=AsyncMock) as mock_detect:
             mock_detect.return_value = []
             
             response = client.post(
@@ -250,7 +250,7 @@ class TestPhotoMealLogging:
     ) -> None:
         """Test upload with multiple food items detected."""
         # Mock vision service to return multiple items
-        with patch('app.services.vision.VisionService.detect_food') as mock_vision:
+        with patch('app.services.vision.VisionService.detect_food', new_callable=AsyncMock) as mock_vision:
             mock_vision.return_value = [
                 {"label": "pizza", "confidence": 0.85, "source": "mock"},
                 {"label": "salad", "confidence": 0.78, "source": "mock"},
@@ -280,7 +280,7 @@ class TestPhotoMealLogging:
         valid_image_file: tuple[str, BytesIO, str]
     ) -> None:
         """Test upload when Vision API fails."""
-        with patch('app.services.vision.VisionService.detect_food') as mock_detect:
+        with patch('app.services.vision.VisionService.detect_food', new_callable=AsyncMock) as mock_detect:
             mock_detect.side_effect = Exception("Vision API error")
             
             response = client.post(
@@ -383,7 +383,7 @@ class TestPhotoMealLogging:
         mock_nutrition_data: dict[str, Any]
     ) -> None:
         """Test that upload succeeds even if some nutrition lookups fail."""
-        with patch('app.services.vision.VisionService.detect_food') as mock_vision:
+        with patch('app.services.vision.VisionService.detect_food', new_callable=AsyncMock) as mock_vision:
             mock_vision.return_value = [
                 {"label": "pizza", "confidence": 0.85, "source": "mock"},
                 {"label": "unknown_food", "confidence": 0.75, "source": "mock"}
@@ -426,7 +426,7 @@ class TestPhotoMealLogging:
             session_gen.close()
         
         # Mock vision service to raise error
-        with patch('app.services.vision.VisionService.detect_food') as mock_detect:
+        with patch('app.services.vision.VisionService.detect_food', new_callable=AsyncMock) as mock_detect:
             mock_detect.side_effect = Exception("Vision API error")
             
             response = client.post(
@@ -467,7 +467,7 @@ class TestPhotoMealLogging:
             session_gen.close()
         
         # Mock vision service to return empty list
-        with patch('app.services.vision.VisionService.detect_food') as mock_detect:
+        with patch('app.services.vision.VisionService.detect_food', new_callable=AsyncMock) as mock_detect:
             mock_detect.return_value = []
             
             response = client.post(
@@ -508,7 +508,7 @@ class TestPhotoMealLogging:
             session_gen.close()
         
         # Mock services
-        with patch('app.services.vision.VisionService.detect_food') as mock_detect, \
+        with patch('app.services.vision.VisionService.detect_food', new_callable=AsyncMock) as mock_detect, \
              patch('app.services.nutrition.NutritionService.search_food') as mock_search:
             
             mock_detect.return_value = [{"label": "pizza", "confidence": 0.85, "source": "mock"}]
