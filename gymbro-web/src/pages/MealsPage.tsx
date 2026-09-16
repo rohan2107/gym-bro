@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
-import { api, FoodLog } from '../lib/api';
+import { api, FoodLog, PhotoAnalysis, PhotoRateLimit } from '../lib/api';
 import { FoodForm, FoodFormState } from '../components/Forms';
+import PhotoCapture from '../components/PhotoCapture';
+import MealReview, { ReviewedMeal } from '../components/MealReview';
 import { formatRelativeDateTime, handleRequestError } from '../lib/utils';
 
 // Validation helper for numeric inputs
@@ -19,6 +21,12 @@ export default function MealsPage() {
   const [foodLogs, setFoodLogs] = useState<FoodLog[]>([]);
   const [saving, setSaving] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
+
+  // Photo logging
+  const [analyzing, setAnalyzing] = useState(false);
+  const [analysis, setAnalysis] = useState<PhotoAnalysis | null>(null);
+  const [rateLimit, setRateLimit] = useState<PhotoRateLimit | null>(null);
+  const [photoError, setPhotoError] = useState<string | null>(null);
 
   const [foodForm, setFoodForm] = useState<FoodFormState>({
     description: '',
@@ -90,6 +98,44 @@ export default function MealsPage() {
     }
   };
 
+  const analyzePhoto = async (file: File) => {
+    setAnalyzing(true);
+    setPhotoError(null);
+    setAnalysis(null);
+
+    try {
+      const result = await api.analyzeMealPhoto(file);
+      setAnalysis(result);
+      setRateLimit(result.rate_limit);
+    } catch (err) {
+      // Photo analysis is a convenience, not the only way in: keep the error
+      // local to the photo control so the manual form stays usable.
+      setPhotoError(handleRequestError(err));
+    } finally {
+      setAnalyzing(false);
+    }
+  };
+
+  const confirmPhotoMeal = async (meal: ReviewedMeal) => {
+    setSaving(true);
+    setPhotoError(null);
+
+    try {
+      const created = await api.createFoodLog(meal);
+      setFoodLogs((prev) => [created, ...prev]);
+      setAnalysis(null);
+    } catch (err) {
+      setPhotoError(handleRequestError(err));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const discardAnalysis = () => {
+    setAnalysis(null);
+    setPhotoError(null);
+  };
+
   const startEdit = (meal: FoodLog) => {
     setEditingId(meal.id);
     setFoodForm({
@@ -128,6 +174,41 @@ export default function MealsPage() {
       {error && (
         <div className="rounded bg-red-50 border border-red-200 text-red-700 px-4 py-3 text-sm mb-4" role="alert" aria-live="assertive">
           {error}
+        </div>
+      )}
+
+      {editingId === null && (
+        <div className="bg-white rounded-lg shadow p-6 mb-6">
+          <h2 className="text-lg font-semibold text-gray-900 mb-1">Log from a photo</h2>
+          <p className="text-sm text-gray-600 mb-4">
+            Snap your meal and we will estimate the macros. You review everything before it
+            is saved.
+          </p>
+
+          {photoError && (
+            <div
+              className="rounded bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 text-sm mb-3"
+              role="alert"
+            >
+              {photoError} You can still log this meal manually below.
+            </div>
+          )}
+
+          {analysis ? (
+            <MealReview
+              predictions={analysis.predictions}
+              onConfirm={confirmPhotoMeal}
+              onCancel={discardAnalysis}
+              busy={saving}
+            />
+          ) : (
+            <PhotoCapture
+              onSelect={analyzePhoto}
+              busy={analyzing}
+              rateLimit={rateLimit}
+              disabled={saving}
+            />
+          )}
         </div>
       )}
 
