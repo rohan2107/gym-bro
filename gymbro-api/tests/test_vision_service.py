@@ -428,3 +428,23 @@ class TestValidateImage:
 
         assert result["valid"] is True
         assert result["format"] == "webp"
+
+    @pytest.mark.parametrize("brand", [b"heic", b"heix", b"mif1", b"hevc"])
+    def test_validate_image_rejects_heic_with_actionable_message(self, vision_service, brand):
+        """iPhone/macOS HEIC photos get a clear message, not Pillow's error."""
+        heic = b"\x00\x00\x00\x18ftyp" + brand + b"\x00" * 300
+
+        result = vision_service.validate_image(heic)
+
+        assert result["valid"] is False
+        assert "HEIC" in result["error"]
+        assert "JPEG" in result["error"]
+
+    def test_validate_image_error_does_not_leak_internals(self, vision_service):
+        """Pillow's exception text includes object reprs and must not reach users."""
+        result = vision_service.validate_image(b"definitely not an image")
+
+        assert result["valid"] is False
+        assert "BytesIO" not in result["error"]
+        assert "0x" not in result["error"]
+        assert "JPEG" in result["error"]

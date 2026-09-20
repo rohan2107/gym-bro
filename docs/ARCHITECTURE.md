@@ -314,6 +314,10 @@ photo endpoint in production while CI stayed green.
   LLM features ship
 - **Offline editing**: Service worker provides read-only cache; no offline writes yet
 - **Profile page**: Displays placeholder data
+- **HEIC photos**: macOS Photos exports HEIC, which Pillow cannot decode without an extra
+  native library. Both the frontend and backend reject it with a message explaining how to get
+  a JPEG. iOS Safari normally converts to JPEG before upload, but this has not been confirmed
+  on a device.
 - **Portion sizes**: USDA nutrition is per 100g; the review UI surfaces this but does not
   estimate actual portion size from the photo
 - **Lint scope**: `ruff.toml` selects ruff's historical default rules (E4, E7, E9, F). Widening

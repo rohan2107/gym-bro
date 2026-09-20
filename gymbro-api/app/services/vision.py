@@ -69,6 +69,28 @@ NON_FOOD_LABELS = frozenset(
 )
 
 
+# ISO base media "ftyp" brands used by HEIC/HEIF images (iPhone and macOS Photos).
+_HEIF_BRANDS = frozenset(
+    {b"heic", b"heix", b"heim", b"heis", b"hevc", b"hevx", b"mif1", b"msf1"}
+)
+
+HEIF_UNSUPPORTED_MESSAGE = (
+    "HEIC photos are not supported. Use JPEG or PNG instead: on iPhone, set "
+    "Settings > Camera > Formats > Most Compatible; on a Mac, export from Photos "
+    "as JPEG."
+)
+
+
+def is_heif(image_bytes: bytes) -> bool:
+    """True if the bytes look like a HEIC/HEIF image.
+
+    Pillow cannot decode these without an extra native library, and the failure
+    it raises is unhelpful, so they are recognised by signature and rejected with
+    a message the user can act on.
+    """
+    return image_bytes[4:8] == b"ftyp" and image_bytes[8:12] in _HEIF_BRANDS
+
+
 class VisionService:
     """Detects food items in images using the Google Cloud Vision API."""
 
@@ -226,6 +248,9 @@ class VisionService:
             ``{"valid": True, "format": ..., "size_kb": ..., "dimensions": ...}``
             or ``{"valid": False, "error": ...}``.
         """
+        if is_heif(image_bytes):
+            return {"valid": False, "error": HEIF_UNSUPPORTED_MESSAGE}
+
         try:
             image = Image.open(io.BytesIO(image_bytes))
             size_kb = len(image_bytes) / 1024
@@ -258,8 +283,10 @@ class VisionService:
                 "dimensions": f"{image.width}x{image.height}",
             }
 
-        except Exception as e:
+        except Exception:
+            # Pillow's message includes object reprs and is not for users.
+            logger.warning("Image validation failed", exc_info=True)
             return {
                 "valid": False,
-                "error": f"Invalid image file: {str(e)}",
+                "error": "Invalid image file. Please upload a JPEG, PNG or WebP photo.",
             }

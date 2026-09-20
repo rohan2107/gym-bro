@@ -48,6 +48,23 @@ describe('PhotoCapture', () => {
     expect(screen.getByRole('alert')).toHaveTextContent(/not an image/i)
   })
 
+  it.each([
+    ['photo.heic', 'image/heic'],
+    ['photo.HEIC', 'image/heic'],
+    ['photo.heif', 'image/heif'],
+    // Some browsers report an empty type for HEIC; the extension still catches it.
+    ['IMG_0001.heic', ''],
+  ])('rejects HEIC/HEIF (%s) with an actionable message', (name, type) => {
+    const onSelect = vi.fn()
+    render(<PhotoCapture onSelect={onSelect} />)
+
+    selectFile(imageFile(name, type))
+
+    expect(onSelect).not.toHaveBeenCalled()
+    expect(screen.getByRole('alert')).toHaveTextContent(/HEIC photos are not supported/i)
+    expect(screen.getByRole('alert')).toHaveTextContent(/JPEG/i)
+  })
+
   it('rejects files over the 10MB backend cap before uploading', () => {
     const onSelect = vi.fn()
     render(<PhotoCapture onSelect={onSelect} />)

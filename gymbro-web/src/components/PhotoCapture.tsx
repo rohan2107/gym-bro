@@ -36,6 +36,16 @@ export default function PhotoCapture({
 
     if (!file) return
 
+    // The backend cannot decode HEIC/HEIF (macOS Photos exports these; iOS Safari
+    // normally converts to JPEG before upload). Fail here with an instruction the
+    // user can act on, rather than after uploading the whole file.
+    if (/^image\/hei[cf]$/i.test(file.type) || /\.hei[cf]$/i.test(file.name)) {
+      setLocalError(
+        'HEIC photos are not supported. Please use a JPEG or PNG. On a Mac, export from Photos as JPEG.'
+      )
+      return
+    }
+
     if (!file.type.startsWith('image/')) {
       setLocalError('That file is not an image. Please choose a photo.')
       return
