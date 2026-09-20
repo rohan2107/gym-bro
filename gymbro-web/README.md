@@ -19,13 +19,13 @@ so the backend needs to be running for anything beyond the login screen.
 ## Environment
 
 ```bash
-# gymbro-web/.env
+# gymbro-web/.env (optional)
 VITE_API_URL=http://localhost:8000
-VITE_GOOGLE_CLIENT_ID=your-client-id.apps.googleusercontent.com
 ```
 
-`VITE_API_URL` is optional in development — without it the client falls back to `/api` and
-relies on the Vite proxy.
+`VITE_API_URL` is the only variable the frontend reads. Without it the client falls back to
+`/api` and relies on the Vite proxy. Google sign-in needs no client id here, because it
+redirects through the backend ([Authentication](../docs/AUTHENTICATION.md)).
 
 ## Scripts
 

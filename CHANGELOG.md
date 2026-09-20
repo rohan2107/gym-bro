@@ -1,0 +1,80 @@
+# Changelog
+
+All notable changes are recorded here. The format follows
+[Keep a Changelog](https://keepachangelog.com/en/1.1.0/). There are no version numbers yet;
+entries are grouped by milestone and dated.
+
+## [Unreleased]
+
+### Changed
+
+- Documentation restructured: the two overlapping roadmaps are consolidated into one
+  ([ROADMAP.md](docs/ROADMAP.md)), decisions are recorded as ADRs ([docs/adr/](docs/adr/README.md)),
+  and the September 2026 audit is kept as its own record
+  ([AUDIT_2026-09.md](docs/AUDIT_2026-09.md))
+- The three design documents that described plans rather than the built system were replaced by
+  accurate ones: [PHOTO_ANALYSIS.md](docs/PHOTO_ANALYSIS.md),
+  [AUTHENTICATION.md](docs/AUTHENTICATION.md) and [ENERGY_BALANCE.md](docs/ENERGY_BALANCE.md)
+
+### Added
+
+- [EVALUATION.md](docs/EVALUATION.md): the design of the evaluation harness, ahead of its
+  implementation
+- [DEPLOYMENT.md](docs/DEPLOYMENT.md): configuration, CI/CD, release, rollback, cost controls
+  and secrets handling
+
+### Fixed
+
+- Documentation claimed the API was "Mangum-wrapped" and could not stream; the handler exposes
+  the ASGI app directly and `mangum` is never imported
+- Documentation listed `VITE_GOOGLE_CLIENT_ID` as a frontend variable; nothing reads it
+
+## Phase 0: Foundation, 2026-09-20
+
+[Pull request #16](https://github.com/rohan2107/gym-bro/pull/16). Details of each finding are
+in the [audit](docs/AUDIT_2026-09.md).
+
+### Security
+
+- Closed an impersonation hole: production accepted an `X-User-Id` header as authentication
+  because `ENVIRONMENT` was unset and defaulted to `development`. The header is now default-deny
+  and never accepted on Vercel
+- Stopped sending the Vision API key in the request URL, where exception logging would have
+  recorded it
+- Replaced a CORS rule that admitted every `*.vercel.app` origin with credentials by an explicit
+  allow-list
+
+### Added
+
+- Google Cloud Vision integration over its REST API, replacing a stub that always returned
+  "pizza"
+- Meal photo capture and review UI: native camera on mobile, every predicted value editable,
+  quota display, and fallback to manual entry on any failure
+- HEIC detection with an actionable message
+- Shell equivalents of the Windows-only developer scripts
+- Tests that prevent recurrence: dependency parity between production and CI, migrations that
+  build the schema from empty, CORS origin rejection, and credential handling
+
+### Changed
+
+- Alembic is the sole owner of the schema; the baseline migration was rewritten to create the
+  schema, keeping its revision id so an already-migrated database is unaffected
+- All configuration is declared on `Settings`
+- Photo analysis refuses to serve mock data on a deployment
+- Ruff is configured and pinned
+
+### Fixed
+
+- The photo endpoint would have failed in production: `pillow` was missing from the deployed
+  dependencies while CI stayed green
+- A placeholder user was written to the production database on every cold start
+- No migration had ever created a table
+- The lint job failed on an untouched `main` because the linter was unpinned
+- Validation errors exposed Python object reprs to users
+
+### Removed
+
+- Fourteen progress-tracking documents, a one-shot `create_all()` script, and generated files
+  that had been committed
+
+Tests: 133 backend and 27 frontend before, 175 and 50 after.

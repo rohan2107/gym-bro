@@ -7,7 +7,8 @@ useful too.
 
 Fitness PWA. FastAPI + SQLModel backend, React/TypeScript frontend, deployed on Vercel with
 Neon PostgreSQL. Start with [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for system design and
-[docs/IMPLEMENTATION_ROADMAP.md](docs/IMPLEMENTATION_ROADMAP.md) for where development stands.
+[docs/ROADMAP.md](docs/ROADMAP.md) for what is planned and where it stands. The full map is in
+[docs/README.md](docs/README.md).
 
 ## Quality gates
 
@@ -65,7 +66,7 @@ When autogenerating a migration, generate it against a database **built by migra
 (`alembic upgrade head` on an empty database), never against one created by `create_all()`.
 Autogenerating against a `create_all()` database is how this project ended up with an "initial
 schema" migration that created no tables — see F11 in
-[docs/AI_ROADMAP.md](docs/AI_ROADMAP.md).
+[docs/AUDIT_2026-09.md](docs/AUDIT_2026-09.md).
 
 Always review generated migrations. Use `server_default` for new NOT NULL columns. Use
 transactions for multi-step operations and `with_for_update()` where a read-modify-write can
@@ -90,11 +91,49 @@ These must stay accurate, especially test counts and status:
 |---|---|
 | `README.md` | Test counts change, features added, stack changes |
 | `docs/ARCHITECTURE.md` | New endpoints, models, services, security changes, test counts |
-| `docs/IMPLEMENTATION_ROADMAP.md` | A phase completes or starts |
-| `docs/AI_ROADMAP.md` | AI/retrieval/eval work progresses |
+| `docs/ROADMAP.md` | A milestone starts, changes state or completes; risks change |
+| `docs/DEPLOYMENT.md` | Configuration, CI jobs, release steps or runtime versions change |
+| `docs/adr/` | A hard-to-reverse choice is made, or a Proposed one is resolved |
+| `CHANGELOG.md` | Any user-visible, operational or security-relevant change |
 
 If you add or remove tests, re-count and update the numbers before committing. Do not document
-behaviour that is not implemented — a README claim the code does not support is a bug.
+behaviour that is not implemented — a README claim the code does not support is a bug. Keep
+each document single-purpose and link rather than repeat: duplicated detail drifts.
+
+## Decisions
+
+Record a decision as an ADR ([docs/adr/](docs/adr/README.md)) when it is hard to reverse, when a
+reasonable engineer would have chosen differently, or when the reasoning would otherwise be
+lost. To reverse one, write a new ADR that supersedes it; do not rewrite history.
+
+## External services and cost
+
+The project is zero-spend ([ADR-0003](docs/adr/0003-hard-capped-providers-only.md)).
+
+- Use only services that **stop at their limit** rather than bill. A budget alert is not a cap.
+- Do not add a paid dependency, or a provider that can bill past a limit, without an ADR.
+- Do not link a billing account to a project that holds an API key.
+- Never put a credential in a URL, a log line, a test fixture or the repository.
+- Model identifiers are pinned in configuration and recorded with every result.
+
+## Evaluation discipline
+
+Applies to LLM-backed features ([docs/EVALUATION.md](docs/EVALUATION.md)).
+
+- Model calls go through the record/replay client; tests and CI make no network calls.
+- Never re-record silently. Re-recording, and any baseline change, is a reviewed change with a
+  stated reason. Lowering a baseline needs an explanation.
+- Report metrics with the model, sample size and commit that produced them. Report null
+  results.
+- Do not tune against the `test` split.
+
+## Pull requests
+
+- One milestone from the [roadmap](docs/ROADMAP.md) per pull request, small enough to review
+  and revert on its own. Documentation-only changes are their own pull request.
+- Update the roadmap state, the changelog and any ADR the change touches.
+- Describe what was verified and, separately, what was **not**. State unverified claims as
+  unverified.
 
 ## Security
 
@@ -117,5 +156,5 @@ behaviour that is not implemented — a README claim the code does not support i
 
 ## Git
 
-- Branches: `feature/name`, `fix/name`, `phase0/name`
+- Branches: `feature/name`, `fix/name`, `docs/name`, or the milestone id, e.g. `m0.3/food-providers`
 - Verify with `git status --short` before every commit
