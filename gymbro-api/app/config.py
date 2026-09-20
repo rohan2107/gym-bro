@@ -35,7 +35,12 @@ class Settings(BaseSettings):
     # the team slug, e.g. "^https://gym-bro-[a-z0-9-]+-myteam\.vercel\.app$".
     CORS_PREVIEW_ORIGIN_REGEX: str = ""
 
-    ENVIRONMENT: str = "development"
+    # Deliberately defaults to "production". This value gates the X-User-Id dev
+    # auth header (see app/deps.py), which lets a caller act as any user. The
+    # previous default of "development" meant a deployment that never set this
+    # variable - as Vercel never did - accepted that header from anyone.
+    # Set ENVIRONMENT=development in a local .env to opt in.
+    ENVIRONMENT: str = "production"
 
     model_config = SettingsConfigDict(
         env_file=".env",

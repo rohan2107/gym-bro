@@ -16,6 +16,18 @@ if str(ROOT) not in sys.path:
 
 
 @pytest.fixture(autouse=True)
+def test_environment(monkeypatch):
+    """Run every test as ENVIRONMENT=test, and never as if on Vercel.
+
+    The X-User-Id dev header is disabled unless the environment is explicitly
+    development or test, so tests that use it must opt in. Tests that exercise
+    the locked-down behaviour override these with patch.dict.
+    """
+    monkeypatch.setenv("ENVIRONMENT", "test")
+    monkeypatch.delenv("VERCEL", raising=False)
+
+
+@pytest.fixture(autouse=True)
 def no_external_api_keys(monkeypatch):
     """Force every service into mock mode for the whole test suite.
 

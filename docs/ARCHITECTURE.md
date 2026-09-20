@@ -228,6 +228,10 @@ thresholded at 0.60 on the raw value and clamped to 1.0 before being reported.
 
 - **Auth**: Google OAuth 2.0 + JWT in httpOnly cookies, `SameSite=Lax` (XSS protection)
 - **Isolation**: All DB queries filtered by `user_id` at dependency level
+- **Dev auth header**: `X-User-Id` lets a caller act as any user and exists only for local
+  development and tests. It is enabled only when `ENVIRONMENT` is explicitly `development` or
+  `test` (the default is `production`), and never on Vercel, which sets `VERCEL=1` itself, so
+  it cannot be re-enabled by a misconfiguration.
 - **Validation**: Pydantic input validation, content-type checks on uploads
 - **Upload limits**: 10MB file size, streaming in 64KB chunks to prevent memory exhaustion
 - **Rate limiting**: Atomic per-user quotas with row-level locking
@@ -246,7 +250,7 @@ thresholded at 0.60 on the raw value and clamped to 1.0 before being reported.
 
 ## Testing
 
-**166 backend tests** (pytest, ~4s) | **50 frontend tests** (Vitest, ~1s) | **216 total**
+**175 backend tests** (pytest, ~4s) | **50 frontend tests** (Vitest, ~1s) | **225 total**
 
 Backend coverage: **85%** (auth.py OAuth callbacks largely uncovered — requires a real Google
 OAuth flow)
@@ -300,6 +304,9 @@ photo endpoint in production while CI stayed green.
 
 ## Known Limitations
 
+- **Photo analysis needs API keys on a deployment**: mock mode returns fixed sample data, so
+  on Vercel the endpoint refuses (503) rather than present fabricated nutrition as a real
+  analysis. The UI falls back to manual entry.
 - **Vision integration unverified against the live API**: implemented and unit-tested against a
   mocked `images:annotate` endpoint, but not yet exercised with a real `GOOGLE_VISION_API_KEY`.
   Real label vocabulary may need additions to `NON_FOOD_LABELS` and `FOOD_MAPPING`.

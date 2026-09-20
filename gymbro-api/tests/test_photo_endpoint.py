@@ -531,3 +531,56 @@ class TestPhotoMealLogging:
             assert user.photo_count == initial_count
         finally:
             session_gen.close()
+
+
+class TestMockModeOnDeployment:
+    """Fabricated sample data must never be served from a real deployment."""
+
+    def test_photo_analysis_refused_when_keys_missing_on_vercel(
+        self,
+        client: TestClient,
+        user_token: str,
+        test_user_in_db: User,
+        valid_image_file: tuple[str, BytesIO, str],
+    ) -> None:
+        with patch.dict("os.environ", {"VERCEL": "1"}):
+            response = client.post(
+                "/food-logs/from-photo",
+                files={"photo": valid_image_file},
+                headers={"Authorization": f"Bearer {user_token}"},
+            )
+
+        assert response.status_code == 503
+        assert "log this meal manually" in response.json()["detail"]
+
+    def test_refusal_does_not_spend_quota(
+        self,
+        client: TestClient,
+        user_token: str,
+        test_user_in_db: User,
+        valid_image_file: tuple[str, BytesIO, str],
+    ) -> None:
+        with patch.dict("os.environ", {"VERCEL": "1"}):
+            client.post(
+                "/food-logs/from-photo",
+                files={"photo": valid_image_file},
+                headers={"Authorization": f"Bearer {user_token}"},
+            )
+
+        session = next(_get_session_gen(client))
+        assert session.get(User, 1).photo_count == 0
+
+    def test_mock_mode_still_works_locally(
+        self,
+        client: TestClient,
+        user_token: str,
+        test_user_in_db: User,
+        valid_image_file: tuple[str, BytesIO, str],
+    ) -> None:
+        """Development keeps its mock behaviour."""
+        response = client.post(
+            "/food-logs/from-photo",
+            files={"photo": valid_image_file},
+            headers={"Authorization": f"Bearer {user_token}"},
+        )
+        assert response.status_code == 200

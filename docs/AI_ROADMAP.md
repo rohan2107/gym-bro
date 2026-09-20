@@ -28,7 +28,7 @@ Verified by running, not by reading docs.
 
 | Thing | As found (audit, 16 Sep) | After Phase 0 |
 |---|---|---|
-| Backend tests | 133 passing in 5.5s | **166 passing** in ~4s |
+| Backend tests | 133 passing in 5.5s | **175 passing** in ~4s |
 | Backend coverage | 84% | **85%** |
 | Frontend tests | 27 (couldn't run — no Node installed) | **50 passing** |
 | Backend lint | 202 findings on untouched main (see F10) | clean, rule set pinned |
@@ -133,6 +133,24 @@ intervention. `tests/test_migrations.py` runs `alembic upgrade head` against a f
 database and asserts the resulting tables, columns and indexes match the models, plus that
 `downgrade base` is clean. **This was the blocker for Phase 1's pgvector migration.**
 
+**F12. Production accepted an unauthenticated user-impersonation header.**
+`get_user_id()` honoured `X-User-Id` whenever `ENVIRONMENT` was `development` or `test`, and
+defaulted to `"development"` when the variable was unset. `ENVIRONMENT` was never documented
+as a Vercel variable, so production had it unset. Verified against the live site on
+September 20, 2026: a request with `X-User-Id: 999999999` returned `200`, the same request
+without it `401`. Anyone could read or write any user's data. The probe used an id that cannot
+exist, so no real data was touched. Pre-existing, found while verifying Phase 0.
+
+*Fixed*: the header is enabled only when `ENVIRONMENT` is explicitly `development` or `test`;
+the `Settings` default is now `production`; and it is never enabled when `VERCEL` is set,
+which Vercel does itself. Tests cover the unset case, the Vercel case with an explicit
+`ENVIRONMENT=development`, and an end-to-end request. The suite now opts in with an autouse
+`ENVIRONMENT=test` fixture instead of relying on the insecure default.
+
+**Related, same change**: mock mode returns fixed sample data (always "pizza"). On a Vercel
+deployment without API keys the photo endpoint would have presented that as a real analysis,
+so it now refuses with a 503 before spending quota.
+
 ### P1 — hardening and hygiene
 
 **F6. CORS admits any `*.vercel.app` origin with credentials.**
@@ -178,6 +196,7 @@ run. Port to shell scripts or a `Makefile`.
 | **F8** stale docs | README, ARCHITECTURE and IMPLEMENTATION_ROADMAP corrected |
 | **F9** Windows-only tooling | Shell equivalents added for all five scripts (`scripts/*.sh`, sharing `lib.sh`); `.ps1` files kept as the Windows versions |
 | **F10** ruff drift | `ruff.toml` added, ruff pinned in CI and requirements |
+| **F12** impersonation header open in production | Default-deny gate, never on Vercel; mock data refused on deployments |
 | **F11** fictional migration history | Real baseline migration written; `tests/test_migrations.py` asserts a fresh `alembic upgrade head` reproduces the models' schema |
 
 ### Remaining Phase 0 verification

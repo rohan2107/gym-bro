@@ -58,7 +58,7 @@ in the September 2026 audit.
   while CI was green), requirements drift between the two files, a placeholder user seeded into
   production on every cold start, `create_all()` competing with Alembic for schema ownership,
   CORS admitting the whole `vercel.app` namespace, and an unpinned ruff breaking the lint job
-- 216 tests (166 backend, 50 frontend), 85% backend coverage
+- 225 tests (175 backend, 50 frontend), 85% backend coverage
 
 **Status**: Implemented and unit-tested; not yet verified against the live Vision API. Set
 `GOOGLE_VISION_API_KEY` and `USDA_API_KEY`, then run a real photo through it.

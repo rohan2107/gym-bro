@@ -96,6 +96,14 @@ These must stay accurate, especially test counts and status:
 If you add or remove tests, re-count and update the numbers before committing. Do not document
 behaviour that is not implemented — a README claim the code does not support is a bug.
 
+## Security
+
+- The `X-User-Id` header is a development convenience that impersonates any user. Never widen
+  the conditions under which `dev_auth_enabled()` returns true, and keep the default deny.
+- A security-relevant default must be the safe one. An unset variable should never enable
+  something dangerous; production once ran with the header open for exactly that reason.
+- Credentials go in headers, never URLs, because httpx puts the URL in exception messages.
+
 ## Anti-patterns
 
 - `print()` anywhere — use the logger
