@@ -12,9 +12,11 @@ A full-stack fitness PWA with AI meal photo analysis, offline support, and a mob
 
 ## Features
 
-✅ **AI meal logging** — photograph a meal, get food predictions and macros from Google
-Vision + USDA, editable before saving (requires `GOOGLE_VISION_API_KEY` and `USDA_API_KEY`;
-without them the services run in mock mode)  
+✅ **AI meal photo analysis** — photograph a meal, get food predictions and macros, editable
+before saving. Implemented against Google Cloud Vision and USDA; **currently disabled on the
+live site** until a provider that needs no billing account is configured (see the
+[roadmap](docs/ROADMAP.md#m03-food-recognition-providers)). Locally it runs in mock mode
+without keys  
 ✅ Google OAuth 2.0 authentication  
 ✅ Daily check-ins (weight, steps, training status)  
 ✅ Meal logging with calorie & macro tracking  
@@ -76,13 +78,13 @@ USDA_API_KEY=your-usda-api-key
 
 All settings are declared in [gymbro-api/app/config.py](gymbro-api/app/config.py).
 
-**gymbro-web/.env**:
+**gymbro-web/.env** (optional; without it the client uses `/api` through the Vite proxy):
 ```bash
 VITE_API_URL=http://localhost:8000
-VITE_GOOGLE_CLIENT_ID=your-client-id.apps.googleusercontent.com
 ```
 
-See the [OAuth Setup Guide](docs/GOOGLE_OAUTH_SETUP.md) for Google OAuth configuration.
+See [Authentication](docs/AUTHENTICATION.md) for Google OAuth setup, including the redirect
+URI to register.
 
 ## Testing
 
@@ -114,14 +116,23 @@ cd gymbro-web && npm run lint -- --fix          # Frontend
 Shell scripts in [scripts/](scripts/) are the primary tooling; the matching `.ps1` files are
 the Windows equivalents.
 
+## Direction
+
+The app is being extended into a system whose LLM behaviour is measured, observable and
+resilient: retrieval with citations, an evaluation harness gated in CI, tracing, and then an
+agent with tools. Everything runs on free tiers that stop at their limit rather than bill. The
+plan, its sequence and its risks are in the [roadmap](docs/ROADMAP.md).
+
 ## Documentation
 
-- [Architecture](docs/ARCHITECTURE.md) — System design, API endpoints, security model
-- [Implementation Roadmap](docs/IMPLEMENTATION_ROADMAP.md) — Completed phases and product direction
-- [AI Roadmap](docs/AI_ROADMAP.md) — Retrieval, agents and evaluation plan
-- [All docs](docs/README.md) — Including OAuth setup and design specs
+- [Architecture](docs/ARCHITECTURE.md): system design, API endpoints, security model, testing
+- [Roadmap](docs/ROADMAP.md): planned work, sequenced into reviewable milestones
+- [Deployment](docs/DEPLOYMENT.md): configuration, CI/CD, releasing and rollback
+- [Decision records](docs/adr/README.md): what was decided and why
+- [All docs](docs/README.md)
 
-Contributing conventions, including the quality gates, are in [AGENTS.md](AGENTS.md).
+Contribution conventions, including the quality gates, are in [AGENTS.md](AGENTS.md). Changes
+are recorded in the [changelog](CHANGELOG.md).
 
 ## License
 

@@ -1,11 +1,31 @@
-# Gym Bro Documentation
+# Documentation
 
-- [Architecture](ARCHITECTURE.md) — System design, API endpoints, security model, testing, deployment
-- [Implementation Roadmap](IMPLEMENTATION_ROADMAP.md) — Completed phases and product direction
-- [AI Roadmap](AI_ROADMAP.md) — Retrieval, agents and evaluation plan, plus the audit fix ledger
+## Start here
 
-## Reference
+- [Architecture](ARCHITECTURE.md): how the system is built today
+- [Roadmap](ROADMAP.md): what is planned, in what order, and how each step is judged done
 
-- [OAuth Setup](GOOGLE_OAUTH_SETUP.md) — Configuring Google OAuth 2.0 credentials
-- [AI Meal Logging](AI_MEAL_LOGGING.md) — Design of the photo analysis pipeline
-- [Energy Balance Spec](ENERGY_BALANCE_SPEC.md) — TDEE and energy balance calculations (planned)
+## Design and decisions
+
+- [Architecture decision records](adr/README.md): what was decided, why, and what it costs
+- [Evaluation design](EVALUATION.md): how LLM-backed features are measured
+- [Photo analysis](PHOTO_ANALYSIS.md): the meal-photo pipeline, failure behaviour and limits
+- [Authentication](AUTHENTICATION.md): Google OAuth setup, the session model and known gaps
+- [Energy balance](ENERGY_BALANCE.md): design of the planned analytics endpoints
+
+## Operations
+
+- [Deployment and operations](DEPLOYMENT.md): configuration, CI/CD, releasing, rollback, cost
+  controls and secrets
+
+## History
+
+- [September 2026 audit](AUDIT_2026-09.md): what was found when development resumed, and how
+  each finding was resolved
+- [Changelog](../CHANGELOG.md)
+
+## Conventions
+
+Contribution conventions and the quality gates are in [AGENTS.md](../AGENTS.md).
+Documents are kept short and single-purpose; where two would overlap, one links to the other
+rather than repeating it.
