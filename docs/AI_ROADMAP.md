@@ -28,9 +28,9 @@ Verified by running, not by reading docs.
 
 | Thing | As found (audit, 16 Sep) | After Phase 0 |
 |---|---|---|
-| Backend tests | 133 passing in 5.5s | **160 passing** in ~4s |
+| Backend tests | 133 passing in 5.5s | **166 passing** in ~4s |
 | Backend coverage | 84% | **85%** |
-| Frontend tests | 27 (couldn't run — no Node installed) | **46 passing** |
+| Frontend tests | 27 (couldn't run — no Node installed) | **50 passing** |
 | Backend lint | 202 findings on untouched main (see F10) | clean, rule set pinned |
 | Vision integration | stub, always returned `"pizza"` | real REST integration (unverified against live API) |
 | Photo UI | none | `PhotoCapture` + `MealReview` on the Meals page |

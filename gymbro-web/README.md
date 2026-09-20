@@ -35,7 +35,7 @@ relies on the Vite proxy.
 | `npm run build` | Type-check and build to `dist/` |
 | `npm run preview` | Serve the production build |
 | `npm run test` | Vitest in watch mode |
-| `npm run test:run` | Vitest once (46 tests) |
+| `npm run test:run` | Vitest once (50 tests) |
 | `npm run coverage` | Vitest with a coverage report |
 | `npm run lint` | ESLint, zero-warning policy |
 | `npm run type-check` | `tsc --noEmit` |

@@ -246,7 +246,7 @@ thresholded at 0.60 on the raw value and clamped to 1.0 before being reported.
 
 ## Testing
 
-**160 backend tests** (pytest, ~4s) | **46 frontend tests** (Vitest, ~1s) | **206 total**
+**166 backend tests** (pytest, ~4s) | **50 frontend tests** (Vitest, ~1s) | **216 total**
 
 Backend coverage: **85%** (auth.py OAuth callbacks largely uncovered — requires a real Google
 OAuth flow)
