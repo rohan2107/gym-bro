@@ -521,12 +521,6 @@ CREATE TABLE workout_calorie_cache (
 - [ ] System acknowledges uncertainty when data insufficient
 - [ ] Language emphasizes review and consideration, not correction
 
-**Portfolio Showcase**:
-- [ ] Demonstrate adaptive algorithm (before/after TDEE adjustment)
-- [ ] Show data validation catching tracking errors
-- [ ] Explain thermodynamics principles in interview
-- [ ] Analytics dashboard screenshot for resume/portfolio
-
 ---
 
 ## 🏗️ System Design Principles
@@ -599,8 +593,5 @@ By building this feature, you'll learn:
 - **Diagnostic design**: Building systems that explain, not prescribe
 - **Graceful degradation**: Optional analytics that remain valuable with incomplete data
 
-**Portfolio value**: This differentiates through **scientific rigor and restraint**. Demonstrates ability to:
-- Build systems that acknowledge uncertainty
-- Apply invariant-preserving inference
-- Design diagnostic tools that avoid false confidence
-- Balance product pragmatism with academic defensibility
+**Design stance**: scientific rigor and restraint — systems that acknowledge uncertainty,
+apply invariant-preserving inference, and diagnose without false confidence.

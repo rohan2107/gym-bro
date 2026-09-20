@@ -26,6 +26,38 @@ export type Workout = {
   started_at: string
 }
 
+export type PhotoNutrition = {
+  name: string
+  fdc_id: number | null
+  calories: number | null
+  protein_g: number | null
+  carbs_g: number | null
+  fat_g: number | null
+  serving_size: string | null
+  confidence: string | null
+}
+
+export type PhotoPrediction = {
+  label: string
+  confidence: number
+  nutrition: PhotoNutrition
+}
+
+export type PhotoRateLimit = {
+  remaining: number
+  limit: number
+  used_today: number
+}
+
+export type PhotoAnalysis = {
+  predictions: PhotoPrediction[]
+  rate_limit: PhotoRateLimit
+  image_info: {
+    format: string | null
+    size_kb: number | null
+  }
+}
+
 // API_BASE: In development uses Vite proxy (/api -> localhost:8000)
 // In production, uses environment variable (ngrok tunnel or deployed backend)
 const API_BASE = import.meta.env.VITE_API_URL || '/api'
@@ -56,7 +88,48 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   return (await res.json()) as T
 }
 
+/**
+ * Upload a meal photo for AI analysis.
+ *
+ * Deliberately does not reuse request(): the browser must set Content-Type
+ * itself so the multipart boundary is included.
+ */
+async function uploadPhoto(file: File): Promise<PhotoAnalysis> {
+  const body = new FormData()
+  body.append('photo', file)
+
+  const res = await fetch(`${API_BASE}/food-logs/from-photo`, {
+    method: 'POST',
+    credentials: 'include',
+    body,
+  })
+
+  if (res.status === 401) {
+    window.location.href = '/login'
+    throw new Error('Authentication required')
+  }
+
+  if (!res.ok) {
+    throw new Error(await extractErrorMessage(res))
+  }
+
+  return (await res.json()) as PhotoAnalysis
+}
+
+/** Pull FastAPI's {"detail": "..."} message out of an error response. */
+async function extractErrorMessage(res: Response): Promise<string> {
+  const raw = await res.text()
+  try {
+    const parsed = JSON.parse(raw) as { detail?: unknown }
+    if (typeof parsed.detail === 'string') return parsed.detail
+  } catch {
+    // Not JSON - fall through to the raw body.
+  }
+  return raw || `Request failed (${res.status})`
+}
+
 export const api = {
+  analyzeMealPhoto: uploadPhoto,
   getTodayCheckIn: () => request<DailyCheckIn>('/daily-checkins/today'),
   getCheckInByDate: (dateISO: string) => request<DailyCheckIn>(`/daily-checkins/${dateISO}`),
   upsertCheckIn: (dateISO: string, data: Partial<Omit<DailyCheckIn, 'id' | 'user_id' | 'checkin_date'>>) =>

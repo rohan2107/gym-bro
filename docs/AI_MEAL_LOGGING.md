@@ -5,7 +5,6 @@
 **Goal**: Enable users to log meals by taking photos with AI-powered food recognition  
 **Backend Status**: Production-ready, awaiting API key configuration
 
-**See**: [Phase 4.2 Complete](PHASE4.2_COMPLETE.md) for full implementation details
 
 ---
 
@@ -761,12 +760,6 @@ alembic upgrade head
 - ✅ Error handling for all failure modes
 - ✅ Zero cost on free tier with typical usage
 
-**Portfolio**:
-- ✅ Demonstrates AI/ML integration skills
-- ✅ Shows production-ready error handling
-- ✅ Impressive demo-able feature
-- ✅ Clean code + documentation
-
 ---
 
 ## Revised Timeline (3-4 weeks)
@@ -792,11 +785,9 @@ alembic upgrade head
 
 ---
 
-## Next Steps
+## Status
 
-1. **Review this plan** - Any changes/additions?
-2. **Start Phase 4.1** - Setup Google Vision API + Vercel Blob
-3. **Create `.env.example` updates** - Document new env vars
-4. **Setup Google Cloud project** - Enable Vision API, generate key
-
-Ready to start Phase 4.1? 🚀
+Implemented. See [ARCHITECTURE.md](ARCHITECTURE.md) for the pipeline as built, which differs
+from this plan in two ways: Vercel Blob was dropped (the endpoint receives image bytes in the
+request and does not persist them), and Vision is called over its REST API rather than the
+client library.

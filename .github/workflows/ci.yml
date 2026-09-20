@@ -66,7 +66,7 @@ jobs:
           python-version: ${{ env.PYTHON_VERSION }}
       
       - name: Install ruff
-        run: pip install ruff
+        run: pip install ruff==0.16.7
       
       - name: Run ruff
         run: ruff check app/ tests/ --output-format=github

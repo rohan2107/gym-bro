@@ -131,3 +131,46 @@ def test_get_user_id_x_user_id_allowed_in_test(client: TestClient):
     with patch.dict("os.environ", {"ENVIRONMENT": "test"}):
         user_id = get_user_id(auth_token=None, authorization=None, x_user_id=42)
         assert user_id == 42
+
+
+def test_dev_auth_disabled_when_environment_is_unset(monkeypatch):
+    """Secure by default: no ENVIRONMENT means the header is rejected.
+
+    Production previously accepted X-User-Id from anyone because the variable
+    was never set on Vercel and the default was "development".
+    """
+    from app.config import Settings
+    from app.deps import dev_auth_enabled
+
+    monkeypatch.delenv("ENVIRONMENT", raising=False)
+    monkeypatch.delenv("VERCEL", raising=False)
+    monkeypatch.setattr("app.deps.settings", Settings(_env_file=None))
+
+    assert dev_auth_enabled() is False
+    with pytest.raises(HTTPException) as exc_info:
+        get_user_id(auth_token=None, authorization=None, x_user_id=42)
+    assert exc_info.value.status_code == 401
+
+
+@pytest.mark.parametrize("env", ["development", "test", "Development"])
+def test_dev_auth_is_never_enabled_on_vercel(env):
+    """Even an explicit ENVIRONMENT=development cannot enable it on a deployment."""
+    with patch.dict("os.environ", {"ENVIRONMENT": env, "VERCEL": "1"}):
+        with pytest.raises(HTTPException) as exc_info:
+            get_user_id(auth_token=None, authorization=None, x_user_id=42)
+        assert exc_info.value.status_code == 401
+
+
+def test_settings_default_environment_is_production(monkeypatch):
+    """The default must be the safe one."""
+    from app.config import Settings
+
+    monkeypatch.delenv("ENVIRONMENT", raising=False)
+    assert Settings(_env_file=None).ENVIRONMENT == "production"
+
+
+def test_x_user_id_is_rejected_over_http_in_production(client: TestClient):
+    """End to end: the header does not authenticate a real request."""
+    with patch.dict("os.environ", {"ENVIRONMENT": "production"}):
+        response = client.get("/food-logs/", headers={"X-User-Id": "999999999"})
+    assert response.status_code == 401

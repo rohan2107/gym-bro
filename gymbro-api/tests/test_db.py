@@ -1,125 +1,87 @@
-"""Tests for database initialization and session management."""
+"""Tests for database connection checking and session management."""
 
-from sqlmodel import create_engine, Session, select, SQLModel
+from sqlmodel import create_engine, Session
 from sqlalchemy.pool import StaticPool
-from sqlalchemy import inspect
 from unittest.mock import patch
 
-from app.db import init_db, get_session, get_engine
-from app.models import User
+from app.db import check_db_connection, get_session, get_engine
 
 
-def test_init_db_creates_all_tables():
-    """Test that init_db() creates all required tables."""
-    # Create a temporary in-memory database
+def test_check_db_connection_succeeds_for_reachable_database():
+    """A reachable database returns True."""
     test_engine = create_engine(
         "sqlite://",
         connect_args={"check_same_thread": False},
         poolclass=StaticPool,
         echo=False
     )
-    
-    # Patch get_engine to return our test engine
+
     with patch('app.db.get_engine', return_value=test_engine):
-        # Call init_db
-        init_db()
-        
-        # Verify all tables were created
-        inspector = inspect(test_engine)
-        tables = inspector.get_table_names()
-        
-        assert "user" in tables
-        assert "foodlog" in tables
-        assert "daily_check_in" in tables  # SQLModel uses snake_case for table names
-        assert "weightentry" in tables
-        assert "workout" in tables
-        assert "exerciseset" in tables
-        
+        assert check_db_connection() is True
+
     test_engine.dispose()
 
 
-@patch('app.db.get_engine')
-def test_init_db_seeds_user_1(mock_get_engine):
-    """Test that init_db() seeds user 1 when it doesn't exist."""
-    # Create a temporary in-memory database
+def test_check_db_connection_returns_false_on_failure():
+    """An unreachable database returns False rather than raising.
+
+    A serverless cold start must not fail because of a transient database blip;
+    every request opens its own session regardless.
+    """
+    with patch('app.db.get_engine', side_effect=Exception("connection refused")):
+        assert check_db_connection() is False
+
+
+def test_check_db_connection_does_not_create_tables():
+    """Alembic owns the schema - startup must not create tables.
+
+    Two mechanisms managing one schema is how the migration history silently
+    stops matching the database.
+    """
+    from sqlalchemy import inspect
+
     test_engine = create_engine(
         "sqlite://",
         connect_args={"check_same_thread": False},
         poolclass=StaticPool,
         echo=False
     )
-    
-    # Mock get_engine to return our test engine
-    mock_get_engine.return_value = test_engine
-    
-    # Call init_db
-    init_db()
-    
-    # Verify user 1 exists with correct data
-    with Session(test_engine) as session:
-        user1 = session.get(User, 1)
-        assert user1 is not None
-        assert user1.id == 1
-        assert user1.email == "temp@gymbro.app"
-        assert user1.display_name == "MVP User"
-        
+
+    with patch('app.db.get_engine', return_value=test_engine):
+        check_db_connection()
+
+    assert inspect(test_engine).get_table_names() == []
+
     test_engine.dispose()
 
 
-@patch('app.db.get_engine')
-def test_init_db_skips_seeding_when_user_1_exists(mock_get_engine):
-    """Test that init_db() doesn't duplicate user 1 if it already exists."""
-    # Create a temporary in-memory database
+def test_check_db_connection_does_not_seed_users():
+    """Startup must not write to the database.
+
+    This previously inserted a placeholder user (id=1, temp@gymbro.app) into
+    production on every cold start, left over from the pre-OAuth MVP.
+    """
+    from sqlalchemy import inspect
+    from sqlmodel import SQLModel, select
+
+    from app.models import User
+
     test_engine = create_engine(
         "sqlite://",
         connect_args={"check_same_thread": False},
         poolclass=StaticPool,
         echo=False
     )
-    
-    # Mock get_engine to return our test engine
-    mock_get_engine.return_value = test_engine
-    
-    # Create tables and manually add user 1
     SQLModel.metadata.create_all(test_engine)
+
+    with patch('app.db.get_engine', return_value=test_engine):
+        check_db_connection()
+
+    assert "user" in inspect(test_engine).get_table_names()
     with Session(test_engine) as session:
-        existing_user = User(
-            id=1,
-            email="existing@example.com",
-            display_name="Existing User"
-        )
-        session.add(existing_user)
-        session.commit()
-    
-    # Call init_db - should not overwrite
-    init_db()
-    
-    # Verify user 1 still has original data
-    with Session(test_engine) as session:
-        user1 = session.get(User, 1)
-        assert user1 is not None
-        assert user1.email == "existing@example.com"
-        assert user1.display_name == "Existing User"
-        
-        # Verify no duplicate users
-        all_users = session.exec(select(User)).all()
-        assert len(all_users) == 1
-        
+        assert session.exec(select(User)).all() == []
+
     test_engine.dispose()
-
-
-def test_init_db_handles_errors_gracefully(monkeypatch):
-    """Test that init_db() can handle various error conditions."""
-    # This test verifies init_db doesn't crash on common error scenarios
-    # The lifespan function in main.py wraps init_db in try/except,
-    # so errors are logged but don't crash the app
-    
-    # Just verify init_db can be called - actual error handling
-    # is tested indirectly through integration tests  
-    # (If init_db has a critical bug, other tests will fail)
-    import app.db
-    assert hasattr(app.db, 'init_db')
-    assert callable(app.db.init_db)
 
 
 def test_get_session_provides_session():

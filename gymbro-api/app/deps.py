@@ -6,10 +6,34 @@ from fastapi import Header, Cookie, HTTPException, status, Depends
 from typing import Optional
 from sqlmodel import Session
 from app.auth_utils import verify_jwt
+from app.config import settings
 from app.services.vision import VisionService
 from app.services.nutrition import NutritionService
 from app.services.rate_limiter import RateLimiter
 from app.db import get_session
+
+
+def running_on_vercel() -> bool:
+    """True on any Vercel deployment (production or preview).
+
+    Vercel sets VERCEL=1 itself, so this cannot be forgotten the way an
+    application-level ENVIRONMENT variable can.
+    """
+    return bool(os.getenv("VERCEL"))
+
+
+def dev_auth_enabled() -> bool:
+    """Whether the X-User-Id header may authenticate a request.
+
+    That header lets the caller act as any user, so it must never be reachable
+    in a deployed app. It is enabled only when ENVIRONMENT is explicitly
+    "development" or "test", and never on Vercel regardless of ENVIRONMENT.
+    An unset variable means disabled.
+    """
+    if running_on_vercel():
+        return False
+    env = (os.getenv("ENVIRONMENT") or settings.ENVIRONMENT).lower()
+    return env in ("development", "test")
 
 
 def get_user_id(
@@ -57,10 +81,8 @@ def get_user_id(
             pass
     
     # Fall back to X-User-Id header (dev/test only, disabled in production)
-    if x_user_id and x_user_id > 0:
-        env = os.getenv("ENVIRONMENT", "development")
-        if env in ("development", "test"):
-            return x_user_id
+    if x_user_id and x_user_id > 0 and dev_auth_enabled():
+        return x_user_id
     
     # No valid authentication
     raise HTTPException(

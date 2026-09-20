@@ -1,7 +1,11 @@
 # Implementation Roadmap
 
-**Last Updated**: February 25, 2026  
-**Current Status**: Phase 4.2 Complete — Backend ready for API key configuration
+**Last Updated**: September 16, 2026  
+**Current Status**: Phase 4.3 Complete — AI photo logging shipped end to end
+
+> Development after Phase 4.3 is planned in the [AI Roadmap](AI_ROADMAP.md), which supersedes
+> the upcoming phases below. Phase 5 is repurposed there: the energy-balance endpoints are kept
+> as agent tools, the dashboard is dropped.
 
 ---
 
@@ -18,7 +22,7 @@
 - Multi-user support with data isolation
 - Protected routes and secure sessions
 
-**Details**: [OAuth Setup Guide](archive/GOOGLE_OAUTH_SETUP.md)
+**Details**: [OAuth Setup Guide](GOOGLE_OAUTH_SETUP.md)
 
 ### Phase 3: Testing & CI/CD (February 18, 2026) ✅
 - Automated test suite (47 backend + 27 frontend at phase completion)
@@ -39,13 +43,33 @@
 - Authorization header support (Bearer token + cookie)
 - Complete code quality improvements (14/14 PR review fixes)
 
-**Status**: Backend production-ready, awaiting API key configuration
+#### Phase 4.3: Frontend & Real Vision Integration ✅ (September 16, 2026)
+
+Completed as Phase 0 of the [AI Roadmap](AI_ROADMAP.md), which also cleared the defects found
+in the September 2026 audit.
+
+- Real Google Cloud Vision integration (REST `images:annotate` with an API key via `httpx`,
+  replacing a stub that always returned a hardcoded `"pizza"`)
+- Generic-label filtering, deduplication and ranking before USDA lookup
+- `PhotoCapture` (native camera on mobile, file picker on desktop, quota indicator) and
+  `MealReview` (every predicted value editable, per-100g caveat stated)
+- Graceful fallback: failures stay local to the photo control, manual entry always available
+- Fixed: `pillow` missing from the production requirements (the endpoint 500'd in production
+  while CI was green), requirements drift between the two files, a placeholder user seeded into
+  production on every cold start, `create_all()` competing with Alembic for schema ownership,
+  CORS admitting the whole `vercel.app` namespace, and an unpinned ruff breaking the lint job
+- 225 tests (175 backend, 50 frontend), 85% backend coverage
+
+**Status**: Implemented and unit-tested; not yet verified against the live Vision API. Set
+`GOOGLE_VISION_API_KEY` and `USDA_API_KEY`, then run a real photo through it.
 
 ---
 
-## Upcoming Phases
+## Superseded Plans
 
-### Phase 4.3: Frontend Implementation (In Planning)
+The phases below predate the [AI Roadmap](AI_ROADMAP.md). Kept for reference.
+
+### Phase 4.3: Frontend Implementation (superseded — delivered, see above)
 
 **Goal**: Complete the photo logging user interface
 
@@ -79,11 +103,14 @@
 
 **Estimated Duration**: 16 days
 
-**Details**: [Phase 4 Implementation Plan](PHASE4_AI_MEAL_PLAN.md)
+**Details**: [AI Meal Logging design](AI_MEAL_LOGGING.md)
 
 ---
 
-### Phase 5: Energy Balance & Analytics
+### Phase 5: Energy Balance & Analytics (superseded — rescoped in the AI Roadmap)
+
+The backend endpoints are kept as agent tools in AI Roadmap Phase 2. The dashboard, setup
+wizard and charts are dropped.
 
 **Goal**: TDEE tracking with weight loss validation
 
@@ -122,17 +149,17 @@ Week 3+:  TDEE = calories_consumed + (weight_change * 3500 / days)
 
 **Estimated Duration**: 2-3 weeks
 
-**Details**: [Energy Balance Specification](archive/ENERGY_BALANCE_SPEC.md)
+**Details**: [Energy Balance Specification](ENERGY_BALANCE_SPEC.md)
 
 ---
 
 ## Future Enhancements
 
 **Performance & Monitoring**:
-- E2E tests with Playwright
-- Lighthouse CI integration
-- Error tracking (Sentry)
-- Performance monitoring
+- E2E tests with Playwright (deferred)
+- Lighthouse CI integration (dropped)
+- Error tracking (Sentry) — subsumed by AI Roadmap Phase 3 observability
+- Performance monitoring — subsumed by AI Roadmap Phase 3
 
 **Integrations**:
 - Strong app workout import (CSV)

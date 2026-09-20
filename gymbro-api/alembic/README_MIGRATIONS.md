@@ -47,8 +47,12 @@ alembic history --indicate-current
 
 1. **Make changes to models** in `app/models.py`
 
-2. **Generate migration**:
+2. **Generate migration** against a database built by migrations:
    ```bash
+   # Autogenerate compares the models to the DATABASE_URL database. That database
+   # must have been built by `alembic upgrade head`, not by create_all() - otherwise
+   # Alembic sees no difference and emits an empty or near-empty migration.
+   alembic upgrade head
    alembic revision --autogenerate -m "Add new field to User model"
    ```
 

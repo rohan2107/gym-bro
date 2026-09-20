@@ -6,7 +6,13 @@ from sqlmodel import Session, SQLModel, select
 
 from ..db import get_session
 from ..models import FoodLog
-from ..deps import get_user_id, get_vision_service, get_nutrition_service, get_rate_limiter
+from ..deps import (
+    get_user_id,
+    get_vision_service,
+    get_nutrition_service,
+    get_rate_limiter,
+    running_on_vercel,
+)
 from ..services.vision import VisionService
 from ..services.nutrition import NutritionService
 from ..services.rate_limiter import RateLimiter
@@ -94,6 +100,17 @@ async def create_food_log_from_photo(
             }
         }
     """
+    # Mock mode returns fixed sample data (always "pizza"). That is right for
+    # local development and tests, but on a real deployment it would present
+    # fabricated nutrition as an analysis of the user's photo. Refuse instead,
+    # before any quota is spent; the UI falls back to manual entry.
+    if running_on_vercel() and (vision_service.mock_mode or nutrition_service.mock_mode):
+        logger.error("Photo analysis requested but API keys are not configured")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Photo analysis is not available right now. Please log this meal manually.",
+        )
+
     # Validate content type
     if photo.content_type and not photo.content_type.startswith("image/"):
         raise HTTPException(
@@ -151,7 +168,7 @@ async def create_food_log_from_photo(
     
     # Detect food items
     try:
-        food_labels = vision_service.detect_food(image_bytes)
+        food_labels = await vision_service.detect_food(image_bytes)
     except ValueError as e:
         # Invalid image format or data - user error, no refund
         logger.warning(f"Invalid image for food detection: {e}")

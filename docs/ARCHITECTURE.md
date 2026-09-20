@@ -1,7 +1,8 @@
 # Architecture
 
-**Last Updated**: February 25, 2026
-**Status**: Phase 4.2 Complete — AI Photo Logging Backend Ready
+**Last Updated**: September 16, 2026
+**Status**: Phase 0 of the [AI Roadmap](AI_ROADMAP.md) complete — AI photo logging implemented
+end to end (backend + UI), pending a verification run against real API keys
 
 ---
 
@@ -13,9 +14,9 @@
 | **Backend** | FastAPI (async), SQLModel, Pydantic v2 |
 | **Database** | PostgreSQL on Neon (serverless) |
 | **Auth** | Google OAuth 2.0 + JWT (httpOnly cookies) |
-| **AI Services** | Google Cloud Vision API, USDA FoodData Central |
+| **AI Services** | Google Cloud Vision REST API, USDA FoodData Central |
 | **Hosting** | Vercel (frontend + serverless functions) |
-| **CI/CD** | GitHub Actions (7 parallel jobs) |
+| **CI/CD** | GitHub Actions (9 jobs, 8 required) |
 | **Migrations** | Alembic |
 
 ---
@@ -34,7 +35,7 @@
 │                                        │
 │  Pages:                                │
 │  - Today: Daily check-ins              │
-│  - Meals: Food logging + photo upload  │
+│  - Meals: Food logging + photo capture │
 │  - Workout: Exercise tracking          │
 │  - Profile: User settings              │
 │                                        │
@@ -105,6 +106,11 @@ User
 
 All models enforce user isolation via `user_id` foreign key. Queries are filtered at the dependency injection layer — no cross-user access is possible.
 
+**Schema ownership**: Alembic is the single source of truth. Application startup only verifies
+that the database is reachable (`check_db_connection()`); it does not create tables and does
+not write. Migrations are applied by the `db-migrate` CI job on push to main, or manually with
+`alembic upgrade head`.
+
 ---
 
 ## API Endpoints
@@ -166,22 +172,43 @@ All models enforce user isolation via `user_id` foreign key. Queries are filtere
 ## AI Photo Logging Pipeline
 
 ```
-Photo uploaded (multipart/form-data, max 10MB)
+Photo captured (multipart/form-data, max 10MB)
   → Content-type validation (image/* only)
+  → Local image validation (Pillow: format, dimensions, size)
   → Rate limit check (30/day/user, atomic with FOR UPDATE)
-  → Google Cloud Vision API → food labels with confidence scores
+  → Google Cloud Vision images:annotate → LABEL_DETECTION + WEB_DETECTION
+  → Generic labels dropped, deduplicated, ranked, top 3 kept
   → USDA FoodData Central API → nutrition per detected food
   → Return predictions for user review/edit
   → User confirms → saved via standard POST /food-logs
 ```
 
+Quota is reserved *before* the expensive calls and refunded if detection or nutrition lookup
+fails, so a failed request does not cost the user a photo.
+
 **Services** (`app/services/`):
-- **VisionService** — Google Cloud Vision integration with mock mode for development
+- **VisionService** — Google Cloud Vision via its REST API (`images:annotate`) using an API
+  key and `httpx`, not the `google-cloud-vision` client library: the client library needs
+  service-account credentials rather than the API key this app is deployed with, and it would
+  ship gRPC and protobuf into a serverless function for one HTTP POST. Mock mode is used when
+  no key is configured.
 - **NutritionService** — USDA FoodData Central with batch search and 10s HTTP timeout
 - **RateLimiter** — Atomic `try_increment()` using `SELECT FOR UPDATE` to prevent race conditions
 - **FoodMapping** — 60+ label → USDA query mappings for common foods
 
 All services use FastAPI dependency injection for testability.
+
+**Confidence scores**: Vision label scores are probabilities in [0, 1] and are thresholded at
+0.70. Web-entity scores are unbounded relevance values that routinely exceed 1.0; they are
+thresholded at 0.60 on the raw value and clamped to 1.0 before being reported.
+
+**Frontend** (`gymbro-web/src/components/`):
+- **PhotoCapture** — file input with `capture="environment"`, which opens the native camera on
+  iOS Safari and Android Chrome and the file picker on desktop. Client-side type and 10MB size
+  checks mirror the backend so bad files fail instantly. Shows remaining daily quota.
+- **MealReview** — every predicted value is editable before saving. USDA figures are per 100g,
+  which is rarely the portion eaten, and the UI says so rather than implying the estimate is
+  authoritative. Failures surface next to the photo control and leave manual entry available.
 
 ---
 
@@ -199,28 +226,43 @@ All services use FastAPI dependency injection for testability.
 
 ## Security
 
-- **Auth**: Google OAuth 2.0 + JWT in httpOnly cookies (XSS protection)
+- **Auth**: Google OAuth 2.0 + JWT in httpOnly cookies, `SameSite=Lax` (XSS protection)
 - **Isolation**: All DB queries filtered by `user_id` at dependency level
+- **Dev auth header**: `X-User-Id` lets a caller act as any user and exists only for local
+  development and tests. It is enabled only when `ENVIRONMENT` is explicitly `development` or
+  `test` (the default is `production`), and never on Vercel, which sets `VERCEL=1` itself, so
+  it cannot be re-enabled by a misconfiguration.
 - **Validation**: Pydantic input validation, content-type checks on uploads
 - **Upload limits**: 10MB file size, streaming in 64KB chunks to prevent memory exhaustion
 - **Rate limiting**: Atomic per-user quotas with row-level locking
-- **API protection**: CORS configured for production domain, 10s timeout on all external calls
+- **CORS**: Explicit allow-list — localhost dev origins plus the configured production
+  origin. Deliberately *not* `https://.*\.vercel\.app`, which would make every site deployed
+  on vercel.app an allowed credentialed origin. `CORS_PREVIEW_ORIGIN_REGEX` allows additional
+  origins but is unset by default, since on Vercel the frontend and API share an origin and
+  CORS is never consulted.
+- **Credentials in logs**: the Vision API key is sent as an `X-Goog-Api-Key` header rather
+  than a query parameter, because httpx embeds the request URL in `HTTPStatusError` and the
+  photo endpoint logs that exception with `exc_info=True`.
+- **API protection**: 10s timeout on all external calls
 - **Error handling**: Generic user-facing messages, detailed internal logging with `exc_info=True`
 
 ---
 
 ## Testing
 
-**133 backend tests** (pytest, ~4s) | **27 frontend tests** (Vitest, ~3s) | **160 total**
+**175 backend tests** (pytest, ~4s) | **50 frontend tests** (Vitest, ~1s) | **225 total**
 
-Backend coverage: **84%** (auth.py OAuth callbacks excluded — requires real Google OAuth flow)
+Backend coverage: **85%** (auth.py OAuth callbacks largely uncovered — requires a real Google
+OAuth flow)
 
 | Area | Tests | Coverage |
 |------|-------|----------|
 | Rate limiter (atomic behavior) | 17 | 84% |
 | Photo endpoint (integration) | 16 | 89% |
 | Nutrition service | 12 | 96% |
-| Vision service | 10 | 84% |
+| Vision service (incl. mocked Vision REST API) | 25 | 96% |
+| Requirements parity (prod vs CI) | 6 | n/a |
+| Migrations (fresh-DB build + model match) | 4 | n/a |
 | Food log CRUD | 9 | 89% |
 | Workout + exercise sets | 11 | 91% |
 | Auth utilities + deps | 19 | 81–94% |
@@ -228,7 +270,11 @@ Backend coverage: **84%** (auth.py OAuth callbacks excluded — requires real Go
 | Weight entries | 9 | 96% |
 | DB + lifespan + main | 19 | 75–83% |
 
-CI pipeline runs 7 parallel jobs on every PR: backend tests, backend lint, frontend tests, frontend lint, TypeScript type-check, frontend build verification, and Vercel config validation.
+CI pipeline runs on every PR: backend tests, backend lint (ruff, pinned — see
+`gymbro-api/ruff.toml`), frontend tests, frontend lint, TypeScript type-check, frontend build
+verification, and Vercel config validation. On push to main it also applies Alembic migrations
+(`db-migrate`). The `all-checks-passed` gate requires 8 jobs; the Vercel preview smoke test
+runs on PRs but is not part of the gate.
 
 ---
 
@@ -243,16 +289,45 @@ git push origin main  # Auto-deploys to Vercel
 **Environment variables** (Vercel):
 ```
 DATABASE_URL, JWT_SECRET_KEY, GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET,
-GOOGLE_REDIRECT_URI, GOOGLE_VISION_API_KEY, USDA_API_KEY
+FRONTEND_URL, GOOGLE_VISION_API_KEY, USDA_API_KEY,
+CORS_ALLOWED_ORIGINS (optional), CORS_PREVIEW_ORIGIN_REGEX (optional)
 ```
+
+All are declared on the `Settings` model in `app/config.py`.
+
+**Dependencies**: `api/requirements.txt` is what Vercel installs for the serverless function;
+`gymbro-api/requirements.txt` is that set plus test tooling. `tests/test_requirements_parity.py`
+enforces that the shared pins stay identical — a drift between the two previously broke the
+photo endpoint in production while CI stayed green.
 
 ---
 
 ## Known Limitations
 
+- **Photo analysis needs API keys on a deployment**: mock mode returns fixed sample data, so
+  on Vercel the endpoint refuses (503) rather than present fabricated nutrition as a real
+  analysis. The UI falls back to manual entry.
+- **Vision integration unverified against the live API**: implemented and unit-tested against a
+  mocked `images:annotate` endpoint, but not yet exercised with a real `GOOGLE_VISION_API_KEY`.
+  Real label vocabulary may need additions to `NON_FOOD_LABELS` and `FOOD_MAPPING`.
+- **Blocking database calls in async handlers**: the app uses synchronous SQLModel sessions
+  throughout, including inside `async def` endpoints, so database latency occupies the event
+  loop. This predates the photo endpoint and affects every router; resolving it means moving
+  the data layer to async SQLAlchemy, tracked as its own piece of work rather than done
+  piecemeal.
 - **Cold starts**: Vercel serverless functions have ~1-2s cold start on first request after idle
+- **Streaming**: Long-running streamed responses are not viable through the Mangum-wrapped app
+  on Vercel functions — a constraint the [AI Roadmap](AI_ROADMAP.md) has to resolve before
+  LLM features ship
 - **Offline editing**: Service worker provides read-only cache; no offline writes yet
-- **Profile page**: Displays placeholder data; full settings planned for Phase 5
-- **Frontend for photo logging**: Backend ready, frontend UI (Phase 4.3) not yet built
+- **Profile page**: Displays placeholder data
+- **HEIC photos**: macOS Photos exports HEIC, which Pillow cannot decode without an extra
+  native library. Both the frontend and backend reject it with a message explaining how to get
+  a JPEG. iOS Safari normally converts to JPEG before upload, but this has not been confirmed
+  on a device.
+- **Portion sizes**: USDA nutrition is per 100g; the review UI surfaces this but does not
+  estimate actual portion size from the photo
+- **Lint scope**: `ruff.toml` selects ruff's historical default rules (E4, E7, E9, F). Widening
+  it (`UP`, `I`, `DTZ`) is a worthwhile separate change — roughly 200 findings, all stylistic
 
 
