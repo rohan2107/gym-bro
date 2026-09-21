@@ -198,17 +198,18 @@ async def create_food_log_from_photo(
     
     # Map labels to USDA queries and fetch nutrition
     predictions: List[Dict[str, Any]] = []
+    lookup_failed = False
     for label_data in food_labels:
         label = label_data["label"]
         confidence = label_data["confidence"]
-        
+
         # Map label to USDA search query
         search_query = get_search_query(label)
-        
+
         # Look up nutrition from USDA
         try:
             nutrition = await nutrition_service.search_food(search_query)
-            
+
             if nutrition:
                 predictions.append({
                     "label": label,
@@ -216,19 +217,27 @@ async def create_food_log_from_photo(
                     "nutrition": nutrition
                 })
         except Exception as e:
-            # Log error but continue with other predictions
-            logger.warning(f"Nutrition lookup failed for '{label}': {e}")
+            # A failed lookup is not the same as "no match": remember it, keep going with
+            # the other foods, and report it accurately if nothing was found. The exception
+            # text is not logged because an httpx error carries the request URL.
+            lookup_failed = True
+            logger.warning(f"Nutrition lookup failed for '{label}': {type(e).__name__}")
             continue
-    
+
     # If no nutrition data found for any labels
     if not predictions:
-        # Nutrition lookup failed - refund the quota
+        # Nothing to show - refund the quota
         rate_limiter.decrement(user_id)
+        if lookup_failed:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Nutrition lookup is temporarily unavailable. Please try again, or log this meal manually."
+            )
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Could not find nutrition data for detected foods. Try manual entry."
         )
-    
+
     # Rate limit was already incremented atomically at the start
     # Return the current status
     return {

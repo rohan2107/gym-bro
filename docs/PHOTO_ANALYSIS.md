@@ -47,7 +47,7 @@ failed request never costs the user a photo. The limit is 30 per user per day, e
 | `GeminiRecognizer` | Default provider. Asks a Gemini model for the foods as schema-constrained JSON |
 | `VisionService` | Optional provider. Calls Vision's `images:annotate` over REST and filters and ranks labels |
 | `image_validation` | Local checks shared by all providers: format, size, dimensions, HEIC |
-| `NutritionService` | USDA FoodData Central lookup, 10s timeout, per-item |
+| `NutritionService` | USDA FoodData Central lookup: header credential, retry, result filtering and ranking |
 | `food_mapping` | Maps a few common names to better USDA queries; other names are searched as given |
 | `RateLimiter` | Atomic per-user daily quota |
 | `PhotoCapture`, `MealReview` | The capture and review components in the frontend |
@@ -82,6 +82,32 @@ are unbounded relevance values that routinely exceed 1.0; they are thresholded a
 raw value and clamped to 1.0 before being reported as a confidence. It needs a billing
 account, so it is optional and off by default.
 
+## Nutrition lookup
+
+Each food name is searched in USDA FoodData Central and the best result is returned, per 100g.
+
+- **Credential** in an `X-Api-Key` header, never the URL. Only status codes are logged, never
+  exception text (an httpx error carries the URL), and the `httpx` logger is raised to WARNING
+  at startup.
+- **No `dataType` filter.** With any filter containing `Survey (FNDDS)`, USDA answered `400` to
+  about half of requests, at random (measured 2026-09-21, 45 of 45 succeeded without one).
+  Data types are selected in code instead: FNDDS, Foundation and SR Legacy are used; Branded is
+  not, because its names are brand text and its values are label claims.
+- **One search, widened once.** 25 results are requested; if none qualifies, 50. A response can
+  be several hundred KB, so the wider page is used only when needed.
+- **Retry.** A transient `400` or `5xx`, a timeout or a non-JSON body is retried once per page
+  size. `401`, `403` and `429` are not retried.
+- **No match and failure are different.** USDA answering with nothing usable returns `None`
+  (`404`, "log manually"); USDA being unreachable raises, and the endpoint answers `503` and
+  refunds the quota.
+- **Energy is matched by unit.** Foundation and SR Legacy list Energy in both kJ and kcal, in
+  either order; taking the wrong one reports about four times the calories.
+- **Ranking.** USDA's first hit is often poor, so results without macro data are dropped and
+  more than half of the query's words must match. Among those it prefers more matching words, a
+  description that starts with a query word, fewer qualifiers, "raw", the better data type, then
+  the shorter description. No match is preferred to a wrong one: "avocado toast" returns nothing
+  rather than "Avocado dressing".
+
 ## Configuration and mock mode
 
 | Setting | Purpose |
@@ -112,6 +138,7 @@ Without its key a provider runs in **mock mode** and returns fixed sample data (
 | Provider unavailable, rate limited, blocked or returning malformed output | 503 | Refunded | Try again, or log manually |
 | No food recognised | 404 | Refunded | Try a clearer photo, or log manually |
 | Food found but no nutrition match | 404 | Refunded | Log manually |
+| Nutrition service unavailable or erroring | 503 | Refunded | Try again, or log manually |
 | No provider configured on a deployment | 503 | Not spent | Log manually |
 
 ## Limits
@@ -122,6 +149,12 @@ Without its key a provider runs in **mock mode** and returns fixed sample data (
 - **Accuracy is unmeasured.** The Gemini provider was smoke-tested on one clear photo (a pizza,
   identified at 0.99) and one blank image (an empty list). Mixed plates and unusual foods have
   not been measured; that is the job of the evaluation harness in Phase 1.
+- **Matching is a heuristic and is unmeasured.** Live spot checks on 2026-09-21: banana, apple,
+  cheeseburger, fried rice and scrambled eggs found sensible entries; `chicken breast` returns
+  the *raw* entry (106 kcal per 100g) because "raw" is preferred, which understates a cooked
+  portion; an unmapped `pizza` returns "Pizza rolls" (the mapping table covers it); `spaghetti
+  bolognese` and `avocado toast` return nothing. Measuring and improving this is what the
+  evaluation harness is for.
 - **Free-tier limits.** The Gemini free tier allows 15 requests a minute and 500 a day per
   model, as observed on 2026-09-21. Beyond that it answers `429` and stops; it never bills
   because no billing account is linked to the project. Google may use free-tier content to
@@ -153,6 +186,10 @@ iPhone.
   plus synthetic cases for blocked, malformed and hostile output; the request shape; model
   fallback for `429`, `5xx` and network errors; no fallback for client errors; failing closed
   when both models fail
+- USDA lookup against a search response **recorded from the live API**
+  (`tests/fixtures/usda/`): header credential, no `dataType` filter, retry and widening, no
+  retry for `401`/`403`/`429`, no-match versus failure, kJ-versus-kcal extraction, result
+  ranking, and that no log line or error contains the key or URL
 - Vision parsing, filtering, thresholds, clamping, deduplication and error handling against a
   mocked `images:annotate` endpoint
 - Provider selection by configuration, and an unknown provider failing at startup

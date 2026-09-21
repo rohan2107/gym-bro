@@ -218,9 +218,12 @@ flow, the session model and known gaps are in [AUTHENTICATION.md](AUTHENTICATION
   on vercel.app an allowed credentialed origin. `CORS_PREVIEW_ORIGIN_REGEX` allows additional
   origins but is unset by default, since on Vercel the frontend and API share an origin and
   CORS is never consulted.
-- **Credentials in logs**: the Gemini and Vision keys are sent as headers (`x-goog-api-key`,
-  `X-Goog-Api-Key`) rather than query parameters, because httpx embeds the request URL in `HTTPStatusError` and the
-  photo endpoint logs that exception with `exc_info=True`.
+- **Credentials in logs**: the Gemini, Vision and USDA keys are sent as headers
+  (`x-goog-api-key`, `X-Goog-Api-Key`, `X-Api-Key`) rather than query parameters, because httpx
+  embeds the request URL in `HTTPStatusError` and in its own INFO log. Services log status
+  codes, not exception text, and the `httpx` logger is raised to WARNING at startup
+  ([F13](AUDIT_2026-09.md#f13-api-key-in-the-request-url),
+  [F15](AUDIT_2026-09.md#f15-usda-key-in-the-request-url-and-in-production-logs)).
 - **API protection**: 10s timeout on all external calls
 - **Error handling**: Generic user-facing messages, detailed internal logging with `exc_info=True`
 
@@ -231,19 +234,19 @@ client) are tracked as open findings in the [audit](AUDIT_2026-09.md#open-findin
 
 ## Testing
 
-**221 backend tests** (pytest, ~4s) | **80 frontend tests** (Vitest, ~1s) | **301 total**
+**254 backend tests** (pytest, ~4s) | **80 frontend tests** (Vitest, ~1s) | **334 total**
 
-Backend coverage is **87%**. The OAuth callback in `auth.py` is largely uncovered because it
+Backend coverage is **88%**. The OAuth callback in `auth.py` is largely uncovered because it
 needs a real Google flow.
 
 | Backend area | Tests |
 |---|---|
 | Gemini provider (recorded responses, fallback, parsing, credentials) | 38 |
 | Vision provider (parsing, filtering, credentials) | 22 |
-| Photo endpoint (every failure path, mock-mode refusal) | 21 |
+| Photo endpoint (every failure path, mock-mode refusal) | 24 |
 | Auth dependencies, development header, provider selection | 22 |
 | Rate limiter (atomicity, refunds) | 17 |
-| Nutrition service | 12 |
+| Nutrition service (recorded response, retry, ranking, credentials) | 41 |
 | Image validation (format, size, HEIC) | 11 |
 | Workouts and exercise sets | 11 |
 | Daily check-ins | 11 |
@@ -255,7 +258,7 @@ needs a real Google flow.
 | Requirements parity (production vs CI) | 5 |
 | Migrations (fresh build matches models, reversible) | 4 |
 | Runtime versions (CI and Vercel match the pinned Python and Node) | 3 |
-| Lifespan | 2 |
+| Lifespan and logging setup | 3 |
 
 | Frontend area | Tests |
 |---|---|

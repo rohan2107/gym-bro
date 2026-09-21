@@ -38,3 +38,14 @@ def test_lifespan_starts_when_db_is_unreachable():
             assert resp.status_code == 200
 
         assert mock_check.called
+
+
+def test_http_client_request_logging_is_quieted():
+    """httpx logs every request URL at INFO; the app raises that logger to WARNING."""
+    import logging
+
+    logging.getLogger("httpx").setLevel(logging.INFO)
+
+    create_app()
+
+    assert logging.getLogger("httpx").level == logging.WARNING

@@ -31,7 +31,7 @@ in Vercel for the environment concerned.
 | `FOOD_RECOGNITION_PROVIDER` | No | `gemini` (default) or `vision`. Anything else fails at startup |
 | `GEMINI_MODEL`, `GEMINI_FALLBACK_MODEL` | No | Pinned model ids; the defaults are `gemini-3.5-flash-lite` and `gemini-3.1-flash-lite` |
 | `GOOGLE_VISION_API_KEY` | No | Enables the optional Vision provider. See the cost rules below |
-| `USDA_API_KEY` | No | Enables nutrition lookup |
+| `USDA_API_KEY` | No | Enables nutrition lookup. Required for photo analysis to be served on a deployment |
 | `CORS_ALLOWED_ORIGINS` | No | Extra allowed origins, comma-separated |
 | `CORS_PREVIEW_ORIGIN_REGEX` | No | Extra allowed origins by pattern. Empty by default; see [AUDIT F6](AUDIT_2026-09.md) before setting it |
 | `ENVIRONMENT` | No | **Do not set to `development` on a deployment.** It defaults to `production`, and the `X-User-Id` development header is disabled on Vercel regardless |
@@ -135,7 +135,11 @@ The project's rule is zero spend ([ADR-0003](adr/0003-hard-capped-providers-only
 - Send credentials in headers. `httpx` includes the request URL in exception messages, and the
   photo endpoint logs exceptions with tracebacks.
 - Restrict every API key to the single API it is for. Rotate a key immediately if it is ever
-  exposed.
+  exposed, including when it appears in a log, a screenshot or a pasted chat. After changing an
+  environment variable in Vercel, redeploy: running deployments keep the values they were built
+  with.
+- Read runtime logs after the first real request to a new integration; that is how the USDA key
+  in a URL was found ([F15](AUDIT_2026-09.md#f15-usda-key-in-the-request-url-and-in-production-logs)).
 - A local `.env` must never point at the production database.
 
 ## Database

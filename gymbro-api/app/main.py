@@ -1,3 +1,4 @@
+import logging
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -22,6 +23,10 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
         root_path="/api",  # Vercel routes /api/* to this app
     )
+
+    # httpx logs every request URL at INFO. Credentials are sent in headers, not URLs, but a URL
+    # can still carry a user's query text, and an INFO line per outbound call is noise.
+    logging.getLogger("httpx").setLevel(logging.WARNING)
 
     # CORS: an explicit allow-list. The optional regex is unset by default -
     # see CORS_PREVIEW_ORIGIN_REGEX in config.py for why.
