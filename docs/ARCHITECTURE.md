@@ -231,7 +231,7 @@ client) are tracked as open findings in the [audit](AUDIT_2026-09.md#open-findin
 
 ## Testing
 
-**221 backend tests** (pytest, ~4s) | **51 frontend tests** (Vitest, ~1s) | **272 total**
+**221 backend tests** (pytest, ~4s) | **80 frontend tests** (Vitest, ~1s) | **301 total**
 
 Backend coverage is **87%**. The OAuth callback in `auth.py` is largely uncovered because it
 needs a real Google flow.
@@ -259,7 +259,9 @@ needs a real Google flow.
 
 | Frontend area | Tests |
 |---|---|
-| Photo capture (type, HEIC, size, quota, data-use notice) | 14 |
+| Photo capture (type, HEIC, size, quota, data-use notice) | 15 |
+| API client (request helper, every endpoint, photo upload) | 18 |
+| Image resizing before upload | 10 |
 | Utilities | 12 |
 | Meal review | 10 |
 | Bottom navigation | 8 |

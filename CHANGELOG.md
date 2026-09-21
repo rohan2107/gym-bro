@@ -36,6 +36,9 @@ entries are grouped by milestone and dated.
 
 ### Fixed
 
+- Photo upload failed with "Load failed" for any photo over about 4.5MB, because Vercel rejects
+  larger request bodies before the API runs. The browser now shrinks the photo (1600px, JPEG)
+  before uploading, and a dropped connection shows a clear message
 - Frontend dependencies: `npm audit` went from 23 vulnerabilities (3 critical) to none,
   including two high-severity advisories in the production `react-router` dependency. Vite is
   now on 8, which Vitest 4 already required

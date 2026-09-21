@@ -1,3 +1,5 @@
+import { prepareImageForUpload } from './image'
+
 export type DailyCheckIn = {
   id: number
   user_id: number
@@ -96,13 +98,20 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
  */
 async function uploadPhoto(file: File): Promise<PhotoAnalysis> {
   const body = new FormData()
-  body.append('photo', file)
+  body.append('photo', await prepareImageForUpload(file))
 
-  const res = await fetch(`${API_BASE}/food-logs/from-photo`, {
-    method: 'POST',
-    credentials: 'include',
-    body,
-  })
+  let res: Response
+  try {
+    res = await fetch(`${API_BASE}/food-logs/from-photo`, {
+      method: 'POST',
+      credentials: 'include',
+      body,
+    })
+  } catch {
+    // fetch rejects only when no response arrived at all; Safari's own text for that is a
+    // bare "Load failed".
+    throw new Error("Couldn't reach the server. Check your connection and try again.")
+  }
 
   if (res.status === 401) {
     window.location.href = '/login'

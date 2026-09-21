@@ -70,14 +70,23 @@ describe('PhotoCapture', () => {
     expect(screen.getByRole('alert')).toHaveTextContent(/JPEG/i)
   })
 
-  it('rejects files over the 10MB backend cap before uploading', () => {
+  it('accepts a large phone photo, because it is shrunk before upload', () => {
     const onSelect = vi.fn()
     render(<PhotoCapture onSelect={onSelect} />)
 
-    selectFile(imageFile('huge.jpg', 'image/jpeg', 11 * 1024 * 1024))
+    selectFile(imageFile('iphone.jpg', 'image/jpeg', 12 * 1024 * 1024))
+
+    expect(onSelect).toHaveBeenCalled()
+  })
+
+  it('rejects a file too large to decode safely', () => {
+    const onSelect = vi.fn()
+    render(<PhotoCapture onSelect={onSelect} />)
+
+    selectFile(imageFile('huge.jpg', 'image/jpeg', 31 * 1024 * 1024))
 
     expect(onSelect).not.toHaveBeenCalled()
-    expect(screen.getByRole('alert')).toHaveTextContent(/larger than 10MB/i)
+    expect(screen.getByRole('alert')).toHaveTextContent(/larger than 30MB/i)
   })
 
   it('shows a busy label and disables the button while analysing', () => {

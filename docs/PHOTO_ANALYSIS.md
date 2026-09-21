@@ -8,7 +8,9 @@ plan this replaces is in the git history.
 
 1. On the Meals page the user taps **Log from photo**. On a phone this opens the camera; on a
    desktop it opens the file picker.
-2. The client checks the file (image type, not HEIC, at most 10MB) and uploads it.
+2. The client checks the file (image type, not HEIC, at most 30MB), scales it down to at most
+   1600px and re-encodes it as JPEG in the browser, then uploads it. A typical result is a few
+   hundred KB.
 3. The server returns predictions, each with nutrition per 100g, and the user's remaining
    daily quota.
 4. The user reviews the predictions, picks between detected foods, edits any value, and saves
@@ -104,7 +106,8 @@ Without its key a provider runs in **mock mode** and returns fixed sample data (
 |---|---|---|---|
 | Not a valid image, or unsupported format | 400 | Not spent | The reason, with what to upload instead |
 | HEIC photo | 400 (client blocks it first) | Not spent | How to get a JPEG on iPhone and on a Mac |
-| Larger than 10MB | 413 (client blocks it first) | Not spent | A size message |
+| Larger than 10MB | 413 (client resizes first; Vercel itself rejects over about 4.5MB) | Not spent | A size message |
+| Connection dropped during upload | none (no response) | Not spent | "Couldn't reach the server" |
 | Daily limit reached | 429 | n/a | Limit reached, log manually |
 | Provider unavailable, rate limited, blocked or returning malformed output | 503 | Refunded | Try again, or log manually |
 | No food recognised | 404 | Refunded | Try a clearer photo, or log manually |
@@ -129,9 +132,13 @@ Without its key a provider runs in **mock mode** and returns fixed sample data (
 - **Vision has not been run against the live API.** It needs a billing account, which conflicts
   with [ADR-0003](adr/0003-hard-capped-providers-only.md). Its label filter and mapping were
   written from expected output and would need adjusting against real output.
-- **Request size.** Local validation allows 10MB, and base64 inflates an image by roughly a
-  third. Vercel also limits a function's request body (documented as 4.5MB), which phone
-  photos usually stay under but a full-resolution one may not. This has not been reproduced.
+- **Request size.** Vercel rejects a request body over about 4.5MB at its edge with
+  `FUNCTION_PAYLOAD_TOO_LARGE`, before the API runs; a 3MB unauthenticated upload reached the
+  API and a 5MB one did not (checked 2026-09-21). A phone photo can exceed that, and Safari
+  then reports a bare "Load failed". The client therefore shrinks the photo before upload
+  (`gymbro-web/src/lib/image.ts`, capped at 4MB). Where the browser cannot decode a file it
+  sends a small original as it is and refuses one over the cap. The server's own 10MB limit
+  is unchanged and still guards direct callers.
 
 ## Next
 
@@ -153,5 +160,6 @@ iPhone.
   URL nor the raised exception
 - The endpoint end to end with services replaced, including every failure row above
 - Mock-mode refusal on a deployment, and that it spends no quota
-- Frontend: capture validation (type, HEIC, size, quota display), the data-use notice, and the
-  review form
+- Frontend: capture validation (type, HEIC, size, quota display), the data-use notice, the
+  review form, in-browser resizing (dimensions, no upscaling, EXIF orientation, quality
+  fallback, decode failure) and the upload's error messages

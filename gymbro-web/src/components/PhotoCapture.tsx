@@ -1,6 +1,8 @@
 import { useRef, useState } from 'react'
 import { PhotoRateLimit } from '../lib/api'
 
+const MAX_SOURCE_BYTES = 30 * 1024 * 1024
+
 /**
  * Meal photo capture.
  *
@@ -51,10 +53,10 @@ export default function PhotoCapture({
       return
     }
 
-    // Matches the backend's 10MB cap, so an oversized file fails instantly
-    // instead of after a long upload.
-    if (file.size > 10 * 1024 * 1024) {
-      setLocalError('That photo is larger than 10MB. Try a smaller one.')
+    // The photo is shrunk before upload (see lib/image.ts), so this is only a sanity limit
+    // on what the browser is asked to decode, not the upload cap.
+    if (file.size > MAX_SOURCE_BYTES) {
+      setLocalError('That photo is larger than 30MB. Try a smaller one.')
       return
     }
 

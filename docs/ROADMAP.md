@@ -46,7 +46,7 @@ place. The plan adds capability to that foundation rather than starting beside i
 | Schema management | Alembic is the sole owner; a fresh `alembic upgrade head` reproduces the models |
 | Photo analysis | Provider interface with a Gemini free-tier provider (recorded-response tests, smoke-tested live) and USDA; Vision optional. **Needs `GEMINI_API_KEY` in Vercel** to work on the live site; per 100g until M0.3b |
 | CI/CD | 8 required gates on every PR; migrations applied on merge to `main` |
-| Tests | 221 backend, 51 frontend |
+| Tests | 221 backend, 80 frontend |
 | Audit | 14 findings fixed; 6 open, tracked in the [audit](AUDIT_2026-09.md#open-findings) |
 
 Production auth was verified after the fix: the `X-User-Id` impersonation header that
