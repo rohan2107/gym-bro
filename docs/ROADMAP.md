@@ -318,6 +318,7 @@ Unscheduled, in rough priority order. Open audit findings are described in
 - Callback page double-fires its effect in development
 - HEIC support server-side, only if device testing shows iOS delivers HEIC
 - Widen the lint rule set (`UP`, `DTZ`, `I`) as its own change
+- Move ESLint 8 (end of life) to 9 with a flat config, and the matching plugins
 - Offline writes in the service worker
 - End-to-end browser tests (Playwright)
 

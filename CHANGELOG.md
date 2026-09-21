@@ -27,6 +27,9 @@ entries are grouped by milestone and dated.
 
 ### Fixed
 
+- Frontend dependencies: `npm audit` went from 23 vulnerabilities (3 critical) to none,
+  including two high-severity advisories in the production `react-router` dependency. Vite is
+  now on 8, which Vitest 4 already required
 - Removed the unused `mangum` dependency
 - Documentation claimed the API was "Mangum-wrapped" and could not stream; the handler exposes
   the ASGI app directly and `mangum` is never imported

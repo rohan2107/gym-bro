@@ -1,6 +1,6 @@
 # Gym Bro — Web Frontend
 
-React 18 + Vite 5 + TypeScript + Tailwind PWA. See the [repo README](../README.md) for the
+React 18 + Vite 8 + TypeScript + Tailwind PWA. See the [repo README](../README.md) for the
 full stack and the [architecture doc](../docs/ARCHITECTURE.md) for system design.
 
 ## Development
