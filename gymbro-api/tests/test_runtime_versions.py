@@ -25,6 +25,12 @@ def test_python_version_matches_ci():
     assert pinned == _ci_env("PYTHON_VERSION")
 
 
+def test_vercel_function_python_version_matches_root():
+    """Vercel looks for the pin next to the function, not at the repo root."""
+    function_pin = (ROOT / "api" / ".python-version").read_text().strip()
+    assert function_pin == (ROOT / ".python-version").read_text().strip()
+
+
 def test_node_version_matches_ci_and_engines():
     nvmrc = (ROOT / ".nvmrc").read_text().strip()
     engines = json.loads((ROOT / "gymbro-web" / "package.json").read_text())["engines"]["node"]

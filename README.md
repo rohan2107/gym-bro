@@ -22,7 +22,7 @@ without keys
 ✅ Meal logging with calorie & macro tracking  
 ✅ Workout tracking with exercise sets  
 ✅ Mobile-first PWA with offline support  
-✅ 227 automated tests, 85% backend coverage  
+✅ 228 automated tests, 85% backend coverage  
 ✅ CI/CD pipeline with GitHub Actions (8 required jobs + Vercel preview smoke test on PRs)
 
 ## Architecture
@@ -33,7 +33,7 @@ without keys
 **Auth**: Google OAuth 2.0 + JWT (httpOnly cookies)  
 **AI**: Google Cloud Vision API + USDA FoodData Central  
 **Hosting**: Vercel (frontend + serverless functions)  
-**Testing**: pytest (177 tests), Vitest (50 tests), GitHub Actions
+**Testing**: pytest (178 tests), Vitest (50 tests), GitHub Actions
 
 ## Quick Start
 
@@ -89,7 +89,7 @@ URI to register.
 ## Testing
 
 ```bash
-# Backend (177 tests)
+# Backend (178 tests)
 cd gymbro-api && pytest -v
 
 # Frontend (50 tests)

@@ -231,7 +231,7 @@ client) are tracked as open findings in the [audit](AUDIT_2026-09.md#open-findin
 
 ## Testing
 
-**177 backend tests** (pytest, ~4s) | **50 frontend tests** (Vitest, ~1s) | **227 total**
+**178 backend tests** (pytest, ~4s) | **50 frontend tests** (Vitest, ~1s) | **228 total**
 
 Backend coverage is **85%**. The OAuth callback in `auth.py` is largely uncovered because it
 needs a real Google flow.
@@ -252,7 +252,7 @@ needs a real Google flow.
 | Auth utilities (JWT) | 6 |
 | Requirements parity (production vs CI) | 5 |
 | Migrations (fresh build matches models, reversible) | 4 |
-| Runtime versions (CI matches the pinned Python and Node) | 2 |
+| Runtime versions (CI and Vercel match the pinned Python and Node) | 3 |
 | Lifespan | 2 |
 
 | Frontend area | Tests |

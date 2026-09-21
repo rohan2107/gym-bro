@@ -61,9 +61,10 @@ Defined in [.github/workflows/ci.yml](../.github/workflows/ci.yml).
 `All Checks Passed` aggregates the gated jobs. The preview smoke test is informative but does
 not block a merge.
 
-**Runtime versions.** Python 3.12 and Node 24, in one place each: `.python-version` and
-`.nvmrc`, with `engines.node` in `gymbro-web/package.json`. Vercel reads `.python-version` and
-`engines`; CI's `PYTHON_VERSION` and `NODE_VERSION` must match them, which
+**Runtime versions.** Python 3.12 and Node 24, pinned in `.python-version` and
+`.nvmrc`, with `engines.node` in `gymbro-web/package.json`. Vercel reads the Python pin from
+`api/.python-version` (next to the function; a copy at the repo root serves local tools) and
+Node from `engines`; CI's `PYTHON_VERSION` and `NODE_VERSION` must match them, which
 `tests/test_runtime_versions.py` enforces. Change all of them together.
 
 ## Releasing

@@ -46,7 +46,7 @@ place. The plan adds capability to that foundation rather than starting beside i
 | Schema management | Alembic is the sole owner; a fresh `alembic upgrade head` reproduces the models |
 | Photo analysis | Implemented against Google Cloud Vision + USDA; **unavailable on the live site** until a provider is configured, and never exercised against the live Vision API (billing required) |
 | CI/CD | 8 required gates on every PR; migrations applied on merge to `main` |
-| Tests | 177 backend, 50 frontend |
+| Tests | 178 backend, 50 frontend |
 | Audit | 14 findings fixed; 6 open, tracked in the [audit](AUDIT_2026-09.md#open-findings) |
 
 Production auth was verified after the fix: the `X-User-Id` impersonation header that
