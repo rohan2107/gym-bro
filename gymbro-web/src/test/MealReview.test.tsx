@@ -43,6 +43,58 @@ describe('MealReview', () => {
     expect(screen.getByText(/per 100g from USDA/i)).toBeInTheDocument()
   })
 
+  it('says when the figures are scaled to an estimated portion', () => {
+    render(
+      <MealReview
+        predictions={[prediction({ nutrition: { serving_size: '300g', source: 'usda' } as never })]}
+        onConfirm={vi.fn()}
+        onCancel={vi.fn()}
+      />
+    )
+
+    expect(screen.getByTestId('basis-note')).toHaveTextContent(
+      /estimated for about 300g, from USDA values scaled to the portion/i
+    )
+    expect(screen.queryByText(/per 100g from USDA/i)).not.toBeInTheDocument()
+  })
+
+  it('warns that an AI estimate is not from a nutrition database', () => {
+    render(
+      <MealReview
+        predictions={[
+          prediction({ nutrition: { serving_size: '300g', source: 'ai_estimate', confidence: 'low' } as never }),
+        ]}
+        onConfirm={vi.fn()}
+        onCancel={vi.fn()}
+      />
+    )
+
+    const note = screen.getByTestId('basis-note')
+    expect(note).toHaveTextContent(/AI estimate for about 300g/i)
+    expect(note).toHaveTextContent(/not from a nutrition database/i)
+    expect(note).toHaveTextContent(/check these numbers/i)
+  })
+
+  it('updates the note when the user switches to a food with a different basis', () => {
+    const estimated = prediction({
+      label: 'rice',
+      nutrition: { serving_size: '150g', source: 'ai_estimate' } as never,
+    })
+
+    render(
+      <MealReview
+        predictions={[prediction(), estimated]}
+        onConfirm={vi.fn()}
+        onCancel={vi.fn()}
+      />
+    )
+    expect(screen.getByTestId('basis-note')).toHaveTextContent(/per 100g from USDA/i)
+
+    fireEvent.click(screen.getByRole('button', { name: /rice/i }))
+
+    expect(screen.getByTestId('basis-note')).toHaveTextContent(/AI estimate for about 150g/i)
+  })
+
   it('confirms the meal with edited values, not the predicted ones', () => {
     const onConfirm = vi.fn()
     render(

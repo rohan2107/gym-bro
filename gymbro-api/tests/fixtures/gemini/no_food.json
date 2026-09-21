@@ -5,7 +5,7 @@
         "parts": [
           {
             "text": "{\n  \"foods\": []\n}",
-            "thoughtSignature": "El4KXAFpFH0T9dEPnc6C68e7XXF+M+EtHG3TLdL8pUVgFw+cYQfNvBtglsqMxBtwO2fWrEaMFJ65scnmIS9GjmxwAl03UKVIzH2G7jIdjBHsOocxKhgP9VPZxPP1e5jE"
+            "thoughtSignature": "EnEKbwFpFH0TLYhakgyqKLlEOpV0Anfu1B4nCj3Bjk27c9kJhE8WSmV1YrTIKxLff9fHeS/mjbWd6l/8m/Lko/xXXZlLPTeGkmkqPhCiQREKo5pxtbgkGKQkMbvmClbqaIswK670sNIWd0J1a99X7SCUrQ=="
           }
         ],
         "role": "model"
@@ -15,9 +15,9 @@
     }
   ],
   "usageMetadata": {
-    "promptTokenCount": 1170,
+    "promptTokenCount": 1227,
     "candidatesTokenCount": 9,
-    "totalTokenCount": 1179,
+    "totalTokenCount": 1236,
     "promptTokensDetails": [
       {
         "modality": "IMAGE",
@@ -25,11 +25,11 @@
       },
       {
         "modality": "TEXT",
-        "tokenCount": 81
+        "tokenCount": 138
       }
     ],
     "serviceTier": "standard"
   },
-  "modelVersion": "gemini-3.5-flash-lite",
-  "responseId": "ASmxatQH6JiR1Q_yhZqgCg"
+  "modelVersion": "gemini-3.1-flash-lite",
+  "responseId": "Czyxat2GOIeNkdUPr7fGoQI"
 }

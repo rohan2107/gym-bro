@@ -234,19 +234,19 @@ client) are tracked as open findings in the [audit](AUDIT_2026-09.md#open-findin
 
 ## Testing
 
-**254 backend tests** (pytest, ~4s) | **80 frontend tests** (Vitest, ~1s) | **334 total**
+**284 backend tests** (pytest, ~4s) | **83 frontend tests** (Vitest, ~1s) | **367 total**
 
 Backend coverage is **88%**. The OAuth callback in `auth.py` is largely uncovered because it
 needs a real Google flow.
 
 | Backend area | Tests |
 |---|---|
-| Gemini provider (recorded responses, fallback, parsing, credentials) | 38 |
+| Gemini provider (recorded responses, fallback, parsing, portion estimates, credentials) | 57 |
 | Vision provider (parsing, filtering, credentials) | 22 |
-| Photo endpoint (every failure path, mock-mode refusal) | 24 |
+| Photo endpoint (every failure path, mock-mode refusal, USDA grounding and fallback) | 31 |
 | Auth dependencies, development header, provider selection | 22 |
 | Rate limiter (atomicity, refunds) | 17 |
-| Nutrition service (recorded response, retry, ranking, credentials) | 41 |
+| Nutrition service (recorded response, retry, ranking, portion scaling, credentials) | 45 |
 | Image validation (format, size, HEIC) | 11 |
 | Workouts and exercise sets | 11 |
 | Daily check-ins | 11 |
@@ -266,7 +266,7 @@ needs a real Google flow.
 | API client (request helper, every endpoint, photo upload) | 18 |
 | Image resizing before upload | 10 |
 | Utilities | 12 |
-| Meal review | 10 |
+| Meal review (including the basis of the numbers) | 13 |
 | Bottom navigation | 8 |
 | Offline indicator | 7 |
 
@@ -319,8 +319,9 @@ layer is measured.
 
 ## Known limitations
 
-- **Photo analysis needs `GEMINI_API_KEY` set on Vercel**, reports nutrition per 100g, and its
-  accuracy is unmeasured. The Vision provider has never run against the live API. See
+- **Photo analysis needs `GEMINI_API_KEY` set on Vercel.** Portions and macros are estimates
+  whose accuracy is unmeasured, and the review screen says whether they came from USDA or from
+  the model alone. The Vision provider has never run against the live API. See
   [PHOTO_ANALYSIS.md](PHOTO_ANALYSIS.md).
 - **Blocking database calls in async handlers.** Sessions are synchronous throughout, so
   database latency occupies the event loop. It affects every router and is scheduled as

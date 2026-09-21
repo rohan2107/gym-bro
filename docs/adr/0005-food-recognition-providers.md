@@ -39,7 +39,7 @@ The model's output is treated as untrusted: it is constrained to a JSON schema, 
 is normalised and length-limited before it becomes a nutrition search term.
 
 Each recognised item is looked up in USDA by name. Scaling to an estimated portion is
-[M0.3b](../ROADMAP.md#m03b-portions), not part of this decision's first increment.
+[M0.3b](../ROADMAP.md#m03b-portions-and-a-graceful-fallback), not part of this decision's first increment.
 
 ## Verification
 

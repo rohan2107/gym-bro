@@ -4,8 +4,8 @@
       "content": {
         "parts": [
           {
-            "text": "{\n  \"foods\": [\n    {\n      \"name\": \"pizza\",\n      \"confidence\": 0.99\n    }\n  ]\n}",
-            "thoughtSignature": "El4KXAFpFH0TcLVLZdcURravVBrdh3OizxSPhq9pD6W6aBqoxglepmb92NUs162fk/cCJe08XpzQtjDeN0+LkVZVAN83Y+qtaMya7K4kwnCkjQqatI8xg7bGu68lk7rR"
+            "text": "{\n  \"foods\": [\n    {\n      \"name\": \"margherita pizza\",\n      \"confidence\": 0.98,\n      \"calories\": 1800,\n      \"carbs_g\": 210,\n      \"estimated_grams\": 750,\n      \"fat_g\": 75,\n      \"protein_g\": 70\n    }\n  ]\n}",
+            "thoughtSignature": "EnEKbwFpFH0TBwHh99uPT7zqD/z2qr/3mtD5YjR3YNkQpt1x1jzMeIHs9XHXz2ayyT1HNhhrM+tgYGbretfjBvrljAMNZFG/gdkeizQDw6PbUEZ9QXAvpT+BAXQr0kg+hKvo//7iyWu1HyzJWGjdeveOJQ=="
           }
         ],
         "role": "model"
@@ -15,21 +15,21 @@
     }
   ],
   "usageMetadata": {
-    "promptTokenCount": 1161,
-    "candidatesTokenCount": 36,
-    "totalTokenCount": 1197,
+    "promptTokenCount": 1218,
+    "candidatesTokenCount": 97,
+    "totalTokenCount": 1315,
     "promptTokensDetails": [
+      {
+        "modality": "TEXT",
+        "tokenCount": 138
+      },
       {
         "modality": "IMAGE",
         "tokenCount": 1080
-      },
-      {
-        "modality": "TEXT",
-        "tokenCount": 81
       }
     ],
     "serviceTier": "standard"
   },
-  "modelVersion": "gemini-3.5-flash-lite",
-  "responseId": "9Cixaq_OCr-DkdUP8e284AE"
+  "modelVersion": "gemini-3.1-flash-lite",
+  "responseId": "CDyxar7oOPW0kdUP7JTfsAI"
 }

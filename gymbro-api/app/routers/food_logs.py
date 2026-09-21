@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from typing import List, Optional, Dict, Any
 
@@ -15,13 +16,17 @@ from ..deps import (
 )
 from ..services.food_recognition import FoodRecognizer
 from ..services.image_validation import validate_image
-from ..services.nutrition import NutritionService
+from ..services.nutrition import NutritionService, estimate_to_nutrition, scale_to_portion
 from ..services.rate_limiter import RateLimiter
 from ..services.food_mapping import get_search_query
 
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/food-logs", tags=["food-logs"])
+
+# How long one USDA lookup may take, retries included. USDA is a helper here, not the answer: a
+# slow or failing lookup falls back to the model's own estimate rather than holding the user up.
+NUTRITION_LOOKUP_BUDGET_SECONDS = 10.0
 
 
 class FoodLogUpdate(SQLModel):
@@ -69,7 +74,8 @@ async def create_food_log_from_photo(
     1. Validates the uploaded image
     2. Checks the user's rate limit (30 photos/day)
     3. Detects food items with the configured recognition provider
-    4. Looks up nutrition data from USDA FoodData Central
+    4. Grounds each food in USDA FoodData Central, scaled to the estimated portion, and falls
+       back to the model's own estimate (marked ``ai_estimate``) if USDA fails or has no match
     5. Returns predictions for user review/editing
     
     The frontend should display these predictions and allow the user
@@ -83,10 +89,12 @@ async def create_food_log_from_photo(
                     "confidence": 0.85,
                     "nutrition": {
                         "name": "Pizza, cheese, regular crust",
-                        "calories": 265,
-                        "protein_g": 11.0,
-                        "carbs_g": 33.0,
-                        "fat_g": 10.0
+                        "calories": 530,          # for the estimated portion
+                        "protein_g": 22.0,
+                        "carbs_g": 66.0,
+                        "fat_g": 20.0,
+                        "serving_size": "200g",   # "100g" when no portion was estimated
+                        "source": "usda"          # or "ai_estimate" (no USDA data was used)
                     }
                 }
             ],
@@ -196,35 +204,51 @@ async def create_food_log_from_photo(
             detail="No food items detected in image. Try a clearer photo or enter manually."
         )
     
-    # Map labels to USDA queries and fetch nutrition
+    # Ground each food in USDA (per 100g, scaled to the estimated portion when there is one).
+    # Lookups run concurrently and each is time-boxed. When USDA fails or has no match, the
+    # model's own estimate is used instead and labelled as an AI estimate, so a USDA problem
+    # degrades accuracy instead of ending the request.
+    lookups = await asyncio.gather(
+        *(
+            asyncio.wait_for(
+                nutrition_service.search_food(get_search_query(item["label"])),
+                NUTRITION_LOOKUP_BUDGET_SECONDS,
+            )
+            for item in food_labels
+        ),
+        return_exceptions=True,
+    )
+
     predictions: List[Dict[str, Any]] = []
     lookup_failed = False
-    for label_data in food_labels:
-        label = label_data["label"]
-        confidence = label_data["confidence"]
+    for item, usda in zip(food_labels, lookups):
+        label = item["label"]
+        grams = item.get("portion_g")
+        estimate = item.get("estimate")
 
-        # Map label to USDA search query
-        search_query = get_search_query(label)
-
-        # Look up nutrition from USDA
-        try:
-            nutrition = await nutrition_service.search_food(search_query)
-
-            if nutrition:
-                predictions.append({
-                    "label": label,
-                    "confidence": confidence,
-                    "nutrition": nutrition
-                })
-        except Exception as e:
-            # A failed lookup is not the same as "no match": remember it, keep going with
-            # the other foods, and report it accurately if nothing was found. The exception
-            # text is not logged because an httpx error carries the request URL.
+        if isinstance(usda, BaseException):
+            # A failed lookup is not the same as "no match". The exception text is not logged
+            # because an httpx error carries the request URL.
             lookup_failed = True
-            logger.warning(f"Nutrition lookup failed for '{label}': {type(e).__name__}")
+            logger.warning(f"Nutrition lookup failed for '{label}': {type(usda).__name__}")
+            usda = None
+
+        if usda:
+            nutrition = scale_to_portion(usda, grams) if grams else dict(usda)
+            nutrition["source"] = "usda"
+        elif estimate and grams:
+            nutrition = estimate_to_nutrition(label, grams, estimate)
+            nutrition["source"] = "ai_estimate"
+        else:
             continue
 
-    # If no nutrition data found for any labels
+        predictions.append({
+            "label": label,
+            "confidence": item["confidence"],
+            "nutrition": nutrition,
+        })
+
+    # Nothing usable from USDA or from the model
     if not predictions:
         # Nothing to show - refund the quota
         rate_limiter.decrement(user_id)

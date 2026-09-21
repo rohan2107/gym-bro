@@ -307,3 +307,27 @@ class NutritionService:
         
         label_lower = vision_label.lower().strip()
         return FOOD_MAPPING.get(label_lower, label_lower)
+
+
+def scale_to_portion(nutrition: Dict[str, Any], grams: float) -> Dict[str, Any]:
+    """USDA's per-100g values scaled to a portion, with the portion stated in serving_size."""
+    factor = grams / 100.0
+    return {
+        **nutrition,
+        "calories": round(nutrition["calories"] * factor),
+        "protein_g": round(nutrition["protein_g"] * factor, 1),
+        "carbs_g": round(nutrition["carbs_g"] * factor, 1),
+        "fat_g": round(nutrition["fat_g"] * factor, 1),
+        "serving_size": f"{round(grams)}g",
+    }
+
+
+def estimate_to_nutrition(name: str, grams: float, estimate: Dict[str, Any]) -> Dict[str, Any]:
+    """A model's own estimate in the same shape as a USDA result, marked as not from USDA."""
+    return {
+        "name": name,
+        "fdc_id": None,
+        **estimate,
+        "serving_size": f"{round(grams)}g",
+        "confidence": "low",
+    }

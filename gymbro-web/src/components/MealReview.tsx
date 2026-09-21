@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { PhotoPrediction } from '../lib/api'
+import { PhotoNutrition, PhotoPrediction } from '../lib/api'
 
 export type ReviewedMeal = {
   description: string
@@ -21,12 +21,32 @@ function toEditable(prediction: PhotoPrediction): ReviewedMeal {
 }
 
 /**
+ * What the numbers are, in words. An AI estimate is not from a nutrition database and a USDA
+ * figure may be per 100g rather than the portion eaten, so the screen says which it is instead
+ * of implying the values are authoritative.
+ */
+function basisNote(nutrition: PhotoNutrition): { text: string; estimate: boolean } {
+  const portion = nutrition.serving_size
+  if (nutrition.source === 'ai_estimate') {
+    return {
+      text: `AI estimate for about ${portion ?? 'the portion shown'}, not from a nutrition database. Check these numbers before saving.`,
+      estimate: true,
+    }
+  }
+  if (portion && portion !== '100g') {
+    return {
+      text: `Estimated for about ${portion}, from USDA values scaled to the portion. Adjust anything before saving.`,
+      estimate: false,
+    }
+  }
+  return { text: 'Nutrition is per 100g from USDA. Adjust anything before saving.', estimate: false }
+}
+
+/**
  * Review step for AI photo predictions.
  *
- * Every value the model produced is editable before it is saved. The USDA
- * figures are per 100g, which is rarely the portion actually eaten, so the
- * numbers are a starting point rather than an answer — the UI says so instead
- * of implying the estimate is authoritative.
+ * Every value the model produced is editable before it is saved, so the numbers are a starting
+ * point rather than an answer.
  */
 export default function MealReview({
   predictions,
@@ -51,6 +71,8 @@ export default function MealReview({
     setMeal((prev) => ({ ...prev, [field]: value === '' ? null : Number(value) }))
   }
 
+  const basis = basisNote(predictions[selectedIndex].nutrition)
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     onConfirm(meal)
@@ -63,8 +85,11 @@ export default function MealReview({
       aria-label="Review AI meal predictions"
     >
       <h3 className="font-semibold text-gray-900 mb-1">Is this right?</h3>
-      <p className="text-xs text-gray-600 mb-3">
-        Nutrition is per 100g from USDA. Adjust anything before saving.
+      <p
+        className={`text-xs mb-3 ${basis.estimate ? 'text-amber-800 bg-amber-50 rounded px-2 py-1' : 'text-gray-600'}`}
+        data-testid="basis-note"
+      >
+        {basis.text}
       </p>
 
       {predictions.length > 1 && (

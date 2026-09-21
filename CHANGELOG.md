@@ -8,6 +8,12 @@ entries are grouped by milestone and dated.
 
 ### Changed
 
+- Photo analysis estimates the portion in grams and scales USDA's per-100g values to it. When
+  USDA errors, times out or has no match, the model's own estimate is returned, labelled as an
+  AI estimate, instead of failing the request; the review screen states which it is
+  ([ADR-0010](docs/adr/0010-usda-as-a-local-reference.md), proposed)
+- The per-model Gemini timeout is 12 seconds, so a hanging model does not hold the user long
+  before the fallback model is tried
 - Photo analysis recognises foods with the Gemini API free tier (no billing account) through a
   `FoodRecognizer` interface; Google Cloud Vision is now an optional provider, chosen by
   `FOOD_RECOGNITION_PROVIDER` ([ADR-0005](docs/adr/0005-food-recognition-providers.md),

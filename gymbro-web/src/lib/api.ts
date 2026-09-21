@@ -35,8 +35,11 @@ export type PhotoNutrition = {
   protein_g: number | null
   carbs_g: number | null
   fat_g: number | null
+  /** "100g" for USDA per-100g values, or the estimated portion, e.g. "300g". */
   serving_size: string | null
   confidence: string | null
+  /** Where the numbers came from. Absent on older responses, which were USDA per 100g. */
+  source?: 'usda' | 'ai_estimate'
 }
 
 export type PhotoPrediction = {

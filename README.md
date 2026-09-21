@@ -15,14 +15,15 @@ A full-stack fitness PWA with AI meal photo analysis, offline support, and a mob
 ✅ **AI meal photo analysis** — photograph a meal, get food predictions and macros, editable
 before saving. Foods are recognised by the Gemini API (free tier, no billing account) and
 looked up in USDA; the provider is swappable by configuration. **Enabled on the live site once
-`GEMINI_API_KEY` is set there**; locally it runs in mock mode without keys. Nutrition is per
-100g until portion estimates land ([roadmap](docs/ROADMAP.md#m03b-portions))  
+`GEMINI_API_KEY` is set there**; locally it runs in mock mode without keys. Portions and macros are
+estimates: grounded in USDA where it has a match, otherwise the model's own, and labelled
+which ([roadmap](docs/ROADMAP.md#m03b-portions-and-a-graceful-fallback))  
 ✅ Google OAuth 2.0 authentication  
 ✅ Daily check-ins (weight, steps, training status)  
 ✅ Meal logging with calorie & macro tracking  
 ✅ Workout tracking with exercise sets  
 ✅ Mobile-first PWA with offline support  
-✅ 334 automated tests, 88% backend coverage  
+✅ 367 automated tests, 88% backend coverage  
 ✅ CI/CD pipeline with GitHub Actions (8 required jobs + Vercel preview smoke test on PRs)
 
 ## Architecture
@@ -33,7 +34,7 @@ looked up in USDA; the provider is swappable by configuration. **Enabled on the 
 **Auth**: Google OAuth 2.0 + JWT (httpOnly cookies)  
 **AI**: Gemini API (food recognition) + USDA FoodData Central  
 **Hosting**: Vercel (frontend + serverless functions)  
-**Testing**: pytest (254 tests), Vitest (80 tests), GitHub Actions
+**Testing**: pytest (284 tests), Vitest (83 tests), GitHub Actions
 
 ## Quick Start
 
@@ -90,7 +91,7 @@ URI to register.
 ## Testing
 
 ```bash
-# Backend (254 tests)
+# Backend (284 tests)
 cd gymbro-api && pytest -v
 
 # Frontend (50 tests)

@@ -17,7 +17,12 @@ import pytest
 import respx
 
 from app.config import settings
-from app.services.nutrition import NutritionLookupError, NutritionService
+from app.services.nutrition import (
+    NutritionLookupError,
+    NutritionService,
+    estimate_to_nutrition,
+    scale_to_portion,
+)
 
 FIXTURES = Path(__file__).parent / "fixtures" / "usda"
 SEARCH_URL = f"{NutritionService.BASE_URL}/foods/search"
@@ -407,3 +412,47 @@ class TestFoodMapping:
 
     def test_unmapped_food_returns_itself(self, nutrition_service):
         assert nutrition_service.get_food_mapping("unknownfood") == "unknownfood"
+
+
+class TestPortionHelpers:
+    PER_100G = {
+        "name": "Pizza, cheese",
+        "fdc_id": 1,
+        "calories": 265,
+        "protein_g": 11.0,
+        "carbs_g": 33.0,
+        "fat_g": 10.0,
+        "serving_size": "100g",
+        "confidence": "high",
+    }
+
+    def test_scale_to_portion_scales_every_macro_and_states_the_portion(self):
+        result = scale_to_portion(self.PER_100G, 250)
+
+        assert (result["calories"], result["protein_g"], result["carbs_g"], result["fat_g"]) == (
+            662,
+            27.5,
+            82.5,
+            25.0,
+        )
+        assert result["serving_size"] == "250g"
+
+    def test_scale_to_portion_keeps_the_identity_of_the_match(self):
+        result = scale_to_portion(self.PER_100G, 250)
+
+        assert (result["name"], result["fdc_id"], result["confidence"]) == ("Pizza, cheese", 1, "high")
+
+    def test_scale_to_portion_does_not_mutate_its_input(self):
+        scale_to_portion(self.PER_100G, 250)
+
+        assert self.PER_100G["calories"] == 265
+
+    def test_estimate_to_nutrition_has_the_same_shape_and_low_confidence(self):
+        result = estimate_to_nutrition(
+            "pizza", 300, {"calories": 800, "protein_g": 30.0, "carbs_g": 90.0, "fat_g": 32.0}
+        )
+
+        assert set(result) == set(self.PER_100G)
+        assert result["fdc_id"] is None
+        assert result["serving_size"] == "300g"
+        assert result["confidence"] == "low"
