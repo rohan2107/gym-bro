@@ -46,8 +46,8 @@ place. The plan adds capability to that foundation rather than starting beside i
 | Schema management | Alembic is the sole owner; a fresh `alembic upgrade head` reproduces the models |
 | Photo analysis | Implemented against Google Cloud Vision + USDA; **unavailable on the live site** until a provider is configured, and never exercised against the live Vision API (billing required) |
 | CI/CD | 8 required gates on every PR; migrations applied on merge to `main` |
-| Tests | 175 backend, 50 frontend |
-| Audit | 14 findings fixed; 8 open, tracked in the [audit](AUDIT_2026-09.md#open-findings) |
+| Tests | 177 backend, 50 frontend |
+| Audit | 14 findings fixed; 6 open, tracked in the [audit](AUDIT_2026-09.md#open-findings) |
 
 Production auth was verified after the fix: the `X-User-Id` impersonation header that
 previously returned `200` now returns `401`.
@@ -80,7 +80,7 @@ dates. Work is sequenced by dependency, and a slipped milestone slips everything
 | ID | Increment | Size | State |
 |---|---|---|---|
 | M0.1 | Documentation restructure and this roadmap | S | In review |
-| M0.2 | Runtime alignment | S | Not started |
+| M0.2 | Runtime alignment | S | Done |
 | M0.3 | Food-recognition providers | M | Not started |
 
 ### M0.1: Documentation restructure
@@ -90,8 +90,8 @@ design documents, and adds operations and evaluation documentation.
 
 ### M0.2: Runtime alignment
 
-Vercel deploys on versions CI never tests: Python 3.12 (no version is specified, so Vercel
-picks its default) against CI's 3.11, and Node 24 against CI's 20.
+Vercel deployed on versions CI never tested: Python 3.12 (no version was specified, so Vercel
+picked its default) against CI's 3.11, and Node 24 against CI's 20.
 
 - Pin the Python version for Vercel (`.python-version`) and make CI match it
 - Pin the Node version (`engines` and CI already say 20; make Vercel honour it)

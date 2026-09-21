@@ -8,6 +8,8 @@ entries are grouped by milestone and dated.
 
 ### Changed
 
+- Python 3.12 and Node 24 are pinned (`.python-version`, `.nvmrc`, `engines`) and CI runs the
+  same versions Vercel builds with; a test fails if they drift
 - Documentation restructured: the two overlapping roadmaps are consolidated into one
   ([ROADMAP.md](docs/ROADMAP.md)), decisions are recorded as ADRs ([docs/adr/](docs/adr/README.md)),
   and the September 2026 audit is kept as its own record
@@ -25,6 +27,7 @@ entries are grouped by milestone and dated.
 
 ### Fixed
 
+- Removed the unused `mangum` dependency
 - Documentation claimed the API was "Mangum-wrapped" and could not stream; the handler exposes
   the ASGI app directly and `mangum` is never imported
 - Documentation listed `VITE_GOOGLE_CLIENT_ID` as a frontend variable; nothing reads it
