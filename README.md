@@ -2,7 +2,7 @@
 
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 [![CI](https://img.shields.io/github/actions/workflow/status/rohan2107/gym-bro/ci.yml?branch=main&label=ci)](https://github.com/rohan2107/gym-bro/actions)
-[![Python](https://img.shields.io/badge/python-3.11+-blue)](https://python.org)
+[![Python](https://img.shields.io/badge/python-3.12-blue)](https://python.org)
 
 **Live Demo**: https://gym-bro-chi.vercel.app/
 
@@ -22,7 +22,7 @@ without keys
 ✅ Meal logging with calorie & macro tracking  
 ✅ Workout tracking with exercise sets  
 ✅ Mobile-first PWA with offline support  
-✅ 225 automated tests, 85% backend coverage  
+✅ 228 automated tests, 85% backend coverage  
 ✅ CI/CD pipeline with GitHub Actions (8 required jobs + Vercel preview smoke test on PRs)
 
 ## Architecture
@@ -33,16 +33,16 @@ without keys
 **Auth**: Google OAuth 2.0 + JWT (httpOnly cookies)  
 **AI**: Google Cloud Vision API + USDA FoodData Central  
 **Hosting**: Vercel (frontend + serverless functions)  
-**Testing**: pytest (175 tests), Vitest (50 tests), GitHub Actions
+**Testing**: pytest (178 tests), Vitest (50 tests), GitHub Actions
 
 ## Quick Start
 
-Requires **Python 3.11+** and **Node 20+**.
+Requires **Python 3.12** and **Node 24** (pinned in `.python-version` and `.nvmrc`).
 
 ```bash
 # Backend
 cd gymbro-api
-python3.11 -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
+python3.12 -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 alembic upgrade head          # required: creates the schema
 uvicorn app.main:app --reload
@@ -89,7 +89,7 @@ URI to register.
 ## Testing
 
 ```bash
-# Backend (175 tests)
+# Backend (178 tests)
 cd gymbro-api && pytest -v
 
 # Frontend (50 tests)

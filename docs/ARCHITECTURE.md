@@ -231,7 +231,7 @@ client) are tracked as open findings in the [audit](AUDIT_2026-09.md#open-findin
 
 ## Testing
 
-**175 backend tests** (pytest, ~4s) | **50 frontend tests** (Vitest, ~1s) | **225 total**
+**178 backend tests** (pytest, ~4s) | **50 frontend tests** (Vitest, ~1s) | **228 total**
 
 Backend coverage is **85%**. The OAuth callback in `auth.py` is largely uncovered because it
 needs a real Google flow.
@@ -252,6 +252,7 @@ needs a real Google flow.
 | Auth utilities (JWT) | 6 |
 | Requirements parity (production vs CI) | 5 |
 | Migrations (fresh build matches models, reversible) | 4 |
+| Runtime versions (CI and Vercel match the pinned Python and Node) | 3 |
 | Lifespan | 2 |
 
 | Frontend area | Tests |
@@ -262,8 +263,9 @@ needs a real Google flow.
 | Bottom navigation | 8 |
 | Offline indicator | 7 |
 
-Three tests exist to stop a specific past defect recurring: `test_requirements_parity.py`
-(production and CI installing different dependencies), `test_migrations.py` (a schema no
+Four groups of tests exist to stop a specific past defect recurring: `test_requirements_parity.py`
+(production and CI installing different dependencies), `test_runtime_versions.py` (CI testing
+other Python and Node versions than Vercel builds on), `test_migrations.py` (a schema no
 migration could build), and the CORS and development-header tests in `test_main.py` and
 `test_deps.py`. The CI gates are listed in [DEPLOYMENT.md](DEPLOYMENT.md#cicd).
 
@@ -316,8 +318,6 @@ layer is measured.
 - **Blocking database calls in async handlers.** Sessions are synchronous throughout, so
   database latency occupies the event loop. It affects every router and is scheduled as
   [M3.0](ROADMAP.md#m30-async-data-layer).
-- **Runtime versions differ from CI**: Vercel builds on Python 3.12 and Node 24, CI tests 3.11
-  and 20 ([M0.2](ROADMAP.md#m02-runtime-alignment)).
 - **Streaming is undecided.** An earlier version of these docs said the app was
   "Mangum-wrapped" and could not stream. It is not; the handler exposes the ASGI app directly.
   Whether streaming works is to be settled by experiment ([ADR-0006](adr/0006-streaming-on-vercel.md)).

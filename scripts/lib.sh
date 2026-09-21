@@ -5,20 +5,20 @@ REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 API_DIR="$REPO_ROOT/gymbro-api"
 WEB_DIR="$REPO_ROOT/gymbro-web"
 
-# The backend needs Python 3.11+; macOS ships 3.9 as `python3`.
+# The backend targets Python 3.12 (see .python-version); macOS ships 3.9 as `python3`.
 resolve_python() {
   if [ -x "$API_DIR/.venv/bin/python" ]; then
     echo "$API_DIR/.venv/bin/python"
     return
   fi
-  for candidate in python3.13 python3.12 python3.11; do
+  for candidate in python3.13 python3.12; do
     if command -v "$candidate" >/dev/null 2>&1; then
       echo "$candidate"
       return
     fi
   done
-  echo "No Python 3.11+ interpreter found. Create the venv first:" >&2
-  echo "  cd gymbro-api && python3.11 -m venv .venv && .venv/bin/pip install -r requirements.txt" >&2
+  echo "No Python 3.12+ interpreter found. Create the venv first:" >&2
+  echo "  cd gymbro-api && python3.12 -m venv .venv && .venv/bin/pip install -r requirements.txt" >&2
   return 1
 }
 

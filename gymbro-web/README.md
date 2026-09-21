@@ -1,11 +1,11 @@
 # Gym Bro — Web Frontend
 
-React 18 + Vite 5 + TypeScript + Tailwind PWA. See the [repo README](../README.md) for the
+React 18 + Vite 8 + TypeScript + Tailwind PWA. See the [repo README](../README.md) for the
 full stack and the [architecture doc](../docs/ARCHITECTURE.md) for system design.
 
 ## Development
 
-Requires Node 20+. From the repo root, `./scripts/start-all.sh` runs the API and this app
+Requires Node 24 (see `.nvmrc`). From the repo root, `./scripts/start-all.sh` runs the API and this app
 together. To run only the frontend:
 
 ```bash

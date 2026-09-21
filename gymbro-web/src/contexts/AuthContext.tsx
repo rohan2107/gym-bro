@@ -24,10 +24,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
-  useEffect(() => {
-    checkAuth()
-  }, [])
-
   const checkAuth = async () => {
     try {
       const res = await fetch('/api/auth/me', { 
@@ -50,6 +46,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setIsLoading(false)
     }
   }
+
+  useEffect(() => {
+    // State is only set after the awaited fetch resolves, not synchronously in the effect.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    checkAuth()
+  }, [])
 
   const login = () => {
     // Redirect to backend OAuth endpoint

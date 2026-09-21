@@ -32,7 +32,6 @@ RUNTIME_CRITICAL_PACKAGES = {
     "pillow",
     "pyjwt",
     "python-multipart",
-    "mangum",
     "alembic",
 }
 

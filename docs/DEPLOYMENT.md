@@ -61,9 +61,11 @@ Defined in [.github/workflows/ci.yml](../.github/workflows/ci.yml).
 `All Checks Passed` aggregates the gated jobs. The preview smoke test is informative but does
 not block a merge.
 
-**Runtime versions.** CI tests Python 3.11 and Node 20. Vercel currently builds on Python 3.12
-(no version is pinned, so it uses its default) and Node 24. That divergence is tracked as
-[M0.2](ROADMAP.md#m02-runtime-alignment).
+**Runtime versions.** Python 3.12 and Node 24, pinned in `.python-version` and
+`.nvmrc`, with `engines.node` in `gymbro-web/package.json`. Vercel reads the Python pin from
+`api/.python-version` (next to the function; a copy at the repo root serves local tools) and
+Node from `engines`; CI's `PYTHON_VERSION` and `NODE_VERSION` must match them, which
+`tests/test_runtime_versions.py` enforces. Change all of them together.
 
 ## Releasing
 
