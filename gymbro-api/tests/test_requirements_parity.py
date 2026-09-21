@@ -19,6 +19,20 @@ DEV_REQUIREMENTS = ROOT / "gymbro-api" / "requirements.txt"
 # Test-only packages that are expected in the dev file and absent from production.
 TEST_ONLY_PACKAGES = {"pytest", "pytest-asyncio", "pytest-cov", "respx", "ruff"}
 
+# The local development server and its extras. Vercel serves api/handler.py's ASGI app itself,
+# so none of these are imported in production. uvicorn[standard] is what pulls in httptools,
+# watchfiles, websockets and PyYAML; click (and colorama, its Windows dependency) exist only
+# for uvicorn's command line.
+DEV_SERVER_PACKAGES = {
+    "uvicorn",
+    "httptools",
+    "watchfiles",
+    "websockets",
+    "pyyaml",
+    "click",
+    "colorama",
+}
+
 # Packages the app imports at runtime. If one of these is missing from the
 # production file, the deployed function breaks on import or first use.
 RUNTIME_CRITICAL_PACKAGES = {
@@ -84,16 +98,29 @@ def test_production_has_every_runtime_critical_package(prod_pins):
     )
 
 
-def test_dev_only_adds_test_packages(prod_pins, dev_pins):
-    """The dev file should be the production set plus test tooling, nothing else.
+def test_dev_only_adds_test_and_dev_server_packages(prod_pins, dev_pins):
+    """The dev file should be the production set plus test tooling and the dev server.
 
     Anything else that drifts in is a dependency production will not have.
     """
-    extra = dev_pins.keys() - prod_pins.keys() - TEST_ONLY_PACKAGES
+    extra = dev_pins.keys() - prod_pins.keys() - TEST_ONLY_PACKAGES - DEV_SERVER_PACKAGES
     assert not extra, (
         f"gymbro-api/requirements.txt has packages production will not install: "
-        f"{sorted(extra)}. Add them to api/requirements.txt or to TEST_ONLY_PACKAGES."
+        f"{sorted(extra)}. Add them to api/requirements.txt, TEST_ONLY_PACKAGES or "
+        "DEV_SERVER_PACKAGES."
     )
+
+
+def test_dev_file_keeps_the_dev_server(dev_pins):
+    """scripts/start-backend.sh runs uvicorn, so local development needs it."""
+    missing = DEV_SERVER_PACKAGES - dev_pins.keys()
+    assert not missing, f"gymbro-api/requirements.txt lost dev-server packages: {sorted(missing)}"
+
+
+def test_production_does_not_ship_the_dev_server(prod_pins):
+    """The deployed function never imports the dev server, so it should not install it."""
+    shipped = DEV_SERVER_PACKAGES & prod_pins.keys()
+    assert not shipped, f"api/requirements.txt ships dev-server packages: {sorted(shipped)}"
 
 
 def test_production_does_not_ship_test_tooling(prod_pins):

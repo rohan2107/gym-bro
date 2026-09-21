@@ -1,7 +1,4 @@
-"""Services package for external API integrations."""
+"""Service modules: recognition providers, nutrition lookup, image validation, rate limiting.
 
-from .vision import VisionService
-from .nutrition import NutritionService
-from .rate_limiter import RateLimiter
-
-__all__ = ["VisionService", "NutritionService", "RateLimiter"]
+Import from the submodules (``app.services.gemini``, ``app.services.nutrition``, ...).
+"""

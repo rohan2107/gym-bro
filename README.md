@@ -23,7 +23,7 @@ which ([roadmap](docs/ROADMAP.md#m03b-portions-and-a-graceful-fallback))
 ✅ Meal logging with calorie & macro tracking  
 ✅ Workout tracking with exercise sets  
 ✅ Mobile-first PWA with offline support  
-✅ 367 automated tests, 88% backend coverage  
+✅ Automated backend and frontend tests, each gated at 80% coverage in CI  
 ✅ CI/CD pipeline with GitHub Actions (8 required jobs + Vercel preview smoke test on PRs)
 
 ## Architecture
@@ -34,7 +34,7 @@ which ([roadmap](docs/ROADMAP.md#m03b-portions-and-a-graceful-fallback))
 **Auth**: Google OAuth 2.0 + JWT (httpOnly cookies)  
 **AI**: Gemini API (food recognition) + USDA FoodData Central  
 **Hosting**: Vercel (frontend + serverless functions)  
-**Testing**: pytest (284 tests), Vitest (83 tests), GitHub Actions
+**Testing**: pytest, Vitest, GitHub Actions
 
 ## Quick Start
 
@@ -43,7 +43,7 @@ Requires **Python 3.12** and **Node 24** (pinned in `.python-version` and `.nvmr
 ```bash
 # Backend
 cd gymbro-api
-python3.12 -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
+python3.12 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 alembic upgrade head          # required: creates the schema
 uvicorn app.main:app --reload
@@ -91,32 +91,32 @@ URI to register.
 ## Testing
 
 ```bash
-# Backend (284 tests)
+# Backend
 cd gymbro-api && pytest -v
 
-# Frontend (50 tests)
+# Frontend
 cd gymbro-web && npm run test:run
 
 # Full validation before committing
-./scripts/pre-commit.sh        # Windows: .\scripts\pre-commit.ps1
+./scripts/pre-commit.sh
 ```
 
 ## Linting
 
 ```bash
 # Quick lint check (both backend & frontend)
-./scripts/lint-check.sh        # Windows: .\scripts\lint-check.ps1
+./scripts/lint-check.sh
 
 # Auto-fix lint issues
-./scripts/lint-check.sh --fix  # Windows: .\scripts\lint-check.ps1 -Fix
+./scripts/lint-check.sh --fix
 
 # Manual linting
 cd gymbro-api && ruff check --fix app/ tests/   # Backend (config in ruff.toml)
 cd gymbro-web && npm run lint -- --fix          # Frontend
 ```
 
-Shell scripts in [scripts/](scripts/) are the primary tooling; the matching `.ps1` files are
-the Windows equivalents.
+The shell scripts in [scripts/](scripts/) are the project's tooling. They need macOS, Linux or
+WSL on Windows.
 
 ## Direction
 
