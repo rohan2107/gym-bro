@@ -1,0 +1,35 @@
+{
+  "candidates": [
+    {
+      "content": {
+        "parts": [
+          {
+            "text": "{\n  \"foods\": []\n}",
+            "thoughtSignature": "El4KXAFpFH0T9dEPnc6C68e7XXF+M+EtHG3TLdL8pUVgFw+cYQfNvBtglsqMxBtwO2fWrEaMFJ65scnmIS9GjmxwAl03UKVIzH2G7jIdjBHsOocxKhgP9VPZxPP1e5jE"
+          }
+        ],
+        "role": "model"
+      },
+      "finishReason": "STOP",
+      "index": 0
+    }
+  ],
+  "usageMetadata": {
+    "promptTokenCount": 1170,
+    "candidatesTokenCount": 9,
+    "totalTokenCount": 1179,
+    "promptTokensDetails": [
+      {
+        "modality": "IMAGE",
+        "tokenCount": 1089
+      },
+      {
+        "modality": "TEXT",
+        "tokenCount": 81
+      }
+    ],
+    "serviceTier": "standard"
+  },
+  "modelVersion": "gemini-3.5-flash-lite",
+  "responseId": "ASmxatQH6JiR1Q_yhZqgCg"
+}

@@ -18,7 +18,7 @@ status. To reverse a decision, write a new ADR that supersedes the old one.
 | [0002](0002-vision-rest-api-with-header-credentials.md) | Call Vision over REST with a header credential | Accepted |
 | [0003](0003-hard-capped-providers-only.md) | Use only providers that stop at their limit | Accepted |
 | [0004](0004-record-replay-for-llm-calls.md) | Record and replay LLM calls for tests and evaluation | Accepted |
-| [0005](0005-food-recognition-providers.md) | Food recognition behind a provider interface | Proposed |
+| [0005](0005-food-recognition-providers.md) | Food recognition behind a provider interface | Accepted |
 | [0006](0006-streaming-on-vercel.md) | Streaming responses on Vercel | Proposed |
 | [0007](0007-knowledge-corpus.md) | Knowledge corpus selection | Proposed |
 | [0008](0008-embedding-model.md) | Embedding model | Proposed |

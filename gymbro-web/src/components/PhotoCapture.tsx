@@ -84,6 +84,10 @@ export default function PhotoCapture({
         {busy ? 'Analysing photo…' : '📸 Log from photo'}
       </button>
 
+      <p className="text-xs text-gray-500 mt-2">
+        Photos are sent to Google to identify the food. Gym Bro does not store them.
+      </p>
+
       {rateLimit && (
         <p className="text-xs text-gray-500 mt-2" aria-live="polite">
           {quotaExhausted

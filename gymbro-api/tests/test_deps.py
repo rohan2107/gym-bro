@@ -174,3 +174,29 @@ def test_x_user_id_is_rejected_over_http_in_production(client: TestClient):
     with patch.dict("os.environ", {"ENVIRONMENT": "production"}):
         response = client.get("/food-logs/", headers={"X-User-Id": "999999999"})
     assert response.status_code == 401
+
+
+def test_food_recognizer_defaults_to_gemini():
+    from app.deps import get_food_recognizer
+    from app.services.gemini import GeminiRecognizer
+
+    assert isinstance(get_food_recognizer(), GeminiRecognizer)
+
+
+def test_food_recognizer_can_be_switched_to_vision_by_configuration(monkeypatch):
+    from app.config import settings
+    from app.deps import get_food_recognizer
+    from app.services.vision import VisionService
+
+    monkeypatch.setattr(settings, "FOOD_RECOGNITION_PROVIDER", "vision")
+
+    assert isinstance(get_food_recognizer(), VisionService)
+
+
+def test_unknown_food_recognition_provider_fails_at_startup():
+    from pydantic import ValidationError
+
+    from app.config import Settings
+
+    with pytest.raises(ValidationError):
+        Settings(FOOD_RECOGNITION_PROVIDER="not-a-provider")

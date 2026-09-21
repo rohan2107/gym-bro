@@ -17,7 +17,7 @@ How the system is built today. Decisions and their reasoning are in [adr/](adr/)
 | **Backend** | FastAPI (async), SQLModel, Pydantic v2 |
 | **Database** | PostgreSQL on Neon (serverless) |
 | **Auth** | Google OAuth 2.0 + JWT (httpOnly cookies) |
-| **AI Services** | Google Cloud Vision REST API, USDA FoodData Central |
+| **AI Services** | Gemini API (food recognition; Cloud Vision optional), USDA FoodData Central |
 | **Hosting** | Vercel: static frontend plus one Python function serving the ASGI app directly |
 | **CI/CD** | GitHub Actions (9 jobs, 8 required) |
 | **Migrations** | Alembic |
@@ -61,7 +61,7 @@ How the system is built today. Decisions and their reasoning are in [adr/](adr/)
 │  - /health           Monitoring        │
 │                                        │
 │  Services:                             │
-│  - VisionService     Food detection    │
+│  - FoodRecognizer    Gemini / Vision   │
 │  - NutritionService  USDA lookup       │
 │  - RateLimiter       Per-user quotas   │
 │                                        │
@@ -72,7 +72,7 @@ How the system is built today. Decisions and their reasoning are in [adr/](adr/)
     ┌────┴────┬──────────────┐
     ↓         ↓              ↓
 ┌──────────┐ ┌──────────┐ ┌──────────┐
-│PostgreSQL│ │Vision API│ │USDA API  │
+│PostgreSQL│ │Gemini API│ │USDA API  │
 │ (Neon)   │ │ (Google) │ │  (USDA)  │
 └──────────┘ └──────────┘ └──────────┘
 ```
@@ -185,12 +185,12 @@ POST /api/food-logs/from-photo
 
 Quota is reserved before the expensive calls and refunded when they fail. On a deployment the
 endpoint refuses rather than serve mock data. Full behaviour, failure modes and limits are in
-[PHOTO_ANALYSIS.md](PHOTO_ANALYSIS.md); the planned change of recognition provider is
+[PHOTO_ANALYSIS.md](PHOTO_ANALYSIS.md); the choice of recognition provider is
 [ADR-0005](adr/0005-food-recognition-providers.md).
 
 Services (`app/services/`) are injected through FastAPI dependencies, so tests replace them
-and no test calls a real service: `VisionService`, `NutritionService`, `RateLimiter`, and the
-`food_mapping` table.
+and no test calls a real service: the configured `FoodRecognizer` (`GeminiRecognizer` or
+`VisionService`), `NutritionService`, `RateLimiter`, and the `food_mapping` table.
 
 ---
 
@@ -218,8 +218,8 @@ flow, the session model and known gaps are in [AUTHENTICATION.md](AUTHENTICATION
   on vercel.app an allowed credentialed origin. `CORS_PREVIEW_ORIGIN_REGEX` allows additional
   origins but is unset by default, since on Vercel the frontend and API share an origin and
   CORS is never consulted.
-- **Credentials in logs**: the Vision API key is sent as an `X-Goog-Api-Key` header rather
-  than a query parameter, because httpx embeds the request URL in `HTTPStatusError` and the
+- **Credentials in logs**: the Gemini and Vision keys are sent as headers (`x-goog-api-key`,
+  `X-Goog-Api-Key`) rather than query parameters, because httpx embeds the request URL in `HTTPStatusError` and the
   photo endpoint logs that exception with `exc_info=True`.
 - **API protection**: 10s timeout on all external calls
 - **Error handling**: Generic user-facing messages, detailed internal logging with `exc_info=True`
@@ -231,18 +231,20 @@ client) are tracked as open findings in the [audit](AUDIT_2026-09.md#open-findin
 
 ## Testing
 
-**178 backend tests** (pytest, ~4s) | **50 frontend tests** (Vitest, ~1s) | **228 total**
+**221 backend tests** (pytest, ~4s) | **51 frontend tests** (Vitest, ~1s) | **272 total**
 
-Backend coverage is **85%**. The OAuth callback in `auth.py` is largely uncovered because it
+Backend coverage is **87%**. The OAuth callback in `auth.py` is largely uncovered because it
 needs a real Google flow.
 
 | Backend area | Tests |
 |---|---|
-| Vision service (parsing, filtering, credentials, HEIC, validation) | 33 |
-| Photo endpoint (every failure path, mock-mode refusal) | 19 |
-| Auth dependencies and the development header | 19 |
+| Gemini provider (recorded responses, fallback, parsing, credentials) | 38 |
+| Vision provider (parsing, filtering, credentials) | 22 |
+| Photo endpoint (every failure path, mock-mode refusal) | 21 |
+| Auth dependencies, development header, provider selection | 22 |
 | Rate limiter (atomicity, refunds) | 17 |
 | Nutrition service | 12 |
+| Image validation (format, size, HEIC) | 11 |
 | Workouts and exercise sets | 11 |
 | Daily check-ins | 11 |
 | App structure and CORS | 11 |
@@ -257,7 +259,7 @@ needs a real Google flow.
 
 | Frontend area | Tests |
 |---|---|
-| Photo capture (type, HEIC, size, quota) | 13 |
+| Photo capture (type, HEIC, size, quota, data-use notice) | 14 |
 | Utilities | 12 |
 | Meal review | 10 |
 | Bottom navigation | 8 |
@@ -312,8 +314,8 @@ layer is measured.
 
 ## Known limitations
 
-- **Photo analysis is unavailable on the live site** until a provider is configured, and
-  the Vision integration has never run against the live API. See
+- **Photo analysis needs `GEMINI_API_KEY` set on Vercel**, reports nutrition per 100g, and its
+  accuracy is unmeasured. The Vision provider has never run against the live API. See
   [PHOTO_ANALYSIS.md](PHOTO_ANALYSIS.md).
 - **Blocking database calls in async handlers.** Sessions are synchronous throughout, so
   database latency occupies the event loop. It affects every router and is scheduled as

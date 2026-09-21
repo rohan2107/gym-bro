@@ -27,7 +27,10 @@ in Vercel for the environment concerned.
 | `JWT_SECRET_KEY` | Yes | Signs session tokens. Unset, token creation raises rather than signing with an empty key |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | Yes | Google OAuth client |
 | `FRONTEND_URL` | Yes | The deployed origin. The OAuth callback is derived from it as `<FRONTEND_URL>/auth/callback`, and cookies are marked `Secure` when it is `https` |
-| `GOOGLE_VISION_API_KEY` | No | Enables the Vision provider. See the cost rules below |
+| `GEMINI_API_KEY` | No | Enables photo analysis with the Gemini API. Without it the endpoint returns `503` on a deployment. Create the key in a project with **no billing account linked** |
+| `FOOD_RECOGNITION_PROVIDER` | No | `gemini` (default) or `vision`. Anything else fails at startup |
+| `GEMINI_MODEL`, `GEMINI_FALLBACK_MODEL` | No | Pinned model ids; the defaults are `gemini-3.5-flash-lite` and `gemini-3.1-flash-lite` |
+| `GOOGLE_VISION_API_KEY` | No | Enables the optional Vision provider. See the cost rules below |
 | `USDA_API_KEY` | No | Enables nutrition lookup |
 | `CORS_ALLOWED_ORIGINS` | No | Extra allowed origins, comma-separated |
 | `CORS_PREVIEW_ORIGIN_REGEX` | No | Extra allowed origins by pattern. Empty by default; see [AUDIT F6](AUDIT_2026-09.md) before setting it |
@@ -114,6 +117,9 @@ The project's rule is zero spend ([ADR-0003](adr/0003-hard-capped-providers-only
 - Use only services that stop at their limit rather than bill.
 - **A budget is an alert, not a cap.** Google's documentation states that budgets do not
   automatically cap usage, and alerts lag actual spend.
+- The Gemini API free tier (500 requests a day per model, 15 a minute) answers `429` at its
+  limits. Keep the project it lives in free of any billing account, and check the key page
+  still says **Free tier**; linking billing is what would let it charge.
 - Google Cloud Vision requires a billing account and has no daily quota cap by default, so it
   is an optional provider, not a required one. If it is ever enabled: use a free-trial billing
   account if eligible (it is not charged unless upgraded), lower the per-minute quota,

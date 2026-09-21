@@ -39,3 +39,4 @@ gymbro-api/package-lock.json
 .env
 .env.*
 !.env.example
+.coverage *

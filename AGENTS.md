@@ -114,7 +114,10 @@ The project is zero-spend ([ADR-0003](docs/adr/0003-hard-capped-providers-only.m
 - Do not add a paid dependency, or a provider that can bill past a limit, without an ADR.
 - Do not link a billing account to a project that holds an API key.
 - Never put a credential in a URL, a log line, a test fixture or the repository.
-- Model identifiers are pinned in configuration and recorded with every result.
+- Model identifiers are pinned in configuration and recorded with every result. Never use a
+  `-latest` alias.
+- Treat model output as untrusted input: constrain it to a schema, then validate and limit it
+  before it reaches a query or the database.
 
 ## Evaluation discipline
 

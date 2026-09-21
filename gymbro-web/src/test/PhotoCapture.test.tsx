@@ -20,6 +20,11 @@ describe('PhotoCapture', () => {
     expect(screen.getByRole('button', { name: /log from photo/i })).toBeInTheDocument()
   })
 
+  it('tells the user the photo is sent to Google and not stored', () => {
+    render(<PhotoCapture onSelect={vi.fn()} />)
+    expect(screen.getByText(/sent to Google.*does not store/i)).toBeInTheDocument()
+  })
+
   it('opens the native camera on mobile via a capture-enabled file input', () => {
     render(<PhotoCapture onSelect={vi.fn()} />)
     const input = screen.getByTestId('photo-input')

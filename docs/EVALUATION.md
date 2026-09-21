@@ -138,7 +138,7 @@ For the agent, the unit under test is the sequence of tool calls:
 
 ## Food recognition (optional, Phase 0)
 
-If provider choice for [M0.3](ROADMAP.md#m03-food-recognition-providers) is to be evidence
+If provider choice for [M0.3a](ROADMAP.md#m03a-food-recognition-providers) is to be evidence
 rather than preference, a small set of 20–30 meals photographed by the author gives item
 precision and recall and a calorie error against known portions. Photographs must be the
 author's own, to avoid redistribution problems.
