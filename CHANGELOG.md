@@ -30,6 +30,8 @@ entries are grouped by milestone and dated.
 - Frontend dependencies: `npm audit` went from 23 vulnerabilities (3 critical) to none,
   including two high-severity advisories in the production `react-router` dependency. Vite is
   now on 8, which Vitest 4 already required
+- ESLint moved from 8 (end of life) to 10 with a flat config (`eslint.config.js`); the newer
+  React Hooks rules flagged an effect that called a function declared after it, now reordered
 - Removed the unused `mangum` dependency
 - Documentation claimed the API was "Mangum-wrapped" and could not stream; the handler exposes
   the ASGI app directly and `mangum` is never imported
