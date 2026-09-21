@@ -234,41 +234,31 @@ client) are tracked as open findings in the [audit](AUDIT_2026-09.md#open-findin
 
 ## Testing
 
-**284 backend tests** (pytest, ~4s) | **83 frontend tests** (Vitest, ~1s) | **367 total**
+Backend (pytest) and frontend (Vitest) are each gated at 80% coverage in CI. Test counts are
+deliberately not recorded here: they change with every pull request and were wrong in several
+places within days of being written. Run the suites for the current numbers. The OAuth callback
+in `auth.py` is largely uncovered because it needs a real Google flow.
 
-Backend coverage is **88%**. The OAuth callback in `auth.py` is largely uncovered because it
-needs a real Google flow.
-
-| Backend area | Tests |
+| Backend area | What is covered |
 |---|---|
-| Gemini provider (recorded responses, fallback, parsing, portion estimates, credentials) | 57 |
-| Vision provider (parsing, filtering, credentials) | 22 |
-| Photo endpoint (every failure path, mock-mode refusal, USDA grounding and fallback) | 31 |
-| Auth dependencies, development header, provider selection | 22 |
-| Rate limiter (atomicity, refunds) | 17 |
-| Nutrition service (recorded response, retry, ranking, portion scaling, credentials) | 45 |
-| Image validation (format, size, HEIC) | 11 |
-| Workouts and exercise sets | 11 |
-| Daily check-ins | 11 |
-| App structure and CORS | 11 |
-| Weight entries | 9 |
-| Food log CRUD | 9 |
-| Database and connection check | 7 |
-| Auth utilities (JWT) | 6 |
-| Requirements parity (production vs CI) | 5 |
-| Migrations (fresh build matches models, reversible) | 4 |
-| Runtime versions (CI and Vercel match the pinned Python and Node) | 3 |
-| Lifespan and logging setup | 3 |
+| Gemini provider | Responses recorded from the live API, model fallback, parsing and validation, portion estimates, credentials |
+| Vision provider | Parsing, filtering, credentials |
+| Nutrition service | A recorded USDA response, retry, ranking, portion scaling, credentials |
+| Photo endpoint | Every failure path, mock-mode refusal, USDA grounding and the AI-estimate fallback |
+| Image validation | Format, size, HEIC |
+| Auth | JWT utilities, dependencies, the development header, provider selection |
+| Rate limiter | Atomicity, refunds |
+| Resource routers | Check-ins, weight, workouts and sets, food-log CRUD |
+| Structure | App wiring, CORS, lifespan and logging setup, database connection check |
+| Guards | Requirements parity, runtime versions, migrations (see below) |
 
-| Frontend area | Tests |
+| Frontend area | What is covered |
 |---|---|
-| Photo capture (type, HEIC, size, quota, data-use notice) | 15 |
-| API client (request helper, every endpoint, photo upload) | 18 |
-| Image resizing before upload | 10 |
-| Utilities | 12 |
-| Meal review (including the basis of the numbers) | 13 |
-| Bottom navigation | 8 |
-| Offline indicator | 7 |
+| Photo capture | Type, HEIC and size checks, quota display, the data-use notice |
+| Image resizing | Dimensions, no upscaling, orientation, quality fallback, decode failure |
+| API client | The request helper, every endpoint, the photo upload |
+| Meal review | Form behaviour and the basis of the numbers |
+| Components and utilities | Bottom navigation, offline indicator, helpers |
 
 Four groups of tests exist to stop a specific past defect recurring: `test_requirements_parity.py`
 (production and CI installing different dependencies), `test_runtime_versions.py` (CI testing
@@ -283,8 +273,9 @@ migration could build), and the CORS and development-header tests in `test_main.
 Merging to `main` deploys to Vercel and runs Alembic migrations against production. The
 environment variables, the release and rollback procedure, and post-deploy checks are in
 [DEPLOYMENT.md](DEPLOYMENT.md). `api/requirements.txt` is what Vercel installs;
-`gymbro-api/requirements.txt` is that set plus test tooling, and a test enforces that the
-shared pins match.
+`gymbro-api/requirements.txt` is that set plus test tooling and the local dev server (uvicorn
+and its extras, which production never imports), and a test enforces that the shared pins
+match and that nothing else drifts in.
 
 ---
 

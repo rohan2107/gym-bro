@@ -12,8 +12,7 @@ omit =
     .venv/*
     */site-packages/*
     
-    # Phase 4 services now have full test coverage (Phase 4.2 complete)
-    # Only excluding food_mapping.py (static configuration file, no logic to test)
+    # A static lookup table with one trivial accessor (tested in test_food_mapping.py)
     app/services/food_mapping.py
 
 [report]

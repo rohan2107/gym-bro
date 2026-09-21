@@ -67,12 +67,6 @@ class TestMockMode:
         assert result is not None
         assert result["confidence"] == "mock"
 
-    async def test_lookup_by_fdc_id_is_mocked_too(self):
-        result = await NutritionService().lookup_by_fdc_id(123)
-
-        assert result is not None
-        assert result["fdc_id"] == 123
-
 
 class TestSearchRequest:
     @respx.mock
@@ -366,52 +360,6 @@ class TestExtractNutrition:
         )
 
         assert result["calories"] == 23.9
-
-
-class TestLookupByFdcId:
-    @respx.mock
-    async def test_success_uses_a_header_credential(self, nutrition_service):
-        route = respx.get(f"{NutritionService.BASE_URL}/food/174987").respond(
-            200, json=food(174987, "Pizza, cheese, regular crust", energy=265)
-        )
-
-        result = await nutrition_service.lookup_by_fdc_id(174987)
-
-        assert result is not None
-        assert result["name"] == "Pizza, cheese, regular crust"
-        request = route.calls.last.request
-        assert request.headers["x-api-key"] == KEY
-        assert KEY not in str(request.url)
-
-    @respx.mock
-    async def test_failure_returns_none_without_logging_the_key(self, nutrition_service, caplog):
-        respx.get(f"{NutritionService.BASE_URL}/food/999999").respond(404)
-        caplog.set_level(logging.DEBUG)
-
-        assert await nutrition_service.lookup_by_fdc_id(999999) is None
-
-        assert KEY not in caplog.text
-        assert "api.nal.usda.gov" not in app_log_text(caplog)
-
-
-class TestBatchSearch:
-    @respx.mock
-    async def test_a_failing_search_becomes_none_without_sinking_the_rest(self, nutrition_service):
-        respx.get(SEARCH_URL, params={"query": "bad"}).respond(403)
-        respx.get(SEARCH_URL, params={"query": "rice"}).respond(200, json={"foods": [food(1, "Rice, cooked")]})
-
-        results = await nutrition_service.batch_search(["rice", "bad"])
-
-        assert results[0] is not None and results[0]["name"] == "Rice, cooked"
-        assert results[1] is None
-
-
-class TestFoodMapping:
-    def test_mapped_food(self, nutrition_service):
-        assert nutrition_service.get_food_mapping("burger") == "hamburger, plain"
-
-    def test_unmapped_food_returns_itself(self, nutrition_service):
-        assert nutrition_service.get_food_mapping("unknownfood") == "unknownfood"
 
 
 class TestPortionHelpers:

@@ -1,6 +1,7 @@
 # Local dev and CI dependencies: the production runtime set (api/requirements.txt)
-# plus test-only packages. tests/test_requirements_parity.py enforces that the
-# shared pins stay identical.
+# plus test tooling and the local dev server (uvicorn and its extras). Production
+# does not install those. tests/test_requirements_parity.py enforces that the
+# shared pins stay identical and that nothing else drifts in.
 annotated-doc==0.0.4
 annotated-types==0.7.0
 anyio==4.12.0

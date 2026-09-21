@@ -106,13 +106,6 @@ FOOD_MAPPING = {
 
 # FDC IDs for common foods (optional - for faster lookup)
 # You can populate this as you discover good matches
-FDC_ID_MAPPING = {
-    # Format: "food_name": fdc_id
-    # Example: "pizza": 174987,
-    # Add these during testing to speed up lookups
-}
-
-
 def get_search_query(vision_label: str) -> str:
     """Get USDA search query for a vision label.
     
@@ -124,16 +117,3 @@ def get_search_query(vision_label: str) -> str:
     """
     label_lower = vision_label.lower().strip()
     return FOOD_MAPPING.get(label_lower, label_lower)
-
-
-def get_fdc_id(vision_label: str) -> int:
-    """Get FDC ID for a vision label if mapped.
-    
-    Args:
-        vision_label: Label from Vision API
-        
-    Returns:
-        FDC ID or None
-    """
-    label_lower = vision_label.lower().strip()
-    return FDC_ID_MAPPING.get(label_lower)

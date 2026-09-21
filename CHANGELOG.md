@@ -6,8 +6,24 @@ entries are grouped by milestone and dated.
 
 ## [Unreleased]
 
+### Removed
+
+- Unused code: `NutritionService.batch_search`, `lookup_by_fdc_id` and `get_food_mapping`, and
+  the empty `FDC_ID_MAPPING` with its accessor. Only tests called them
+- The PowerShell scripts, which duplicated the shell scripts, were untested, and are not used
+  on the project's platform. Windows users can use WSL
+- The Codecov upload and the unused frontend build-artifact upload in CI. Coverage is enforced
+  by the 80% gate in each suite, not by an external service. The frontend suite no longer runs
+  twice
+- Hard-coded test counts in the documentation, which had already drifted
+
 ### Changed
 
+- Production no longer installs `uvicorn`, `httptools`, `watchfiles`, `websockets`, `PyYAML`,
+  `click` or `colorama`. The deployed handler never imports them; they remain in the
+  development requirements for the local server, and a test keeps the two sets apart. Checked
+  by importing the handler and calling `/health` in a clean environment built from the
+  production requirements alone
 - Photo analysis estimates the portion in grams and scales USDA's per-100g values to it. When
   USDA errors, times out or has no match, the model's own estimate is returned, labelled as an
   AI estimate, instead of failing the request; the review screen states which it is
