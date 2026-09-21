@@ -194,7 +194,7 @@ class TestPhotoMealLogging:
     ) -> None:
         """Test upload when no food is detected in image."""
         # Mock vision service to return empty list
-        with patch('app.services.vision.VisionService.detect_food', new_callable=AsyncMock) as mock_detect:
+        with patch('app.services.gemini.GeminiRecognizer.detect_food', new_callable=AsyncMock) as mock_detect:
             mock_detect.return_value = []
             
             response = client.post(
@@ -250,7 +250,7 @@ class TestPhotoMealLogging:
     ) -> None:
         """Test upload with multiple food items detected."""
         # Mock vision service to return multiple items
-        with patch('app.services.vision.VisionService.detect_food', new_callable=AsyncMock) as mock_vision:
+        with patch('app.services.gemini.GeminiRecognizer.detect_food', new_callable=AsyncMock) as mock_vision:
             mock_vision.return_value = [
                 {"label": "pizza", "confidence": 0.85, "source": "mock"},
                 {"label": "salad", "confidence": 0.78, "source": "mock"},
@@ -280,7 +280,7 @@ class TestPhotoMealLogging:
         valid_image_file: tuple[str, BytesIO, str]
     ) -> None:
         """Test upload when Vision API fails."""
-        with patch('app.services.vision.VisionService.detect_food', new_callable=AsyncMock) as mock_detect:
+        with patch('app.services.gemini.GeminiRecognizer.detect_food', new_callable=AsyncMock) as mock_detect:
             mock_detect.side_effect = Exception("Vision API error")
             
             response = client.post(
@@ -383,7 +383,7 @@ class TestPhotoMealLogging:
         mock_nutrition_data: dict[str, Any]
     ) -> None:
         """Test that upload succeeds even if some nutrition lookups fail."""
-        with patch('app.services.vision.VisionService.detect_food', new_callable=AsyncMock) as mock_vision:
+        with patch('app.services.gemini.GeminiRecognizer.detect_food', new_callable=AsyncMock) as mock_vision:
             mock_vision.return_value = [
                 {"label": "pizza", "confidence": 0.85, "source": "mock"},
                 {"label": "unknown_food", "confidence": 0.75, "source": "mock"}
@@ -426,7 +426,7 @@ class TestPhotoMealLogging:
             session_gen.close()
         
         # Mock vision service to raise error
-        with patch('app.services.vision.VisionService.detect_food', new_callable=AsyncMock) as mock_detect:
+        with patch('app.services.gemini.GeminiRecognizer.detect_food', new_callable=AsyncMock) as mock_detect:
             mock_detect.side_effect = Exception("Vision API error")
             
             response = client.post(
@@ -446,6 +446,63 @@ class TestPhotoMealLogging:
             assert user.photo_count == initial_count
         finally:
             session_gen.close()
+
+    def test_provider_failure_returns_503_and_refunds_quota(
+        self,
+        client: TestClient,
+        user_token: str,
+        test_user_in_db: User,
+        valid_image_file: tuple[str, BytesIO, str]
+    ) -> None:
+        """A provider error (quota, block, bad response) fails closed and costs the user nothing."""
+        from app.services.food_recognition import FoodRecognitionError
+
+        session_gen = _get_session_gen(client)
+        try:
+            user = next(session_gen).get(User, 1)
+            assert user is not None
+            initial_count = user.photo_count
+        finally:
+            session_gen.close()
+
+        with patch('app.services.gemini.GeminiRecognizer.detect_food', new_callable=AsyncMock) as mock_detect:
+            mock_detect.side_effect = FoodRecognitionError("Gemini request failed")
+
+            response = client.post(
+                "/food-logs/from-photo",
+                files={"photo": valid_image_file},
+                headers={"Authorization": f"Bearer {user_token}"}
+            )
+
+        assert response.status_code == 503
+        # The provider's own message is for logs, not clients.
+        assert "Gemini" not in response.json()["detail"]
+
+        session_gen = _get_session_gen(client)
+        try:
+            user = next(session_gen).get(User, 1)
+            assert user is not None
+            assert user.photo_count == initial_count
+        finally:
+            session_gen.close()
+
+    def test_the_image_mime_type_reaches_the_provider(
+        self,
+        client: TestClient,
+        user_token: str,
+        test_user_in_db: User,
+        valid_image_file: tuple[str, BytesIO, str]
+    ) -> None:
+        with patch('app.services.gemini.GeminiRecognizer.detect_food', new_callable=AsyncMock) as mock_detect:
+            mock_detect.return_value = []
+
+            client.post(
+                "/food-logs/from-photo",
+                files={"photo": valid_image_file},
+                headers={"Authorization": f"Bearer {user_token}"}
+            )
+
+        assert mock_detect.call_args.kwargs["mime_type"] == "image/jpeg"
 
     def test_upload_photo_refunds_quota_on_no_food_detected(
         self,
@@ -467,7 +524,7 @@ class TestPhotoMealLogging:
             session_gen.close()
         
         # Mock vision service to return empty list
-        with patch('app.services.vision.VisionService.detect_food', new_callable=AsyncMock) as mock_detect:
+        with patch('app.services.gemini.GeminiRecognizer.detect_food', new_callable=AsyncMock) as mock_detect:
             mock_detect.return_value = []
             
             response = client.post(
@@ -508,7 +565,7 @@ class TestPhotoMealLogging:
             session_gen.close()
         
         # Mock services
-        with patch('app.services.vision.VisionService.detect_food', new_callable=AsyncMock) as mock_detect, \
+        with patch('app.services.gemini.GeminiRecognizer.detect_food', new_callable=AsyncMock) as mock_detect, \
              patch('app.services.nutrition.NutritionService.search_food') as mock_search:
             
             mock_detect.return_value = [{"label": "pizza", "confidence": 0.85, "source": "mock"}]

@@ -8,12 +8,13 @@ from ..db import get_session
 from ..models import FoodLog
 from ..deps import (
     get_user_id,
-    get_vision_service,
+    get_food_recognizer,
     get_nutrition_service,
     get_rate_limiter,
     running_on_vercel,
 )
-from ..services.vision import VisionService
+from ..services.food_recognition import FoodRecognizer
+from ..services.image_validation import validate_image
 from ..services.nutrition import NutritionService
 from ..services.rate_limiter import RateLimiter
 from ..services.food_mapping import get_search_query
@@ -58,7 +59,7 @@ def create_food_log(
 async def create_food_log_from_photo(
     photo: UploadFile = File(...),
     user_id: int = Depends(get_user_id),
-    vision_service: VisionService = Depends(get_vision_service),
+    food_recognizer: FoodRecognizer = Depends(get_food_recognizer),
     nutrition_service: NutritionService = Depends(get_nutrition_service),
     rate_limiter: RateLimiter = Depends(get_rate_limiter),
 ) -> Dict[str, Any]:
@@ -67,7 +68,7 @@ async def create_food_log_from_photo(
     This endpoint:
     1. Validates the uploaded image
     2. Checks the user's rate limit (30 photos/day)
-    3. Detects food items using Google Cloud Vision API
+    3. Detects food items with the configured recognition provider
     4. Looks up nutrition data from USDA FoodData Central
     5. Returns predictions for user review/editing
     
@@ -104,7 +105,7 @@ async def create_food_log_from_photo(
     # local development and tests, but on a real deployment it would present
     # fabricated nutrition as an analysis of the user's photo. Refuse instead,
     # before any quota is spent; the UI falls back to manual entry.
-    if running_on_vercel() and (vision_service.mock_mode or nutrition_service.mock_mode):
+    if running_on_vercel() and (food_recognizer.mock_mode or nutrition_service.mock_mode):
         logger.error("Photo analysis requested but API keys are not configured")
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -148,7 +149,7 @@ async def create_food_log_from_photo(
         )
     
     # Validate image
-    validation = vision_service.validate_image(image_bytes)
+    validation = validate_image(image_bytes)
     if not validation["valid"]:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -168,7 +169,9 @@ async def create_food_log_from_photo(
     
     # Detect food items
     try:
-        food_labels = await vision_service.detect_food(image_bytes)
+        food_labels = await food_recognizer.detect_food(
+            image_bytes, mime_type=f"image/{validation['format']}"
+        )
     except ValueError as e:
         # Invalid image format or data - user error, no refund
         logger.warning(f"Invalid image for food detection: {e}")
@@ -177,7 +180,7 @@ async def create_food_log_from_photo(
             detail="Invalid image format. Please upload a valid photo."
         )
     except Exception as e:
-        # Vision API or unexpected errors - refund the quota
+        # Provider or unexpected errors - refund the quota
         logger.error(f"Food detection service error: {e}", exc_info=True)
         rate_limiter.decrement(user_id)
         raise HTTPException(

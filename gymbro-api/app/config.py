@@ -1,3 +1,5 @@
+from typing import Literal
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -16,6 +18,15 @@ class Settings(BaseSettings):
     JWT_SECRET_KEY: str = ""
 
     # External AI/nutrition services
+    # Which provider recognises foods in photos. An unknown value fails at startup, not at
+    # the first photo.
+    FOOD_RECOGNITION_PROVIDER: Literal["gemini", "vision"] = "gemini"
+    GEMINI_API_KEY: str = ""
+    # Model ids are pinned, never a `-latest` alias: an alias changes under us and makes
+    # measured accuracy unrepeatable. The fallback is tried when the primary is rate
+    # limited or erroring; it has its own quota.
+    GEMINI_MODEL: str = "gemini-3.5-flash-lite"
+    GEMINI_FALLBACK_MODEL: str = "gemini-3.1-flash-lite"
     GOOGLE_VISION_API_KEY: str = ""
     USDA_API_KEY: str = ""
 

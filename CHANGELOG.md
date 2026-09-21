@@ -8,6 +8,11 @@ entries are grouped by milestone and dated.
 
 ### Changed
 
+- Photo analysis recognises foods with the Gemini API free tier (no billing account) through a
+  `FoodRecognizer` interface; Google Cloud Vision is now an optional provider, chosen by
+  `FOOD_RECOGNITION_PROVIDER` ([ADR-0005](docs/adr/0005-food-recognition-providers.md),
+  accepted). Image validation is shared by every provider
+- The capture screen states that photos are sent to Google and are not stored
 - Python 3.12 and Node 24 are pinned (`.python-version`, `.nvmrc`, `engines`) and CI runs the
   same versions Vercel builds with; a test fails if they drift
 - Documentation restructured: the two overlapping roadmaps are consolidated into one
@@ -20,6 +25,10 @@ entries are grouped by milestone and dated.
 
 ### Added
 
+- `GEMINI_API_KEY`, `GEMINI_MODEL`, `GEMINI_FALLBACK_MODEL` and `FOOD_RECOGNITION_PROVIDER`
+  settings; the Gemini provider falls back to a second model on `429` and `5xx` and otherwise
+  fails closed with the user's quota refunded
+- Tests against Gemini responses recorded from the live API
 - [EVALUATION.md](docs/EVALUATION.md): the design of the evaluation harness, ahead of its
   implementation
 - [DEPLOYMENT.md](docs/DEPLOYMENT.md): configuration, CI/CD, release, rollback, cost controls

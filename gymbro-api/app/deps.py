@@ -7,6 +7,8 @@ from typing import Optional
 from sqlmodel import Session
 from app.auth_utils import verify_jwt
 from app.config import settings
+from app.services.food_recognition import FoodRecognizer
+from app.services.gemini import GeminiRecognizer
 from app.services.vision import VisionService
 from app.services.nutrition import NutritionService
 from app.services.rate_limiter import RateLimiter
@@ -91,14 +93,16 @@ def get_user_id(
     )
 
 
-def get_vision_service() -> VisionService:
+def get_food_recognizer() -> FoodRecognizer:
     """
-    Provide VisionService instance for food detection.
-    
-    Returns:
-        VisionService instance with auto-detected mock mode
+    Provide the configured food-recognition provider.
+
+    The provider is chosen by ``FOOD_RECOGNITION_PROVIDER``; each falls back to mock mode
+    when its credentials are missing.
     """
-    return VisionService()
+    if settings.FOOD_RECOGNITION_PROVIDER == "vision":
+        return VisionService()
+    return GeminiRecognizer()
 
 
 def get_nutrition_service() -> NutritionService:

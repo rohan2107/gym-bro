@@ -1,8 +1,8 @@
 # Photo analysis
 
 Photograph a meal, get food predictions and macros, review and edit them, then save. This
-document describes the pipeline as built, its failure behaviour, its limits, and the planned
-change of provider. The original plan this replaces is in the git history.
+document describes the pipeline as built, its failure behaviour and its limits. The original
+plan this replaces is in the git history.
 
 ## User flow
 
@@ -25,10 +25,10 @@ POST /api/food-logs/from-photo          (multipart, authenticated)
   stream the body in 64KB chunks, cap at 10MB                        -> 413
   validate with Pillow: format, minimum 200x200, not HEIC            -> 400
   reserve one unit of the user's daily quota (row-locked, atomic)    -> 429 if none left
-  Google Cloud Vision: label + web detection
-      generic labels dropped, duplicates merged, top 3 kept          -> 503 on failure, quota refunded
-      nothing left                                                   -> 404, quota refunded
-  map each label to a USDA query, look up nutrition per item
+  configured provider: names the foods in the photo (top 3)
+      provider failure, quota or block                               -> 503, quota refunded
+      nothing recognised                                             -> 404, quota refunded
+  map each name to a USDA query, look up nutrition per item
       nothing found                                                  -> 404, quota refunded
   return predictions, quota state, image info
 ```
@@ -41,25 +41,57 @@ failed request never costs the user a photo. The limit is 30 per user per day, e
 
 | Component | Responsibility |
 |---|---|
-| `VisionService` | Calls Vision's `images:annotate` over REST and filters and ranks the result |
+| `FoodRecognizer` | The interface every provider implements; the endpoint depends only on this |
+| `GeminiRecognizer` | Default provider. Asks a Gemini model for the foods as schema-constrained JSON |
+| `VisionService` | Optional provider. Calls Vision's `images:annotate` over REST and filters and ranks labels |
+| `image_validation` | Local checks shared by all providers: format, size, dimensions, HEIC |
 | `NutritionService` | USDA FoodData Central lookup, 10s timeout, per-item |
-| `food_mapping` | Maps Vision labels to USDA search queries |
+| `food_mapping` | Maps a few common names to better USDA queries; other names are searched as given |
 | `RateLimiter` | Atomic per-user daily quota |
 | `PhotoCapture`, `MealReview` | The capture and review components in the frontend |
 
 All services are injected as dependencies, so tests replace them and no test calls a real
-service. See [ADR-0002](adr/0002-vision-rest-api-with-header-credentials.md).
+service. The provider is chosen by configuration
+([ADR-0005](adr/0005-food-recognition-providers.md)); Vision's REST integration is described in
+[ADR-0002](adr/0002-vision-rest-api-with-header-credentials.md).
 
-### Scores
+### Gemini provider
+
+The request asks for the distinct foods in the photo and constrains the reply to a JSON schema
+(`{"foods": [{"name", "confidence"}]}`) at temperature 0. The credential is sent in an
+`x-goog-api-key` header, never in the URL, because httpx puts the URL in its exception
+messages and this app logs them.
+
+The reply is untrusted input. Names are lower-cased, whitespace-collapsed and limited to 60
+characters; confidences are clamped to [0, 1]; items of the wrong type are dropped; duplicates
+keep the highest confidence; at most three are returned. A response with no candidates (a
+safety block, for example) is a provider failure, not "no food", so it returns `503` and
+refunds the quota. The prompt also tells the model to ignore instructions inside the image;
+that is a mitigation, not a guarantee, and the worst a hostile image can do here is change
+which food name is searched.
+
+Two models are configured. A `429` or `5xx` from the primary is retried once on the fallback,
+which has its own quota; other errors are not retried. Model ids are pinned in settings.
+
+### Vision provider
 
 Vision label scores are probabilities in [0, 1] and are thresholded at 0.70. Web-entity scores
 are unbounded relevance values that routinely exceed 1.0; they are thresholded at 0.60 on the
-raw value and clamped to 1.0 before being reported as a confidence.
+raw value and clamped to 1.0 before being reported as a confidence. It needs a billing
+account, so it is optional and off by default.
 
 ## Configuration and mock mode
 
-`GOOGLE_VISION_API_KEY` and `USDA_API_KEY` enable the two services. Without a key a service
-runs in **mock mode** and returns fixed sample data (always "pizza").
+| Setting | Purpose |
+|---|---|
+| `FOOD_RECOGNITION_PROVIDER` | `gemini` (default) or `vision`. Anything else fails at startup |
+| `GEMINI_API_KEY` | Enables the Gemini provider |
+| `GEMINI_MODEL`, `GEMINI_FALLBACK_MODEL` | Pinned model ids: `gemini-3.5-flash-lite` and `gemini-3.1-flash-lite` |
+| `GOOGLE_VISION_API_KEY` | Enables the Vision provider |
+| `USDA_API_KEY` | Enables nutrition lookup |
+
+Without its key a provider runs in **mock mode** and returns fixed sample data (always
+"pizza"), as does the nutrition service.
 
 - Locally and in tests, mock mode is expected and useful.
 - On a Vercel deployment the endpoint refuses instead, with a `503` and a message pointing to
@@ -74,51 +106,52 @@ runs in **mock mode** and returns fixed sample data (always "pizza").
 | HEIC photo | 400 (client blocks it first) | Not spent | How to get a JPEG on iPhone and on a Mac |
 | Larger than 10MB | 413 (client blocks it first) | Not spent | A size message |
 | Daily limit reached | 429 | n/a | Limit reached, log manually |
-| Vision unavailable or erroring | 503 | Refunded | Try again, or log manually |
+| Provider unavailable, rate limited, blocked or returning malformed output | 503 | Refunded | Try again, or log manually |
 | No food recognised | 404 | Refunded | Try a clearer photo, or log manually |
 | Food found but no nutrition match | 404 | Refunded | Log manually |
 | No provider configured on a deployment | 503 | Not spent | Log manually |
 
 ## Limits
 
-- **Nutrition is per 100g.** Vision returns labels, which carry no portion size, so the review
-  screen states the basis and lets the user edit every value.
+- **Nutrition is per 100g.** The provider names foods but does not yet estimate a portion, so
+  the review screen states the basis and lets the user edit every value. Portions are
+  [M0.3b](ROADMAP.md#m03b-portions).
+- **Accuracy is unmeasured.** The Gemini provider was smoke-tested on one clear photo (a pizza,
+  identified at 0.99) and one blank image (an empty list). Mixed plates and unusual foods have
+  not been measured; that is the job of the evaluation harness in Phase 1.
+- **Free-tier limits.** The Gemini free tier allows 15 requests a minute and 500 a day per
+  model, as observed on 2026-09-21. Beyond that it answers `429` and stops; it never bills
+  because no billing account is linked to the project. Google may use free-tier content to
+  improve its products, which the capture screen states.
 - **HEIC is not supported.** macOS Photos exports it and Pillow cannot decode it without an
   extra native library. iOS Safari normally converts to JPEG before upload, but this has not
   been confirmed on a device.
 - **Vision has not been run against the live API.** It needs a billing account, which conflicts
-  with [ADR-0003](adr/0003-hard-capped-providers-only.md). The label filter and mapping were
-  written from expected output and will need adjusting against real output.
-- **The Vision request body is capped at about 10MB** by Google, and base64 inflates an image by
-  roughly a third, so an image between about 7.5MB and 10MB could pass local validation and be
-  rejected upstream. Phone photos are normally smaller. This limit is from Google's
-  documentation and has not been reproduced.
+  with [ADR-0003](adr/0003-hard-capped-providers-only.md). Its label filter and mapping were
+  written from expected output and would need adjusting against real output.
+- **Request size.** Local validation allows 10MB, and base64 inflates an image by roughly a
+  third. Vercel also limits a function's request body (documented as 4.5MB), which phone
+  photos usually stay under but a full-resolution one may not. This has not been reproduced.
 
-## Planned: provider interface
+## Next
 
-[M0.3](ROADMAP.md#m03-food-recognition-providers) replaces label recognition with a provider
-interface ([ADR-0005](adr/0005-food-recognition-providers.md)). The target contract:
-
-```
-FoodRecognizer.recognize(image) -> [ { name, estimated_grams, confidence } ]
-```
-
-Each item is looked up in USDA by name and scaled to the estimated grams, so the review screen
-shows macros for the portion rather than for 100g. Providers are chosen by configuration:
-
-- a multimodal model on a free tier that stops at its limit (leading candidate: the Gemini API)
-- Google Cloud Vision, kept as an optional provider
-- mock, for development and tests
-
-Tests run against recorded provider responses ([ADR-0004](adr/0004-record-replay-for-llm-calls.md)),
-and every failure continues to degrade to manual entry.
+[M0.3b](ROADMAP.md#m03b-portions) asks the provider for an estimated portion in grams, looks
+each item up in USDA by name, and scales the macros to the portion, so the review screen shows
+the portion eaten rather than 100g. It also covers checking HEIC and camera capture on a real
+iPhone.
 
 ## Testing
 
+- Gemini parsing against responses **recorded from the live API** (`tests/fixtures/gemini/`),
+  plus synthetic cases for blocked, malformed and hostile output; the request shape; model
+  fallback for `429`, `5xx` and network errors; no fallback for client errors; failing closed
+  when both models fail
 - Vision parsing, filtering, thresholds, clamping, deduplication and error handling against a
   mocked `images:annotate` endpoint
-- Credential handling: the key is asserted to appear in neither the request URL nor the raised
-  exception
+- Provider selection by configuration, and an unknown provider failing at startup
+- Credential handling, for both providers: the key is asserted to appear in neither the request
+  URL nor the raised exception
 - The endpoint end to end with services replaced, including every failure row above
 - Mock-mode refusal on a deployment, and that it spends no quota
-- Frontend: capture validation (type, HEIC, size, quota display) and the review form
+- Frontend: capture validation (type, HEIC, size, quota display), the data-use notice, and the
+  review form

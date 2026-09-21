@@ -44,9 +44,9 @@ place. The plan adds capability to that foundation rather than starting beside i
 |---|---|
 | Core app (check-ins, meals, workouts, OAuth, PWA) | Shipped |
 | Schema management | Alembic is the sole owner; a fresh `alembic upgrade head` reproduces the models |
-| Photo analysis | Implemented against Google Cloud Vision + USDA; **unavailable on the live site** until a provider is configured, and never exercised against the live Vision API (billing required) |
+| Photo analysis | Provider interface with a Gemini free-tier provider (recorded-response tests, smoke-tested live) and USDA; Vision optional. **Needs `GEMINI_API_KEY` in Vercel** to work on the live site; per 100g until M0.3b |
 | CI/CD | 8 required gates on every PR; migrations applied on merge to `main` |
-| Tests | 178 backend, 50 frontend |
+| Tests | 221 backend, 51 frontend |
 | Audit | 14 findings fixed; 6 open, tracked in the [audit](AUDIT_2026-09.md#open-findings) |
 
 Production auth was verified after the fix: the `X-User-Id` impersonation header that
@@ -79,9 +79,10 @@ dates. Work is sequenced by dependency, and a slipped milestone slips everything
 
 | ID | Increment | Size | State |
 |---|---|---|---|
-| M0.1 | Documentation restructure and this roadmap | S | In review |
+| M0.1 | Documentation restructure and this roadmap | S | Done |
 | M0.2 | Runtime alignment | S | Done |
-| M0.3 | Food-recognition providers | M | Not started |
+| M0.3a | Food-recognition providers | M | In review |
+| M0.3b | Portions | S | Not started |
 
 ### M0.1: Documentation restructure
 
@@ -100,22 +101,36 @@ picked its default) against CI's 3.11, and Node 24 against CI's 20.
 
 **Done when**: CI and Vercel run the same Python and Node versions, and the docs say so.
 
-### M0.3: Food-recognition providers
+### M0.3a: Food-recognition providers
 
-The photo pipeline is Vision labels → label mapping → USDA. Vision needs a billing account,
-which conflicts with principle 2, and labels cannot express portion size.
+The photo pipeline was Vision labels → label mapping → USDA. Vision needs a billing account,
+which conflicts with principle 2. This increment replaces it with a provider interface and a
+provider that needs no billing account ([ADR-0005](adr/0005-food-recognition-providers.md)).
 
-- Introduce a `FoodRecognizer` interface; providers are selected through `Settings`
-- Add a multimodal-model provider that returns structured items with estimated portions
-  (candidate: the Gemini API free tier, see [ADR-0005](adr/0005-food-recognition-providers.md))
-- Keep the Vision implementation as an optional provider; keep mock mode for development
-- Look items up in USDA by name and scale to the estimated portion
+- A `FoodRecognizer` interface; providers selected through `Settings`, an unknown one failing
+  at startup
+- A Gemini provider on the free tier: schema-constrained JSON, pinned model ids, a fallback
+  model, output treated as untrusted, failing closed with the quota refunded
+- Vision kept as an optional provider; mock mode kept for development
+- Image validation moved out of Vision so every provider shares it
+- Tests run against responses recorded from the live API, not live calls
+- A data-use notice where the photo is taken
+
+**Done when**: the provider is swappable by configuration alone, every failure degrades to
+manual entry, and photo analysis works on the live site with no billing account attached. The
+last part needs `GEMINI_API_KEY` set in Vercel and is checked after merge.
+
+### M0.3b: Portions
+
+Labels and names carry no portion size, so nutrition is still per 100g.
+
+- Ask the provider for an estimated portion in grams alongside each name
+- Look items up in USDA by name and scale the macros to the portion
 - Show and allow editing of the portion in the review UI
-- Tests run against recorded provider responses, not live calls
 - Verify HEIC handling and camera capture on a real iPhone
 
-**Done when**: photo analysis works on the live site with no billing account attached, every
-failure degrades to manual entry, and the provider is swappable by configuration alone.
+**Done when**: the review screen shows macros for the portion eaten, the portion is editable,
+and the iPhone flow has been exercised on a device.
 
 ---
 
@@ -125,7 +140,7 @@ failure degrades to manual entry, and the provider is swappable by configuration
 
 | ID | Increment | Size | Depends on |
 |---|---|---|---|
-| M1.1 | Knowledge corpus and retrieval with citations | L | M0.3 (provider pattern) |
+| M1.1 | Knowledge corpus and retrieval with citations | L | M0.3a (provider pattern) |
 | M1.2 | LLM record/replay layer | M | M1.1 |
 | M1.3 | Golden set and evaluation harness, gated in CI | L | M1.2 |
 | M1.4 | Tracing and cost/latency tracking | M | M1.2 |

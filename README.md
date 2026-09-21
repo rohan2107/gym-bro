@@ -8,21 +8,21 @@
 
 A full-stack fitness PWA with AI meal photo analysis, offline support, and a mobile-first UI. Built with FastAPI, React, and deployed on Vercel with CI/CD.
 
-**Stack**: React · TypeScript · FastAPI · PostgreSQL · Google Cloud Vision · USDA API
+**Stack**: React · TypeScript · FastAPI · PostgreSQL · Gemini API · USDA API
 
 ## Features
 
 ✅ **AI meal photo analysis** — photograph a meal, get food predictions and macros, editable
-before saving. Implemented against Google Cloud Vision and USDA; **currently disabled on the
-live site** until a provider that needs no billing account is configured (see the
-[roadmap](docs/ROADMAP.md#m03-food-recognition-providers)). Locally it runs in mock mode
-without keys  
+before saving. Foods are recognised by the Gemini API (free tier, no billing account) and
+looked up in USDA; the provider is swappable by configuration. **Enabled on the live site once
+`GEMINI_API_KEY` is set there**; locally it runs in mock mode without keys. Nutrition is per
+100g until portion estimates land ([roadmap](docs/ROADMAP.md#m03b-portions))  
 ✅ Google OAuth 2.0 authentication  
 ✅ Daily check-ins (weight, steps, training status)  
 ✅ Meal logging with calorie & macro tracking  
 ✅ Workout tracking with exercise sets  
 ✅ Mobile-first PWA with offline support  
-✅ 228 automated tests, 85% backend coverage  
+✅ 272 automated tests, 87% backend coverage  
 ✅ CI/CD pipeline with GitHub Actions (8 required jobs + Vercel preview smoke test on PRs)
 
 ## Architecture
@@ -31,9 +31,9 @@ without keys
 **Backend**: FastAPI, SQLModel, Pydantic v2  
 **Database**: PostgreSQL (Neon)  
 **Auth**: Google OAuth 2.0 + JWT (httpOnly cookies)  
-**AI**: Google Cloud Vision API + USDA FoodData Central  
+**AI**: Gemini API (food recognition) + USDA FoodData Central  
 **Hosting**: Vercel (frontend + serverless functions)  
-**Testing**: pytest (178 tests), Vitest (50 tests), GitHub Actions
+**Testing**: pytest (221 tests), Vitest (51 tests), GitHub Actions
 
 ## Quick Start
 
@@ -72,8 +72,9 @@ JWT_SECRET_KEY=your-jwt-secret
 FRONTEND_URL=http://localhost:5173
 
 # Optional: without these, photo analysis runs in mock mode
-GOOGLE_VISION_API_KEY=your-vision-api-key
+GEMINI_API_KEY=your-gemini-api-key        # https://aistudio.google.com, free tier
 USDA_API_KEY=your-usda-api-key
+# FOOD_RECOGNITION_PROVIDER=vision        # optional; needs GOOGLE_VISION_API_KEY and billing
 ```
 
 All settings are declared in [gymbro-api/app/config.py](gymbro-api/app/config.py).
@@ -89,7 +90,7 @@ URI to register.
 ## Testing
 
 ```bash
-# Backend (178 tests)
+# Backend (221 tests)
 cd gymbro-api && pytest -v
 
 # Frontend (50 tests)
