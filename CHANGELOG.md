@@ -8,6 +8,12 @@ entries are grouped by milestone and dated.
 
 ### Changed
 
+- Photo analysis estimates the portion in grams and scales USDA's per-100g values to it. When
+  USDA errors, times out or has no match, the model's own estimate is returned, labelled as an
+  AI estimate, instead of failing the request; the review screen states which it is
+  ([ADR-0010](docs/adr/0010-usda-as-a-local-reference.md), proposed)
+- The per-model Gemini timeout is 12 seconds, so a hanging model does not hold the user long
+  before the fallback model is tried
 - Photo analysis recognises foods with the Gemini API free tier (no billing account) through a
   `FoodRecognizer` interface; Google Cloud Vision is now an optional provider, chosen by
   `FOOD_RECOGNITION_PROVIDER` ([ADR-0005](docs/adr/0005-food-recognition-providers.md),
@@ -36,6 +42,17 @@ entries are grouped by milestone and dated.
 
 ### Fixed
 
+- **Security:** the USDA API key was sent in the URL and written to production logs. It is now a
+  header, logs carry status codes only, and the `httpx` logger is quieted at startup. Rotate
+  any key that has appeared in a log
+- Photos of common foods failed with "Could not find nutrition data" because USDA answered `400`
+  to about half of searches that used a `dataType` filter, and the service reported every error
+  as "no match". The filter is gone, transient errors are retried, and a failed lookup is now a
+  `503` with the quota refunded, distinct from a real `404`
+- Nutrition extraction could report kilojoules as calories for Foundation and SR Legacy foods;
+  energy is now matched by unit
+- USDA results are filtered (no branded products, no entries without macro data) and ranked, so
+  "apples" no longer returns candied apple and no match is preferred to a wrong one
 - Photo upload failed with "Load failed" for any photo over about 4.5MB, because Vercel rejects
   larger request bodies before the API runs. The browser now shrinks the photo (1600px, JPEG)
   before uploading, and a dropped connection shows a clear message

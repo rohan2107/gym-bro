@@ -218,9 +218,12 @@ flow, the session model and known gaps are in [AUTHENTICATION.md](AUTHENTICATION
   on vercel.app an allowed credentialed origin. `CORS_PREVIEW_ORIGIN_REGEX` allows additional
   origins but is unset by default, since on Vercel the frontend and API share an origin and
   CORS is never consulted.
-- **Credentials in logs**: the Gemini and Vision keys are sent as headers (`x-goog-api-key`,
-  `X-Goog-Api-Key`) rather than query parameters, because httpx embeds the request URL in `HTTPStatusError` and the
-  photo endpoint logs that exception with `exc_info=True`.
+- **Credentials in logs**: the Gemini, Vision and USDA keys are sent as headers
+  (`x-goog-api-key`, `X-Goog-Api-Key`, `X-Api-Key`) rather than query parameters, because httpx
+  embeds the request URL in `HTTPStatusError` and in its own INFO log. Services log status
+  codes, not exception text, and the `httpx` logger is raised to WARNING at startup
+  ([F13](AUDIT_2026-09.md#f13-api-key-in-the-request-url),
+  [F15](AUDIT_2026-09.md#f15-usda-key-in-the-request-url-and-in-production-logs)).
 - **API protection**: 10s timeout on all external calls
 - **Error handling**: Generic user-facing messages, detailed internal logging with `exc_info=True`
 
@@ -231,19 +234,19 @@ client) are tracked as open findings in the [audit](AUDIT_2026-09.md#open-findin
 
 ## Testing
 
-**221 backend tests** (pytest, ~4s) | **80 frontend tests** (Vitest, ~1s) | **301 total**
+**284 backend tests** (pytest, ~4s) | **83 frontend tests** (Vitest, ~1s) | **367 total**
 
-Backend coverage is **87%**. The OAuth callback in `auth.py` is largely uncovered because it
+Backend coverage is **88%**. The OAuth callback in `auth.py` is largely uncovered because it
 needs a real Google flow.
 
 | Backend area | Tests |
 |---|---|
-| Gemini provider (recorded responses, fallback, parsing, credentials) | 38 |
+| Gemini provider (recorded responses, fallback, parsing, portion estimates, credentials) | 57 |
 | Vision provider (parsing, filtering, credentials) | 22 |
-| Photo endpoint (every failure path, mock-mode refusal) | 21 |
+| Photo endpoint (every failure path, mock-mode refusal, USDA grounding and fallback) | 31 |
 | Auth dependencies, development header, provider selection | 22 |
 | Rate limiter (atomicity, refunds) | 17 |
-| Nutrition service | 12 |
+| Nutrition service (recorded response, retry, ranking, portion scaling, credentials) | 45 |
 | Image validation (format, size, HEIC) | 11 |
 | Workouts and exercise sets | 11 |
 | Daily check-ins | 11 |
@@ -255,7 +258,7 @@ needs a real Google flow.
 | Requirements parity (production vs CI) | 5 |
 | Migrations (fresh build matches models, reversible) | 4 |
 | Runtime versions (CI and Vercel match the pinned Python and Node) | 3 |
-| Lifespan | 2 |
+| Lifespan and logging setup | 3 |
 
 | Frontend area | Tests |
 |---|---|
@@ -263,7 +266,7 @@ needs a real Google flow.
 | API client (request helper, every endpoint, photo upload) | 18 |
 | Image resizing before upload | 10 |
 | Utilities | 12 |
-| Meal review | 10 |
+| Meal review (including the basis of the numbers) | 13 |
 | Bottom navigation | 8 |
 | Offline indicator | 7 |
 
@@ -316,8 +319,9 @@ layer is measured.
 
 ## Known limitations
 
-- **Photo analysis needs `GEMINI_API_KEY` set on Vercel**, reports nutrition per 100g, and its
-  accuracy is unmeasured. The Vision provider has never run against the live API. See
+- **Photo analysis needs `GEMINI_API_KEY` set on Vercel.** Portions and macros are estimates
+  whose accuracy is unmeasured, and the review screen says whether they came from USDA or from
+  the model alone. The Vision provider has never run against the live API. See
   [PHOTO_ANALYSIS.md](PHOTO_ANALYSIS.md).
 - **Blocking database calls in async handlers.** Sessions are synchronous throughout, so
   database latency occupies the event loop. It affects every router and is scheduled as

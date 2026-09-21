@@ -486,6 +486,227 @@ class TestPhotoMealLogging:
         finally:
             session_gen.close()
 
+    def test_nutrition_lookup_failure_is_a_503_not_a_misleading_404_and_refunds_quota(
+        self,
+        client: TestClient,
+        user_token: str,
+        test_user_in_db: User,
+        valid_image_file: tuple[str, BytesIO, str]
+    ) -> None:
+        """USDA erroring is "try again", not "we found no nutrition data"."""
+        from app.services.nutrition import NutritionLookupError
+
+        session_gen = _get_session_gen(client)
+        try:
+            user = next(session_gen).get(User, 1)
+            assert user is not None
+            initial_count = user.photo_count
+        finally:
+            session_gen.close()
+
+        with patch('app.services.gemini.GeminiRecognizer.detect_food', new_callable=AsyncMock) as mock_detect, \
+             patch('app.services.nutrition.NutritionService.search_food', new_callable=AsyncMock) as mock_search:
+            mock_detect.return_value = [{"label": "banana", "confidence": 0.9, "source": "gemini"}]
+            mock_search.side_effect = NutritionLookupError("USDA returned 403")
+
+            response = client.post(
+                "/food-logs/from-photo",
+                files={"photo": valid_image_file},
+                headers={"Authorization": f"Bearer {user_token}"}
+            )
+
+        assert response.status_code == 503
+        assert "USDA" not in response.json()["detail"]
+        assert "manually" in response.json()["detail"]
+
+        session_gen = _get_session_gen(client)
+        try:
+            user = next(session_gen).get(User, 1)
+            assert user is not None
+            assert user.photo_count == initial_count
+        finally:
+            session_gen.close()
+
+    def test_no_nutrition_match_is_still_a_404(
+        self,
+        client: TestClient,
+        user_token: str,
+        test_user_in_db: User,
+        valid_image_file: tuple[str, BytesIO, str]
+    ) -> None:
+        with patch('app.services.gemini.GeminiRecognizer.detect_food', new_callable=AsyncMock) as mock_detect, \
+             patch('app.services.nutrition.NutritionService.search_food', new_callable=AsyncMock) as mock_search:
+            mock_detect.return_value = [{"label": "unobtainium", "confidence": 0.9, "source": "gemini"}]
+            mock_search.return_value = None
+
+            response = client.post(
+                "/food-logs/from-photo",
+                files={"photo": valid_image_file},
+                headers={"Authorization": f"Bearer {user_token}"}
+            )
+
+        assert response.status_code == 404
+
+    def test_one_failed_lookup_does_not_hide_the_foods_that_were_found(
+        self,
+        client: TestClient,
+        user_token: str,
+        test_user_in_db: User,
+        valid_image_file: tuple[str, BytesIO, str],
+        mock_nutrition_data: dict[str, Any]
+    ) -> None:
+        from app.services.nutrition import NutritionLookupError
+
+        with patch('app.services.gemini.GeminiRecognizer.detect_food', new_callable=AsyncMock) as mock_detect, \
+             patch('app.services.nutrition.NutritionService.search_food', new_callable=AsyncMock) as mock_search:
+            mock_detect.return_value = [
+                {"label": "banana", "confidence": 0.9, "source": "gemini"},
+                {"label": "pizza", "confidence": 0.8, "source": "gemini"},
+            ]
+            mock_search.side_effect = [NutritionLookupError("USDA returned 503"), mock_nutrition_data]
+
+            response = client.post(
+                "/food-logs/from-photo",
+                files={"photo": valid_image_file},
+                headers={"Authorization": f"Bearer {user_token}"}
+            )
+
+        assert response.status_code == 200
+        assert [p["label"] for p in response.json()["predictions"]] == ["pizza"]
+
+    def _post_photo(self, client, user_token, valid_image_file, predictions, search_result=None, search_side_effect=None):
+        """Run the endpoint with the recognizer and USDA replaced."""
+        with patch('app.services.gemini.GeminiRecognizer.detect_food', new_callable=AsyncMock) as mock_detect, \
+             patch('app.services.nutrition.NutritionService.search_food', new_callable=AsyncMock) as mock_search:
+            mock_detect.return_value = predictions
+            mock_search.return_value = search_result
+            if search_side_effect is not None:
+                mock_search.side_effect = search_side_effect
+            return client.post(
+                "/food-logs/from-photo",
+                files={"photo": valid_image_file},
+                headers={"Authorization": f"Bearer {user_token}"}
+            )
+
+    PIZZA_WITH_ESTIMATE = {
+        "label": "pizza", "confidence": 0.9, "source": "gemini", "portion_g": 300,
+        "estimate": {"calories": 800, "protein_g": 30.0, "carbs_g": 90.0, "fat_g": 32.0},
+    }
+
+    def test_usda_values_are_scaled_to_the_estimated_portion(
+        self, client: TestClient, user_token: str, test_user_in_db: User,
+        valid_image_file: tuple[str, BytesIO, str], mock_nutrition_data: dict[str, Any]
+    ) -> None:
+        response = self._post_photo(
+            client, user_token, valid_image_file, [self.PIZZA_WITH_ESTIMATE], mock_nutrition_data
+        )
+
+        assert response.status_code == 200
+        nutrition = response.json()["predictions"][0]["nutrition"]
+        assert nutrition["source"] == "usda"
+        assert nutrition["serving_size"] == "300g"
+        assert nutrition["calories"] == round(mock_nutrition_data["calories"] * 3)
+
+    def test_usda_values_stay_per_100g_when_no_portion_was_estimated(
+        self, client: TestClient, user_token: str, test_user_in_db: User,
+        valid_image_file: tuple[str, BytesIO, str], mock_nutrition_data: dict[str, Any]
+    ) -> None:
+        bare = {"label": "pizza", "confidence": 0.9, "source": "gemini", "portion_g": None, "estimate": None}
+
+        response = self._post_photo(client, user_token, valid_image_file, [bare], mock_nutrition_data)
+
+        nutrition = response.json()["predictions"][0]["nutrition"]
+        assert nutrition["source"] == "usda"
+        assert nutrition["serving_size"] == "100g"
+        assert nutrition["calories"] == mock_nutrition_data["calories"]
+
+    def test_a_usda_failure_falls_back_to_the_models_own_estimate(
+        self, client: TestClient, user_token: str, test_user_in_db: User,
+        valid_image_file: tuple[str, BytesIO, str]
+    ) -> None:
+        """USDA erroring degrades accuracy, not availability."""
+        from app.services.nutrition import NutritionLookupError
+
+        response = self._post_photo(
+            client, user_token, valid_image_file, [self.PIZZA_WITH_ESTIMATE],
+            search_side_effect=NutritionLookupError("USDA returned 503"),
+        )
+
+        assert response.status_code == 200
+        nutrition = response.json()["predictions"][0]["nutrition"]
+        assert nutrition["source"] == "ai_estimate"
+        assert nutrition["calories"] == 800
+        assert nutrition["serving_size"] == "300g"
+        assert nutrition["fdc_id"] is None
+
+    def test_no_usda_match_also_falls_back_to_the_estimate(
+        self, client: TestClient, user_token: str, test_user_in_db: User,
+        valid_image_file: tuple[str, BytesIO, str]
+    ) -> None:
+        response = self._post_photo(
+            client, user_token, valid_image_file, [self.PIZZA_WITH_ESTIMATE], search_result=None
+        )
+
+        assert response.status_code == 200
+        assert response.json()["predictions"][0]["nutrition"]["source"] == "ai_estimate"
+
+    def test_a_slow_usda_lookup_is_cut_off_and_falls_back(
+        self, client: TestClient, user_token: str, test_user_in_db: User,
+        valid_image_file: tuple[str, BytesIO, str], monkeypatch
+    ) -> None:
+        import asyncio
+
+        from app.routers import food_logs
+
+        async def slow_search(self, query):
+            await asyncio.sleep(5)
+
+        monkeypatch.setattr(food_logs, "NUTRITION_LOOKUP_BUDGET_SECONDS", 0.05)
+        with patch('app.services.nutrition.NutritionService.search_food', slow_search), \
+             patch('app.services.gemini.GeminiRecognizer.detect_food', new_callable=AsyncMock) as mock_detect:
+            mock_detect.return_value = [self.PIZZA_WITH_ESTIMATE]
+            response = client.post(
+                "/food-logs/from-photo",
+                files={"photo": valid_image_file},
+                headers={"Authorization": f"Bearer {user_token}"}
+            )
+
+        assert response.status_code == 200
+        assert response.json()["predictions"][0]["nutrition"]["source"] == "ai_estimate"
+
+    def test_an_estimate_without_a_portion_is_not_used(
+        self, client: TestClient, user_token: str, test_user_in_db: User,
+        valid_image_file: tuple[str, BytesIO, str]
+    ) -> None:
+        """Macros with no stated portion cannot be labelled honestly, so USDA failing is a 503."""
+        from app.services.nutrition import NutritionLookupError
+
+        odd = {**self.PIZZA_WITH_ESTIMATE, "portion_g": None}
+
+        response = self._post_photo(
+            client, user_token, valid_image_file, [odd],
+            search_side_effect=NutritionLookupError("USDA returned 503"),
+        )
+
+        assert response.status_code == 503
+
+    def test_the_other_foods_still_use_usda_when_only_one_lookup_fails(
+        self, client: TestClient, user_token: str, test_user_in_db: User,
+        valid_image_file: tuple[str, BytesIO, str], mock_nutrition_data: dict[str, Any]
+    ) -> None:
+        from app.services.nutrition import NutritionLookupError
+
+        rice = {"label": "rice", "confidence": 0.8, "source": "gemini", "portion_g": 150,
+                "estimate": {"calories": 200, "protein_g": 4.0, "carbs_g": 44.0, "fat_g": 0.5}}
+
+        response = self._post_photo(
+            client, user_token, valid_image_file, [self.PIZZA_WITH_ESTIMATE, rice],
+            search_side_effect=[NutritionLookupError("USDA returned 503"), mock_nutrition_data],
+        )
+
+        sources = {p["label"]: p["nutrition"]["source"] for p in response.json()["predictions"]}
+        assert sources == {"pizza": "ai_estimate", "rice": "usda"}
+
     def test_the_image_mime_type_reaches_the_provider(
         self,
         client: TestClient,

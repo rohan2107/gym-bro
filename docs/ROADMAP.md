@@ -46,8 +46,8 @@ place. The plan adds capability to that foundation rather than starting beside i
 | Schema management | Alembic is the sole owner; a fresh `alembic upgrade head` reproduces the models |
 | Photo analysis | Provider interface with a Gemini free-tier provider (recorded-response tests, smoke-tested live) and USDA; Vision optional. **Needs `GEMINI_API_KEY` in Vercel** to work on the live site; per 100g until M0.3b |
 | CI/CD | 8 required gates on every PR; migrations applied on merge to `main` |
-| Tests | 221 backend, 80 frontend |
-| Audit | 14 findings fixed; 6 open, tracked in the [audit](AUDIT_2026-09.md#open-findings) |
+| Tests | 284 backend, 83 frontend |
+| Audit | 16 findings fixed; 6 open, tracked in the [audit](AUDIT_2026-09.md#open-findings) |
 
 Production auth was verified after the fix: the `X-User-Id` impersonation header that
 previously returned `200` now returns `401`.
@@ -82,7 +82,8 @@ dates. Work is sequenced by dependency, and a slipped milestone slips everything
 | M0.1 | Documentation restructure and this roadmap | S | Done |
 | M0.2 | Runtime alignment | S | Done |
 | M0.3a | Food-recognition providers | M | In review |
-| M0.3b | Portions | S | Not started |
+| M0.3b | Portions and a graceful fallback | M | In review |
+| M0.3c | Portion editing and device check | S | Not started |
 
 ### M0.1: Documentation restructure
 
@@ -120,17 +121,33 @@ provider that needs no billing account ([ADR-0005](adr/0005-food-recognition-pro
 manual entry, and photo analysis works on the live site with no billing account attached. The
 last part needs `GEMINI_API_KEY` set in Vercel and is checked after merge.
 
-### M0.3b: Portions
+### M0.3b: Portions and a graceful fallback
 
-Labels and names carry no portion size, so nutrition is still per 100g.
+Names alone carry no portion size, and USDA failing ended the request. This increment makes
+the flow work when USDA does not, and gives the numbers a portion.
 
-- Ask the provider for an estimated portion in grams alongside each name
-- Look items up in USDA by name and scale the macros to the portion
-- Show and allow editing of the portion in the review UI
+- The model also estimates the portion in grams and the macros for it; both are optional and
+  validated against plausible bounds, and a partial estimate is discarded whole
+- USDA per-100g values are scaled to the estimated portion
+- Lookups run concurrently and each is time-boxed; when USDA fails or has no match, the model's
+  own estimate is used and marked `ai_estimate`, so a USDA problem lowers accuracy instead of
+  ending the request
+- The review screen says which it is: USDA per 100g, USDA scaled to a portion, or an AI
+  estimate that is not from a nutrition database
+- Per-model Gemini timeout cut to 12 seconds so a hanging model does not hold the user before
+  the fallback model is tried
+- Decision recorded in [ADR-0010](adr/0010-usda-as-a-local-reference.md)
+
+**Done when**: a photo on the live site returns usable numbers with USDA unavailable, and the
+source of each number is stated.
+
+### M0.3c: Portion editing and device check
+
+- Make the portion editable in the review screen, recalculating the macros from the gram value
 - Verify HEIC handling and camera capture on a real iPhone
 
-**Done when**: the review screen shows macros for the portion eaten, the portion is editable,
-and the iPhone flow has been exercised on a device.
+**Done when**: changing the portion updates the macros, and the iPhone flow has been exercised
+on a device.
 
 ---
 
@@ -140,11 +157,30 @@ and the iPhone flow has been exercised on a device.
 
 | ID | Increment | Size | Depends on |
 |---|---|---|---|
+| M1.0 | USDA reference dataset in Postgres, replacing the live API | M | M0.3b |
 | M1.1 | Knowledge corpus and retrieval with citations | L | M0.3a (provider pattern) |
 | M1.2 | LLM record/replay layer | M | M1.1 |
 | M1.3 | Golden set and evaluation harness, gated in CI | L | M1.2 |
 | M1.4 | Tracing and cost/latency tracking | M | M1.2 |
 | M1.5 | Planted cases, judge validation, retrieval ablation | M | M1.3, M1.4 |
+
+### M1.0: USDA reference dataset
+
+Decided in [ADR-0010](adr/0010-usda-as-a-local-reference.md) (proposed): the app owns the
+reference data instead of calling the API per request.
+
+- **Gate first**: confirm the licence from the release notes, that Postgres search on Neon
+  (`pg_trgm` or full-text) is available and good enough, and that the data fits the storage
+  limit
+- Alembic migration for foods, macros and household portions
+- A reproducible import script for FNDDS, Foundation and SR Legacy, recording the release used
+  and crediting FoodData Central
+- A local search service behind the interface `NutritionService` has today; the request path
+  makes no USDA call
+- Household portions used to turn the model's portion description into grams
+
+**Done when**: photo analysis makes no USDA request, the migration is applied by CI, and search
+results for a fixed set of queries are covered by tests.
 
 ### M1.1: Knowledge corpus and retrieval
 

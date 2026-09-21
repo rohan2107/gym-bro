@@ -1,7 +1,7 @@
 """Tests for the Gemini food-recognition provider.
 
 Responses in tests/fixtures/gemini/ were recorded from the live API (model
-gemini-3.5-flash-lite, 2026-09-21) with the same request this module sends, so the parser is
+gemini-3.1-flash-lite, 2026-09-21) with the same request this module sends, so the parser is
 tested against the real response shape. Nothing here makes a live call.
 """
 
@@ -87,7 +87,15 @@ class TestRecordedResponses:
 
         result = await recognizer.detect_food(IMAGE)
 
-        assert result == [{"label": "pizza", "confidence": 0.99, "source": "gemini"}]
+        assert result == [
+            {
+                "label": "margherita pizza",
+                "confidence": 0.98,
+                "source": "gemini",
+                "portion_g": 750.0,
+                "estimate": {"calories": 1800, "protein_g": 70.0, "carbs_g": 210.0, "fat_g": 75.0},
+            }
+        ]
 
     @respx.mock
     async def test_recorded_photo_with_no_food_is_an_empty_list(self, recognizer):
@@ -215,7 +223,8 @@ class TestParsing:
             answer({"name": "Rice", "confidence": 0.4}, {"name": "rice", "confidence": 0.8})
         )
 
-        assert result == [{"label": "rice", "confidence": 0.8, "source": "gemini"}]
+        assert len(result) == 1
+        assert (result[0]["label"], result[0]["confidence"]) == ("rice", 0.8)
 
     def test_ranked_by_confidence_and_capped(self, recognizer):
         foods = [{"name": f"food {i}", "confidence": i / 10} for i in range(1, 7)]
@@ -238,3 +247,60 @@ class TestParsing:
     )
     def test_invalid_items_are_skipped(self, recognizer, item):
         assert recognizer._parse(answer(item)) == []
+
+
+def item(**fields) -> dict:
+    return {"name": "pizza", "confidence": 0.9, **fields}
+
+
+FULL = {"estimated_grams": 300, "calories": 800, "protein_g": 30, "carbs_g": 90, "fat_g": 32}
+
+
+class TestPortionEstimate:
+    """The model's portion and macro estimate is optional and validated, never trusted."""
+
+    def test_a_complete_estimate_is_kept(self, recognizer):
+        (result,) = recognizer._parse(answer(item(**FULL)))
+
+        assert result["portion_g"] == 300
+        assert result["estimate"] == {"calories": 800, "protein_g": 30.0, "carbs_g": 90.0, "fat_g": 32.0}
+
+    def test_no_estimate_fields_is_fine(self, recognizer):
+        (result,) = recognizer._parse(answer(item()))
+
+        assert result["portion_g"] is None
+        assert result["estimate"] is None
+
+    def test_grams_without_macros_keeps_the_grams_for_scaling_usda(self, recognizer):
+        (result,) = recognizer._parse(answer(item(estimated_grams=250)))
+
+        assert result["portion_g"] == 250
+        assert result["estimate"] is None
+
+    @pytest.mark.parametrize("missing", ["calories", "protein_g", "carbs_g", "fat_g"])
+    def test_a_partial_estimate_is_discarded_whole(self, recognizer, missing):
+        fields = {k: v for k, v in FULL.items() if k != missing}
+
+        (result,) = recognizer._parse(answer(item(**fields)))
+
+        assert result["estimate"] is None
+        assert result["portion_g"] == 300
+
+    @pytest.mark.parametrize("grams", [0, -50, 3001, 40_000, "300", True, None])
+    def test_an_implausible_portion_is_dropped_and_takes_the_estimate_with_it(self, recognizer, grams):
+        (result,) = recognizer._parse(answer(item(**{**FULL, "estimated_grams": grams})))
+
+        assert result["portion_g"] is None
+        assert result["estimate"] is None
+
+    @pytest.mark.parametrize(
+        ("field", "value"),
+        [("calories", 5001), ("calories", -1), ("protein_g", 501), ("carbs_g", -5), ("fat_g", "lots")],
+    )
+    def test_an_implausible_macro_discards_the_estimate_but_not_the_portion(
+        self, recognizer, field, value
+    ):
+        (result,) = recognizer._parse(answer(item(**{**FULL, field: value})))
+
+        assert result["estimate"] is None
+        assert result["portion_g"] == 300

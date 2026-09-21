@@ -138,10 +138,25 @@ For the agent, the unit under test is the sequence of tool calls:
 
 ## Food recognition (optional, Phase 0)
 
-If provider choice for [M0.3a](ROADMAP.md#m03a-food-recognition-providers) is to be evidence
-rather than preference, a small set of 20–30 meals photographed by the author gives item
-precision and recall and a calorie error against known portions. Photographs must be the
-author's own, to avoid redistribution problems.
+The claims made about photo analysis, and the choice in
+[ADR-0010](adr/0010-usda-as-a-local-reference.md), should rest on measurement. A golden set of
+20–30 meals photographed by the author, each weighed on a kitchen scale and its nutrition
+computed from the weights, gives item precision and recall and an error in calories and macros
+against a known truth. Photographs must be the author's own, to avoid redistribution problems.
+
+Variants to compare on the same photos:
+
+| Variant | What it tests |
+|---|---|
+| A. Model alone | Its own name, portion and macro estimates, with no database |
+| B. Model plus USDA lookup | The current pipeline: model names and portions, database supplies the values |
+| C. Model choosing among locally retrieved candidates | Retrieval grounded in the local reference dataset ([M1.0](ROADMAP.md#m10-usda-reference-dataset)) |
+
+Report mean absolute error and mean absolute percentage error for calories and each macro,
+split by meal type, with confidence intervals. Published work reports large errors that grow
+with portion size for ungrounded estimates and a large reduction from grounding in FNDDS by
+retrieval; these are motivation, not a prediction about this app, and the models used here
+have not been measured.
 
 ## Reporting and reproducibility
 
