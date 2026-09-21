@@ -258,6 +258,7 @@ in `auth.py` is largely uncovered because it needs a real Google flow.
 | Image resizing | Dimensions, no upscaling, orientation, quality fallback, decode failure |
 | API client | The request helper, every endpoint, the photo upload |
 | Meal review | Form behaviour and the basis of the numbers |
+| Service worker | `public/sw.js` run against a fake cache: network-first pages, offline and slow-network fallback, permanent hashed assets, lifecycle |
 | Components and utilities | Bottom navigation, offline indicator, helpers |
 
 Four groups of tests exist to stop a specific past defect recurring: `test_requirements_parity.py`
@@ -310,6 +311,9 @@ layer is measured.
 
 ## Known limitations
 
+- **A device can run a stale frontend for up to a day after a deploy** until the fix in
+  [M0.4](ROADMAP.md#m04-stale-frontend-after-a-deploy) (in review) is live: the old worker served
+  the page cache-first for 24 hours while the API was always fresh.
 - **Photo analysis needs `GEMINI_API_KEY` set on Vercel.** Portions and macros are estimates
   whose accuracy is unmeasured, and the review screen says whether they came from USDA or from
   the model alone. The Vision provider has never run against the live API. See
@@ -322,7 +326,9 @@ layer is measured.
   Whether streaming works is to be settled by experiment ([ADR-0006](adr/0006-streaming-on-vercel.md)).
 - **Cold starts.** A Vercel function and a Neon compute that have scaled to zero each add
   latency to the first request.
-- **Offline writes** are not supported; the service worker provides a read-only cache.
+- **Offline writes** are not supported; the service worker provides a read-only cache. The page
+  is fetched network-first with the cached shell as fallback, and hashed assets are cached
+  permanently.
 - **Profile page** shows placeholder data.
 - **Nutrition is per 100g**, and HEIC photos are rejected; see
   [PHOTO_ANALYSIS.md](PHOTO_ANALYSIS.md#limits).

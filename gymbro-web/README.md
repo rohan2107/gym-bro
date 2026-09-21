@@ -75,5 +75,7 @@ redirects to `/login`.
 ## PWA
 
 `public/manifest.json` and `public/sw.js` provide installability and a read-only offline
-cache. Offline writes are not supported — `OfflineIndicator` tells the user when they are
+cache. The page is fetched network-first (so a deploy shows on the next load) with the cached
+shell as the offline fallback, and content-hashed assets are cached permanently. Change the
+cache name in `sw.js` whenever the strategy changes. Offline writes are not supported — `OfflineIndicator` tells the user when they are
 disconnected.

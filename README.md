@@ -14,8 +14,7 @@ A full-stack fitness PWA with AI meal photo analysis, offline support, and a mob
 
 ✅ **AI meal photo analysis** — photograph a meal, get food predictions and macros, editable
 before saving. Foods are recognised by the Gemini API (free tier, no billing account) and
-looked up in USDA; the provider is swappable by configuration. **Enabled on the live site once
-`GEMINI_API_KEY` is set there**; locally it runs in mock mode without keys. Portions and macros are
+looked up in USDA; the provider is swappable by configuration. **Enabled on the live site**; locally it runs in mock mode without keys. Portions and macros are
 estimates: grounded in USDA where it has a match, otherwise the model's own, and labelled
 which ([roadmap](docs/ROADMAP.md#m03b-portions-and-a-graceful-fallback))  
 ✅ Google OAuth 2.0 authentication  

@@ -58,6 +58,11 @@ entries are grouped by milestone and dated.
 
 ### Fixed
 
+- After a deploy, a device could run the old frontend against the new API for up to 24 hours,
+  because the service worker served the page cache-first. The page is now fetched network-first
+  (falling back to the cached shell offline or after four seconds), hashed assets stay
+  cached permanently, and the cache name is bumped so the old shell is dropped. Seen as
+  portion-scaled numbers under the old "per 100g" note
 - **Security:** the USDA API key was sent in the URL and written to production logs. It is now a
   header, logs carry status codes only, and the `httpx` logger is quieted at startup. Rotate
   any key that has appeared in a log

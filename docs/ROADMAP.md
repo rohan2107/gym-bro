@@ -44,10 +44,10 @@ place. The plan adds capability to that foundation rather than starting beside i
 |---|---|
 | Core app (check-ins, meals, workouts, OAuth, PWA) | Shipped |
 | Schema management | Alembic is the sole owner; a fresh `alembic upgrade head` reproduces the models |
-| Photo analysis | Provider interface with a Gemini free-tier provider (recorded-response tests, smoke-tested live) and USDA; Vision optional. **Needs `GEMINI_API_KEY` in Vercel** to work on the live site; per 100g until M0.3b |
+| Photo analysis | Working on the live site (photo of bananas checked on a phone, 2026-09-21): a Gemini free-tier provider behind an interface, USDA for grounding with the model's own estimate as fallback, Vision optional. Portions and macros are estimates whose accuracy is unmeasured |
 | CI/CD | 8 required gates on every PR; migrations applied on merge to `main` |
 | Tests | Backend and frontend suites, each gated at 80% coverage in CI |
-| Audit | 16 findings fixed; 6 open, tracked in the [audit](AUDIT_2026-09.md#open-findings) |
+| Audit | 16 findings fixed; 7 open, tracked in the [audit](AUDIT_2026-09.md#open-findings) |
 
 Production auth was verified after the fix: the `X-User-Id` impersonation header that
 previously returned `200` now returns `401`.
@@ -81,8 +81,9 @@ dates. Work is sequenced by dependency, and a slipped milestone slips everything
 |---|---|---|---|
 | M0.1 | Documentation restructure and this roadmap | S | Done |
 | M0.2 | Runtime alignment | S | Done |
-| M0.3a | Food-recognition providers | M | In review |
-| M0.3b | Portions and a graceful fallback | M | In review |
+| M0.3a | Food-recognition providers | M | Done |
+| M0.3b | Portions and a graceful fallback | M | Done |
+| M0.4 | Stale frontend after a deploy (service worker) | S | In review |
 | M0.3c | Portion editing and device check | S | Not started |
 
 ### M0.1: Documentation restructure
@@ -140,6 +141,35 @@ the flow work when USDA does not, and gives the numbers a portion.
 
 **Done when**: a photo on the live site returns usable numbers with USDA unavailable, and the
 source of each number is stated.
+
+### M0.4: Stale frontend after a deploy
+
+The service worker (`gymbro-web/public/sw.js`) served the page itself, `/` and `/index.html`,
+**cache-first for up to 24 hours**, and never changed its cache name, so browsers saw no reason
+to replace it. After a deploy a device could keep running the old frontend, which loads the old
+JavaScript, against the new API, which is not cached that way.
+
+Seen on 2026-09-21: the review screen showed numbers scaled to a portion (exactly 3.6 times
+USDA's per-100g values for a banana) under the old note "Nutrition is per 100g from USDA". The
+mechanism is reproduced by the tests below, which fail against the old worker; it has not been
+confirmed on the device itself.
+
+- Navigation requests (`/`, any route) are **network-first**, falling back to the cached shell
+  when offline or when the network takes longer than four seconds, so a poor connection does
+  not hang the app. A late response still refreshes the cache
+- Content-hashed assets under `/assets/` stay **cache-first** and never expire: their filenames
+  change with every build, so a cached copy cannot be stale
+- The cache name is bumped (`gymbro-v3`), so activation drops the shell cached by the old
+  worker, and `sw.js` itself changed, so browsers install the new worker
+- API and auth requests are unchanged
+- Tests run `sw.js` against a fake cache and fetch (`src/test/serviceWorker.test.ts`): a deploy
+  shows on the next load, offline and slow-network fallbacks, hashed assets, and requests the
+  worker must leave alone. The stale-page tests fail against the previous worker
+
+**Done when**: after a deploy, reloading the app shows the new frontend without clearing site
+data, and the app still opens offline from the last cached shell. The first part is checked on
+the phone after the deploy: the review note should read "Estimated for about…" without clearing
+anything. Devices that still hold the old worker pick up the new one on their next visit.
 
 ### M0.3c: Portion editing and device check
 
