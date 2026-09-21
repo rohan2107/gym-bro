@@ -47,7 +47,7 @@ place. The plan adds capability to that foundation rather than starting beside i
 | Photo analysis | Provider interface with a Gemini free-tier provider (recorded-response tests, smoke-tested live) and USDA; Vision optional. **Needs `GEMINI_API_KEY` in Vercel** to work on the live site; per 100g until M0.3b |
 | CI/CD | 8 required gates on every PR; migrations applied on merge to `main` |
 | Tests | Backend and frontend suites, each gated at 80% coverage in CI |
-| Audit | 16 findings fixed; 6 open, tracked in the [audit](AUDIT_2026-09.md#open-findings) |
+| Audit | 16 findings fixed; 7 open, tracked in the [audit](AUDIT_2026-09.md#open-findings) |
 
 Production auth was verified after the fix: the `X-User-Id` impersonation header that
 previously returned `200` now returns `401`.
@@ -83,6 +83,7 @@ dates. Work is sequenced by dependency, and a slipped milestone slips everything
 | M0.2 | Runtime alignment | S | Done |
 | M0.3a | Food-recognition providers | M | In review |
 | M0.3b | Portions and a graceful fallback | M | In review |
+| M0.4 | Stale frontend after a deploy (service worker) | S | Not started |
 | M0.3c | Portion editing and device check | S | Not started |
 
 ### M0.1: Documentation restructure
@@ -140,6 +141,34 @@ the flow work when USDA does not, and gives the numbers a portion.
 
 **Done when**: a photo on the live site returns usable numbers with USDA unavailable, and the
 source of each number is stated.
+
+### M0.4: Stale frontend after a deploy
+
+The service worker (`gymbro-web/public/sw.js`) serves the page itself, `/` and `/index.html`,
+**cache-first for up to 24 hours**, and `sw.js` never changes its cache name, so browsers see no
+reason to replace it. After a deploy a device can keep running the old frontend, which loads
+the old JavaScript, against the new API, which is not cached that way.
+
+Seen on 2026-09-21: the review screen showed numbers scaled to a portion (exactly 3.6 times
+USDA's per-100g values for a banana) under the old note "Nutrition is per 100g from USDA". The
+cause is inferred from that mismatch and from reading `sw.js`, not yet confirmed on a device.
+
+- **Reproduce first**: load the site in a private tab on the phone, which has no cached
+  service worker, and check that it shows the current text where the installed app did not
+- Serve navigation requests (`/`, `/index.html`) **network-first**, falling back to the cache
+  only when offline, so the last shell still opens without a connection
+- Keep the content-hashed JavaScript and CSS **cache-first**; their filenames change with every
+  build, so caching them is safe
+- Change the cache name so existing clients drop the old shell, and change `sw.js` itself so
+  browsers install the new worker
+- Tests for the fetch handler: navigation goes to the network first, offline falls back to the
+  cached shell, hashed assets come from the cache, API and auth requests are unaffected
+
+Do this **before** [M0.3c](#m03c-portion-editing-and-device-check): that milestone is checked on
+a phone, and a stale cache would make every UI change there look broken or not deployed.
+
+**Done when**: after a deploy, reloading the app shows the new frontend without clearing site
+data, and the app still opens offline from the last cached shell.
 
 ### M0.3c: Portion editing and device check
 

@@ -310,6 +310,9 @@ layer is measured.
 
 ## Known limitations
 
+- **A device can run a stale frontend for up to a day after a deploy.** The service worker
+  serves the app shell cache-first for 24 hours while the API is always fresh. Scheduled as
+  [M0.4](ROADMAP.md#m04-stale-frontend-after-a-deploy).
 - **Photo analysis needs `GEMINI_API_KEY` set on Vercel.** Portions and macros are estimates
   whose accuracy is unmeasured, and the review screen says whether they came from USDA or from
   the model alone. The Vision provider has never run against the live API. See
