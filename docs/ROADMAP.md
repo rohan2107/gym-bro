@@ -84,7 +84,7 @@ dates. Work is sequenced by dependency, and a slipped milestone slips everything
 | M0.3a | Food-recognition providers | M | Done |
 | M0.3b | Portions and a graceful fallback | M | Done |
 | M0.4 | Stale frontend after a deploy (service worker) | S | Done |
-| M0.3c | Portion editing | S | In review |
+| M0.3c | Portion editing | S | Done |
 | M0.3d | iPhone device check (HEIC, camera) | S | Not started |
 
 ### M0.1: Documentation restructure
@@ -215,7 +215,7 @@ check moves to whatever increment fixes O10.
 
 | ID | Increment | Size | Depends on |
 |---|---|---|---|
-| M1.0 | USDA reference dataset in Postgres, replacing the live API | M | In review |
+| M1.0 | USDA reference dataset in Postgres, replacing the live API | M | Done |
 | M1.1 | Knowledge corpus and retrieval with citations | L | M0.3a (provider pattern) |
 | M1.2 | LLM record/replay layer | M | M1.1 |
 | M1.3 | Golden set and evaluation harness, gated in CI | L | M1.2 |
@@ -242,8 +242,12 @@ reference data instead of calling the API per request.
   backlog
 
 **Done when**: photo analysis makes no USDA request, the migration is applied by CI, and search
-results for a fixed set of queries are covered by tests. Done; not yet confirmed on the live
-site after deploy.
+results for a fixed set of queries are covered by tests. Confirmed 2026-09-22: the merge to
+`main` ran `Apply DB Migrations` (not skipped, as it is on a PR's own CI) and it succeeded, so
+the live table is populated. A live request has not yet reached the nutrition-lookup step
+itself to confirm a real hit end to end, because both Gemini models were briefly down at the
+same time on the one attempt made so far (unrelated - see the backlog item on retrying a
+transient Gemini failure).
 
 ### M1.1: Knowledge corpus and retrieval
 
@@ -436,6 +440,13 @@ Unscheduled, in rough priority order. Open audit findings are described in
   one-tap convenience that was the point of using it
 - HEIC support server-side, only if device testing shows iOS delivers HEIC
 - Widen the lint rule set (`UP`, `DTZ`, `I`) as its own change
+- Gemini resilience: both free-tier models returned 503 within 4 seconds of each other on
+  2026-09-22 (Google-side capacity, not a bug - the fallback ran correctly and failed closed
+  with a clear message, no quota spent). Two small, low-cost improvements: swap which model is
+  primary (config only, no code change) as a hedge against one model seeing disproportionate
+  load; add a single short backoff-and-retry after both models fail once, since "high demand"
+  503s are typically transient. Cheap enough to do alongside M0.3d rather than treat as its own
+  milestone
 - Offline writes in the service worker
 - End-to-end browser tests (Playwright)
 - USDA household portions, imported alongside the macros already in `usda_food`, to turn a
