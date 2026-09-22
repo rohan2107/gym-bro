@@ -172,7 +172,7 @@ Without its key a provider runs in **mock mode** and returns fixed sample data (
   underestimation of large portions by ungrounded models; see
   [ADR-0010](adr/0010-usda-as-a-local-reference.md). The review screen states the basis of the
   numbers and lets the user edit every value. The portion itself becomes editable in
-  [M0.3c](ROADMAP.md#m03c-portion-editing-and-device-check).
+  [M0.3c](ROADMAP.md#m03c-portion-editing).
 - **Accuracy is unmeasured.** The Gemini provider was smoke-tested on one clear photo (a pizza,
   identified at 0.99) and one blank image (an empty list). Mixed plates and unusual foods have
   not been measured; that is the job of the evaluation harness in Phase 1.
@@ -202,8 +202,9 @@ Without its key a provider runs in **mock mode** and returns fixed sample data (
 
 ## Next
 
-[M0.3c](ROADMAP.md#m03c-portion-editing-and-device-check) makes the portion editable in the
-review screen and covers checking HEIC and camera capture on a real iPhone.
+[M0.3c](ROADMAP.md#m03c-portion-editing) makes the portion editable in the review screen.
+[M0.3d](ROADMAP.md#m03d-iphone-device-check-heic-camera) covers checking a library HEIC photo
+and the portion field on a real iPhone.
 [M1.0](ROADMAP.md#m10-usda-reference-dataset) then replaces the live USDA call with a local copy
 of the data ([ADR-0010](adr/0010-usda-as-a-local-reference.md)).
 

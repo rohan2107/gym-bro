@@ -257,7 +257,7 @@ in `auth.py` is largely uncovered because it needs a real Google flow.
 | Photo capture | Type, HEIC and size checks, quota display, the data-use notice |
 | Image resizing | Dimensions, no upscaling, orientation, quality fallback, decode failure |
 | API client | The request helper, every endpoint, the photo upload |
-| Meal review | Form behaviour and the basis of the numbers |
+| Meal review | Form behaviour, the basis of the numbers, and rescaling every macro when the portion is edited |
 | Service worker | `public/sw.js` run against a fake cache: network-first pages, offline and slow-network fallback, permanent hashed assets, lifecycle |
 | Components and utilities | Bottom navigation, offline indicator, helpers |
 
@@ -311,9 +311,6 @@ layer is measured.
 
 ## Known limitations
 
-- **A device can run a stale frontend for up to a day after a deploy** until the fix in
-  [M0.4](ROADMAP.md#m04-stale-frontend-after-a-deploy) (in review) is live: the old worker served
-  the page cache-first for 24 hours while the API was always fresh.
 - **Photo analysis needs `GEMINI_API_KEY` set on Vercel.** Portions and macros are estimates
   whose accuracy is unmeasured, and the review screen says whether they came from USDA or from
   the model alone. The Vision provider has never run against the live API. See

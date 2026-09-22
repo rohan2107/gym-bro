@@ -15,6 +15,7 @@ function prediction(overrides: Partial<PhotoPrediction> = {}): PhotoPrediction {
       carbs_g: 33,
       fat_g: 10,
       serving_size: '100g',
+      portion_g: 100,
       confidence: 'high',
       ...(overrides.nutrition || {}),
     },
@@ -46,7 +47,7 @@ describe('MealReview', () => {
   it('says when the figures are scaled to an estimated portion', () => {
     render(
       <MealReview
-        predictions={[prediction({ nutrition: { serving_size: '300g', source: 'usda' } as never })]}
+        predictions={[prediction({ nutrition: { serving_size: '300g', portion_g: 300, source: 'usda' } as never })]}
         onConfirm={vi.fn()}
         onCancel={vi.fn()}
       />
@@ -62,7 +63,7 @@ describe('MealReview', () => {
     render(
       <MealReview
         predictions={[
-          prediction({ nutrition: { serving_size: '300g', source: 'ai_estimate', confidence: 'low' } as never }),
+          prediction({ nutrition: { serving_size: '300g', portion_g: 300, source: 'ai_estimate', confidence: 'low' } as never }),
         ]}
         onConfirm={vi.fn()}
         onCancel={vi.fn()}
@@ -78,7 +79,7 @@ describe('MealReview', () => {
   it('updates the note when the user switches to a food with a different basis', () => {
     const estimated = prediction({
       label: 'rice',
-      nutrition: { serving_size: '150g', source: 'ai_estimate' } as never,
+      nutrition: { serving_size: '150g', portion_g: 150, source: 'ai_estimate' } as never,
     })
 
     render(
@@ -93,6 +94,108 @@ describe('MealReview', () => {
     fireEvent.click(screen.getByRole('button', { name: /rice/i }))
 
     expect(screen.getByTestId('basis-note')).toHaveTextContent(/AI estimate for about 150g/i)
+  })
+
+  it('pre-fills the portion from the prediction', () => {
+    render(
+      <MealReview
+        predictions={[prediction({ nutrition: { portion_g: 250 } as never })]}
+        onConfirm={vi.fn()}
+        onCancel={vi.fn()}
+      />
+    )
+
+    expect(screen.getByLabelText(/portion/i)).toHaveValue(250)
+  })
+
+  it('defaults the portion to 100g when the prediction has none', () => {
+    render(
+      <MealReview
+        predictions={[prediction({ nutrition: { portion_g: undefined } as never })]}
+        onConfirm={vi.fn()}
+        onCancel={vi.fn()}
+      />
+    )
+
+    expect(screen.getByLabelText(/portion/i)).toHaveValue(100)
+  })
+
+  it('recalculates every macro when the portion changes, scaling from the original basis', () => {
+    render(
+      <MealReview predictions={[prediction()]} onConfirm={vi.fn()} onCancel={vi.fn()} />
+    )
+
+    fireEvent.change(screen.getByLabelText(/portion/i), { target: { value: '250' } })
+
+    // Basis: 265 kcal / 11g protein / 33g carbs / 10g fat at 100g.
+    expect(screen.getByLabelText(/calories/i)).toHaveValue(663)
+    expect(screen.getByLabelText(/protein/i)).toHaveValue(27.5)
+    expect(screen.getByLabelText(/carbs/i)).toHaveValue(82.5)
+    expect(screen.getByLabelText(/fat/i)).toHaveValue(25)
+  })
+
+  it('re-derives from the original basis each time, so edits do not compound rounding error', () => {
+    render(
+      <MealReview predictions={[prediction()]} onConfirm={vi.fn()} onCancel={vi.fn()} />
+    )
+
+    const portionField = screen.getByLabelText(/portion/i)
+    fireEvent.change(portionField, { target: { value: '250' } })
+    fireEvent.change(portionField, { target: { value: '400' } })
+
+    expect(screen.getByLabelText(/calories/i)).toHaveValue(Math.round(265 * 4))
+  })
+
+  it('updates the basis note as the portion is edited', () => {
+    render(
+      <MealReview predictions={[prediction()]} onConfirm={vi.fn()} onCancel={vi.fn()} />
+    )
+
+    fireEvent.change(screen.getByLabelText(/portion/i), { target: { value: '180' } })
+
+    expect(screen.getByTestId('basis-note')).toHaveTextContent(
+      /estimated for about 180g, from usda values scaled to the portion/i
+    )
+  })
+
+  it('resets the portion when the user switches to a different detected food', () => {
+    const salad = prediction({
+      label: 'salad',
+      nutrition: { calories: 20, portion_g: 300 } as never,
+    })
+
+    render(
+      <MealReview predictions={[prediction(), salad]} onConfirm={vi.fn()} onCancel={vi.fn()} />
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: /salad/i }))
+
+    expect(screen.getByLabelText(/portion/i)).toHaveValue(300)
+  })
+
+  it('leaves the macros as they are while the portion field is being cleared', () => {
+    render(
+      <MealReview predictions={[prediction()]} onConfirm={vi.fn()} onCancel={vi.fn()} />
+    )
+
+    fireEvent.change(screen.getByLabelText(/portion/i), { target: { value: '' } })
+
+    expect(screen.getByLabelText(/portion/i)).toHaveValue(null)
+    expect(screen.getByLabelText(/calories/i)).toHaveValue(265)
+  })
+
+  it('does not send the portion to onConfirm, only description and macros', () => {
+    const onConfirm = vi.fn()
+    render(
+      <MealReview predictions={[prediction()]} onConfirm={onConfirm} onCancel={vi.fn()} />
+    )
+
+    fireEvent.change(screen.getByLabelText(/portion/i), { target: { value: '250' } })
+    fireEvent.click(screen.getByRole('button', { name: /save meal/i }))
+
+    expect(onConfirm).toHaveBeenCalledWith(
+      expect.not.objectContaining({ portion_g: expect.anything() })
+    )
   })
 
   it('confirms the meal with edited values, not the predicted ones', () => {

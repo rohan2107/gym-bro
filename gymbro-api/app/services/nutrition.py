@@ -235,12 +235,17 @@ class NutritionService:
             "carbs_g": value("Carbohydrate, by difference", "Carbohydrate, by summation"),
             "fat_g": value("Total lipid (fat)", "Total fat (NLEA)"),
             "serving_size": "100g",  # USDA data is per 100g
+            "portion_g": 100.0,
             "confidence": "high" if food_data.get("dataType") == "Survey (FNDDS)" else "medium",
         }
 
 
 def scale_to_portion(nutrition: Dict[str, Any], grams: float) -> Dict[str, Any]:
-    """USDA's per-100g values scaled to a portion, with the portion stated in serving_size."""
+    """USDA's per-100g values scaled to a portion, with the portion stated in serving_size.
+
+    ``portion_g`` is the same value as a plain number, so the frontend can rescale the macros
+    itself (dividing by it) as the user edits the portion, without parsing ``serving_size``.
+    """
     factor = grams / 100.0
     return {
         **nutrition,
@@ -249,6 +254,7 @@ def scale_to_portion(nutrition: Dict[str, Any], grams: float) -> Dict[str, Any]:
         "carbs_g": round(nutrition["carbs_g"] * factor, 1),
         "fat_g": round(nutrition["fat_g"] * factor, 1),
         "serving_size": f"{round(grams)}g",
+        "portion_g": grams,
     }
 
 
@@ -259,5 +265,6 @@ def estimate_to_nutrition(name: str, grams: float, estimate: Dict[str, Any]) -> 
         "fdc_id": None,
         **estimate,
         "serving_size": f"{round(grams)}g",
+        "portion_g": grams,
         "confidence": "low",
     }
