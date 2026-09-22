@@ -209,7 +209,7 @@ the device works as it does in tests.
 
 | ID | Increment | Size | Depends on |
 |---|---|---|---|
-| M1.0 | USDA reference dataset in Postgres, replacing the live API | M | M0.3b |
+| M1.0 | USDA reference dataset in Postgres, replacing the live API | M | In review |
 | M1.1 | Knowledge corpus and retrieval with citations | L | M0.3a (provider pattern) |
 | M1.2 | LLM record/replay layer | M | M1.1 |
 | M1.3 | Golden set and evaluation harness, gated in CI | L | M1.2 |
@@ -218,21 +218,26 @@ the device works as it does in tests.
 
 ### M1.0: USDA reference dataset
 
-Decided in [ADR-0010](adr/0010-usda-as-a-local-reference.md) (proposed): the app owns the
+Decided in [ADR-0010](adr/0010-usda-as-a-local-reference.md) (accepted): the app owns the
 reference data instead of calling the API per request.
 
-- **Gate first**: confirm the licence from the release notes, that Postgres search on Neon
-  (`pg_trgm` or full-text) is available and good enough, and that the data fits the storage
-  limit
-- Alembic migration for foods, macros and household portions
-- A reproducible import script for FNDDS, Foundation and SR Legacy, recording the release used
-  and crediting FoodData Central
-- A local search service behind the interface `NutritionService` has today; the request path
-  makes no USDA call
-- Household portions used to turn the model's portion description into grams
+- Gates cleared: licence confirmed CC0 from the API guide; Neon storage checked (31.55MB used
+  of 500MB free tier); trigram search (`pg_trgm`) was prototyped and then dropped in favour of
+  a plain substring prefilter, because `pg_trgm` is Postgres-only and this project's tests run
+  migrations against SQLite for speed - see ADR-0010's "What building it found"
+- `scripts/build_usda_dataset.py`: downloads Foundation, Survey (FNDDS) and SR Legacy, trims to
+  name/data type/macros, writes `data/usda_foods.json` (13,545 foods, 2.6MB), records the
+  releases used and the licence
+- Alembic migration creates `usda_food` and loads that file, the same way every other table is
+  created
+- `NutritionService.search_food` queries the local table; the request path makes no USDA call;
+  nutrition lookup has no mock mode any more (no key to be missing)
+- Household portions and a genuinely improved match ranking are not in this increment - see the
+  backlog
 
 **Done when**: photo analysis makes no USDA request, the migration is applied by CI, and search
-results for a fixed set of queries are covered by tests.
+results for a fixed set of queries are covered by tests. Done; not yet confirmed on the live
+site after deploy.
 
 ### M1.1: Knowledge corpus and retrieval
 
@@ -423,6 +428,12 @@ Unscheduled, in rough priority order. Open audit findings are described in
 - Widen the lint rule set (`UP`, `DTZ`, `I`) as its own change
 - Offline writes in the service worker
 - End-to-end browser tests (Playwright)
+- USDA household portions, imported alongside the macros already in `usda_food`, to turn a
+  model's portion description ("a slice", "a cup") into grams instead of relying only on the
+  model's own gram estimate
+- Re-run `_best_match`'s ranking against the full local dataset with real queries and measure
+  it, rather than the dozen or so spot-checks so far (Phase 1's evaluation harness is the
+  proper place for this, once it exists)
 
 ## Deferred or dropped
 

@@ -8,6 +8,11 @@ entries are grouped by milestone and dated.
 
 ### Removed
 
+- Nutrition lookup no longer calls USDA's search API. `USDA_API_KEY` is gone from
+  configuration, `.env.example` and Vercel's required variables; the endpoint that used to
+  read it (which failed with `400` about half the time under any `dataType` filter) is
+  replaced by a local, read-only reference table
+  ([ADR-0010](docs/adr/0010-usda-as-a-local-reference.md), accepted)
 - Unused code: `NutritionService.batch_search`, `lookup_by_fdc_id` and `get_food_mapping`, and
   the empty `FDC_ID_MAPPING` with its accessor. Only tests called them
 - The PowerShell scripts, which duplicated the shell scripts, were untested, and are not used
@@ -27,7 +32,7 @@ entries are grouped by milestone and dated.
 - Photo analysis estimates the portion in grams and scales USDA's per-100g values to it. When
   USDA errors, times out or has no match, the model's own estimate is returned, labelled as an
   AI estimate, instead of failing the request; the review screen states which it is
-  ([ADR-0010](docs/adr/0010-usda-as-a-local-reference.md), proposed)
+  ([ADR-0010](docs/adr/0010-usda-as-a-local-reference.md), accepted)
 - The per-model Gemini timeout is 12 seconds, so a hanging model does not hold the user long
   before the fallback model is tried
 - Photo analysis recognises foods with the Gemini API free tier (no billing account) through a
@@ -47,6 +52,9 @@ entries are grouped by milestone and dated.
 
 ### Added
 
+- `usda_food`, a local copy of USDA FoodData Central (Foundation, Survey/FNDDS, SR Legacy;
+  13,545 foods, 2.6MB), built by `scripts/build_usda_dataset.py` and loaded by an Alembic
+  migration on merge to `main`, the same way every other table is created
 - `GEMINI_API_KEY`, `GEMINI_MODEL`, `GEMINI_FALLBACK_MODEL` and `FOOD_RECOGNITION_PROVIDER`
   settings; the Gemini provider falls back to a second model on `429` and `5xx` and otherwise
   fails closed with the user's quota refunded

@@ -105,14 +105,14 @@ def get_food_recognizer() -> FoodRecognizer:
     return GeminiRecognizer()
 
 
-def get_nutrition_service() -> NutritionService:
+def get_nutrition_service(session: Session = Depends(get_session)) -> NutritionService:
     """
     Provide NutritionService instance for nutrition lookup.
-    
-    Returns:
-        NutritionService instance with auto-detected mock mode
+
+    Since M1.0 this queries a local reference table (see ADR-0010), not an external API, so
+    there is no key to be missing and no mock mode: it works the same in every environment.
     """
-    return NutritionService()
+    return NutritionService(session)
 
 
 def get_rate_limiter(session: Session = Depends(get_session)) -> RateLimiter:

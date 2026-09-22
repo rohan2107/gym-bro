@@ -28,7 +28,8 @@ class Settings(BaseSettings):
     GEMINI_MODEL: str = "gemini-3.5-flash-lite"
     GEMINI_FALLBACK_MODEL: str = "gemini-3.1-flash-lite"
     GOOGLE_VISION_API_KEY: str = ""
-    USDA_API_KEY: str = ""
+    # No USDA_API_KEY: nutrition lookup queries a local reference table since M1.0, not USDA's
+    # API (see ADR-0010). The bulk downloads that built that table need no key either.
 
     FRONTEND_URL: str = "http://localhost:5173"
 

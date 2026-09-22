@@ -140,3 +140,24 @@ class DailyCheckIn(SQLModel, table=True):
     weight_entries: list["WeightEntry"] = Relationship(
         back_populates="daily_check_in", sa_relationship=True
     )
+
+
+class UsdaFood(SQLModel, table=True):
+    """One food from USDA FoodData Central, trimmed to what nutrition lookup needs.
+
+    Populated once by an Alembic migration from data/usda_foods.json (built by
+    scripts/build_usda_dataset.py), not written to at runtime. See
+    docs/adr/0010-usda-as-a-local-reference.md.
+    """
+
+    __tablename__ = "usda_food"
+
+    # USDA's own id, not a surrogate: stable across releases and lets a query be traced back
+    # to FoodData Central without a lookup table.
+    fdc_id: int = Field(primary_key=True)
+    name: str = Field(index=True)
+    data_type: str  # "Foundation", "Survey (FNDDS)" or "SR Legacy" - never "Branded"
+    calories: float
+    protein_g: float
+    carbs_g: float
+    fat_g: float

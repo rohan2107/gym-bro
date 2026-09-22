@@ -113,8 +113,11 @@ async def create_food_log_from_photo(
     # local development and tests, but on a real deployment it would present
     # fabricated nutrition as an analysis of the user's photo. Refuse instead,
     # before any quota is spent; the UI falls back to manual entry.
-    if running_on_vercel() and (food_recognizer.mock_mode or nutrition_service.mock_mode):
-        logger.error("Photo analysis requested but API keys are not configured")
+    #
+    # Nutrition lookup has no mock mode since M1.0: it queries a local reference table
+    # (ADR-0010), not an external API, so there is no key that can be missing.
+    if running_on_vercel() and food_recognizer.mock_mode:
+        logger.error("Photo analysis requested but the recognition provider is not configured")
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Photo analysis is not available right now. Please log this meal manually.",

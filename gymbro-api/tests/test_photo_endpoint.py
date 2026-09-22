@@ -856,7 +856,21 @@ class TestMockModeOnDeployment:
         test_user_in_db: User,
         valid_image_file: tuple[str, BytesIO, str],
     ) -> None:
-        """Development keeps its mock behaviour."""
+        """Development keeps the recognizer's mock behaviour (always "pizza").
+
+        Nutrition lookup has no mock mode since M1.0 - it is a real query against the local
+        table regardless of environment - so a matching row must exist for it to find, exactly
+        as it would in production.
+        """
+        from app.models import UsdaFood
+
+        session = next(_get_session_gen(client))
+        session.add(UsdaFood(
+            fdc_id=1, name="Pizza, cheese, regular crust", data_type="Survey (FNDDS)",
+            calories=265, protein_g=11.0, carbs_g=33.0, fat_g=10.0,
+        ))
+        session.commit()
+
         response = client.post(
             "/food-logs/from-photo",
             files={"photo": valid_image_file},

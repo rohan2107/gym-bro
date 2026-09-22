@@ -102,37 +102,49 @@ account, so it is optional and off by default.
 
 ## Nutrition lookup
 
-Each food name is searched in USDA FoodData Central and the best result is returned, per 100g,
-then scaled to the model's estimated portion. USDA is a grounding step, not a requirement: see
-the fallback below and [ADR-0010](adr/0010-usda-as-a-local-reference.md).
+Since [M1.0](ROADMAP.md#m10-usda-reference-dataset) ([ADR-0010](adr/0010-usda-as-a-local-reference.md),
+accepted), each food name is searched in a local, read-only copy of USDA FoodData Central, not
+USDA's API. The request path makes no external call for nutrition at all.
 
-- **Credential** in an `X-Api-Key` header, never the URL. Only status codes are logged, never
-  exception text (an httpx error carries the URL), and the `httpx` logger is raised to WARNING
-  at startup.
-- **No `dataType` filter.** With any filter containing `Survey (FNDDS)`, USDA answered `400` to
-  about half of requests, at random (measured 2026-09-21, 45 of 45 succeeded without one).
-  Data types are selected in code instead: FNDDS, Foundation and SR Legacy are used; Branded is
-  not, because its names are brand text and its values are label claims.
-- **One search, widened once.** 25 results are requested; if none qualifies, 50. A response can
-  be several hundred KB, so the wider page is used only when needed.
-- **Retry.** A transient `400` or `5xx`, a timeout or a non-JSON body is retried once per page
-  size. `401`, `403` and `429` are not retried.
-- **No match and failure are different.** USDA answering with nothing usable returns `None`
-  (`404`, "log manually"); USDA being unreachable raises, and the endpoint answers `503` and
-  refunds the quota.
-- **Energy is matched by unit.** Foundation and SR Legacy list Energy in both kJ and kcal, in
-  either order; taking the wrong one reports about four times the calories.
-- **Fallback.** Lookups run concurrently, each limited to 10 seconds including retries. If USDA
-  errors, times out or has no match and the model gave a complete estimate with a portion, the
-  model's estimate is returned with `source: ai_estimate` and low confidence. Without an
-  estimate, an error is a `503` and a real no-match a `404`, both refunding the quota.
-- **Ranking.** USDA's first hit is often poor, so results without macro data are dropped and
-  more than half of the query's words must match. Among those it prefers more matching words, a
-  description that starts with a query word, fewer qualifiers, "raw", the better data type, then
-  the shorter description. No match is preferred to a wrong one: "avocado toast" returns nothing
-  rather than "Avocado dressing".
+- **The data.** `data/usda_foods.json` (about 2.6MB, 13,545 foods: Foundation, Survey/FNDDS and
+  SR Legacy; Branded excluded, as before, because its names are brand text and its values are
+  label claims) is built by `scripts/build_usda_dataset.py` from USDA's public-domain bulk
+  downloads and loaded into the `usda_food` table by an Alembic migration, once, the same way
+  every other table is created. Refreshed only when USDA issues a new release (FNDDS every two
+  years, Foundation twice a year) - not on every deploy.
+- **The query.** Every word of the search term is matched against food names with a plain
+  case-insensitive substring search; at this table's size (about 13,500 rows) an unfiltered
+  scan for even a common single word takes single-digit milliseconds, so there is no candidate
+  cap to get wrong. The result is ranked in Python: more matching words, a name starting with a
+  query word, fewer qualifiers, "raw", the better data type, then the shorter name - unchanged
+  from the ranking used against USDA's own search results before this change, and still a
+  heuristic whose accuracy is unmeasured. No match is preferred to a wrong one: "avocado toast"
+  returns nothing rather than "Avocado dressing".
+- **No match and failure are different.** No row is a good enough match returns `None` (`404`,
+  "log manually"); the table itself failing to query (a connection problem) raises, and the
+  endpoint answers `503` and refunds the quota - the same distinction the old API-backed version
+  drew, now for a different kind of failure.
+- **Energy is matched by unit at ingestion**, not at query time. Foundation and SR Legacy's bulk
+  data lists Energy in both kJ and kcal, and Foundation sometimes carries only a computed
+  Atwater value rather than a directly measured one; `build_usda_dataset.py` resolves this once
+  when the dataset is built, so the stored value is always correct kcal.
+- **Fallback unchanged.** Lookups still run concurrently, each time-boxed (`NUTRITION_LOOKUP_BUDGET_SECONDS`,
+  10 seconds - generous for a query that normally takes milliseconds, kept for a serverless
+  Postgres compute waking from idle). If the query errors or finds nothing and the model gave a
+  complete estimate with a portion, the model's estimate is returned with `source: ai_estimate`.
 
-## Configuration and mock mode
+### A note on this decision's own history
+
+The plan going into M1.0 was trigram search (`pg_trgm`) on Postgres. Building it surfaced a
+reason not to: this project's tests run migrations against a fresh SQLite database for speed
+(`test_migrations.py`), and `pg_trgm`/GIN indexes are Postgres-only, which would have forced
+either a Postgres-only test path or skipping trigram search in tests entirely. A plain substring
+prefilter needs no extension, works identically on SQLite and Postgres, and - because the real
+ranking already happens in Python over the candidates it returns - loses nothing at this data's
+size. No index was added for the same reason: a full scan is already fast enough, and "add one
+if this ever gets slow" is more honest than indexing against no measurement.
+
+## Configuration
 
 | Setting | Purpose |
 |---|---|
@@ -140,14 +152,18 @@ the fallback below and [ADR-0010](adr/0010-usda-as-a-local-reference.md).
 | `GEMINI_API_KEY` | Enables the Gemini provider |
 | `GEMINI_MODEL`, `GEMINI_FALLBACK_MODEL` | Pinned model ids: `gemini-3.5-flash-lite` and `gemini-3.1-flash-lite` |
 | `GOOGLE_VISION_API_KEY` | Enables the Vision provider |
-| `USDA_API_KEY` | Enables nutrition lookup |
 
-Without its key a provider runs in **mock mode** and returns fixed sample data (always
-"pizza"), as does the nutrition service.
+Nutrition lookup needs no key and has no mock mode: since M1.0 it is a real query against the
+local table in every environment, including tests (which seed a handful of rows rather than
+the full dataset) and a fresh local database (which gets the full dataset from the migration,
+same as production).
+
+Without its key, a recognition provider still runs in **mock mode** and returns fixed sample
+data (always "pizza").
 
 - Locally and in tests, mock mode is expected and useful.
 - On a Vercel deployment the endpoint refuses instead, with a `503` and a message pointing to
-  manual entry, because fabricated nutrition presented as an analysis of the user's photo is
+  manual entry, because fabricated food names presented as an analysis of the user's photo are
   worse than no analysis.
 
 ## Accepted formats
@@ -214,11 +230,8 @@ a plain JPEG of the same photo.
 
 ## Next
 
-[M0.3c](ROADMAP.md#m03c-portion-editing) makes the portion editable in the review screen.
 [M0.3d](ROADMAP.md#m03d-iphone-device-check-heic-camera) covers checking a library HEIC photo
-and the portion field on a real iPhone.
-[M1.0](ROADMAP.md#m10-usda-reference-dataset) then replaces the live USDA call with a local copy
-of the data ([ADR-0010](adr/0010-usda-as-a-local-reference.md)).
+and the portion field on a real iPhone - the one part of Phase 0 not yet exercised on a device.
 
 ## Testing
 
@@ -232,10 +245,15 @@ of the data ([ADR-0010](adr/0010-usda-as-a-local-reference.md)).
   the estimate on error, no match and timeout, no fallback without a portion, and mixed results
   across several foods
 - Image validation: format acceptance including MPO, HEIC rejection, size and dimension limits
-- USDA lookup against a search response **recorded from the live API**
-  (`tests/fixtures/usda/`): header credential, no `dataType` filter, retry and widening, no
-  retry for `401`/`403`/`429`, no-match versus failure, kJ-versus-kcal extraction, result
-  ranking, and that no log line or error contains the key or URL
+- Nutrition lookup against a handful of seeded rows (not the full local table, for speed):
+  finding an exact and a singular/plural name, ranking a plain result over a decoy, no match,
+  an empty table, a query of only short words, and a database failure raising rather than
+  returning a silent `None`
+- The dataset build script's extraction logic (`scripts/build_usda_dataset.py`), run against
+  synthetic bulk-shaped records rather than the live download: the kJ-versus-kcal unit match,
+  the Atwater energy fallback, dropping a food with no usable energy or name, and that a
+  literal `null` entry in the source (observed in a real release) is skipped rather than
+  crashing the build
 - Vision parsing, filtering, thresholds, clamping, deduplication and error handling against a
   mocked `images:annotate` endpoint
 - Provider selection by configuration, and an unknown provider failing at startup

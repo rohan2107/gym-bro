@@ -39,7 +39,6 @@ def no_external_api_keys(monkeypatch):
 
     monkeypatch.setattr(settings, "GEMINI_API_KEY", "", raising=False)
     monkeypatch.setattr(settings, "GOOGLE_VISION_API_KEY", "", raising=False)
-    monkeypatch.setattr(settings, "USDA_API_KEY", "", raising=False)
 
 
 @pytest.fixture()
