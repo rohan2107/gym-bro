@@ -189,17 +189,23 @@ confirmed on a device (see [M0.3d](#m03d-iphone-device-check-heic-camera)).
 
 ### M0.3d: iPhone device check (HEIC, camera)
 
-Live camera capture already works: confirmed on an iPhone with two photos (bananas, eggs),
-both correctly analysed. What has not been exercised on a device:
+Live camera capture already works: confirmed on an iPhone with three photos (bananas, eggs,
+chicken), all correctly analysed, and a photo from a Mac browser upload (MPO format) was
+accepted correctly too.
 
-- Choosing an existing **HEIC** photo from the library (not the live camera, which iOS
-  typically re-encodes), to confirm the client shows the actionable HEIC message rather than a
-  raw error
+Checking an existing HEIC photo from the library turned out not to be possible as scoped:
+[O10](AUDIT_2026-09.md#open-findings) found that `PhotoCapture` opens the camera directly on
+iOS with no library option at all, so there is currently no way to select an existing photo -
+HEIC or otherwise - on a phone. That check is blocked on O10, not merely undone, and is removed
+from this milestone's scope until O10 has a fix to build on.
+
+What is still achievable and not yet done:
+
 - The portion field ([M0.3c](#m03c-portion-editing)) on a touchscreen, including its numeric
-  keyboard
+  keyboard, using a photo taken with the live camera
 
-**Done when**: a HEIC photo from the library shows the HEIC message, and editing the portion on
-the device works as it does in tests.
+**Done when**: editing the portion on the device works as it does in tests. The HEIC-from-library
+check moves to whatever increment fixes O10.
 
 ---
 
@@ -428,6 +434,10 @@ Unscheduled, in rough priority order. Open audit findings are described in
 
 - OAuth hardening: `state` parameter, `email_verified` check, no raw provider errors to clients
 - Callback page double-fires its effect in development
+- Camera-only photo capture on mobile ([O10](AUDIT_2026-09.md#open-findings)): offer a way to
+  choose an existing photo, not only the live camera - most simply, drop `capture="environment"`
+  and let the OS's own action sheet offer the choice, at the cost of the direct-to-camera
+  one-tap convenience that was the point of using it
 - HEIC support server-side, only if device testing shows iOS delivers HEIC
 - Widen the lint rule set (`UP`, `DTZ`, `I`) as its own change
 - Gemini resilience: both free-tier models returned 503 within 4 seconds of each other on
