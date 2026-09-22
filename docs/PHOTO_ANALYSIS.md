@@ -230,8 +230,10 @@ a plain JPEG of the same photo.
 
 ## Next
 
-[M0.3d](ROADMAP.md#m03d-iphone-device-check-heic-camera) covers checking a library HEIC photo
-and the portion field on a real iPhone - the one part of Phase 0 not yet exercised on a device.
+[M0.3d](ROADMAP.md#m03d-iphone-device-check-heic-camera) covers checking the portion field on a
+real iPhone. Checking a library HEIC photo turned out to be blocked by
+[O10](AUDIT_2026-09.md#open-findings): the capture button opens the camera directly on iOS with
+no way to choose an existing photo at all, so that check has no route to be performed yet.
 
 ## Testing
 
