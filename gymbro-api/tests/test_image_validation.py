@@ -104,3 +104,30 @@ class TestValidateImage:
         assert "BytesIO" not in result["error"]
         assert "0x" not in result["error"]
         assert "JPEG" in result["error"]
+
+    def test_validate_image_accepts_mpo_as_its_first_frame(self):
+        """macOS Continuity Camera and some Photos exports produce MPO: a real JPEG photo
+        followed by an extra frame (depth or thumbnail) appended after it. Confirmed live
+        against Gemini on 2026-09-22 that the extra frame is silently ignored downstream."""
+        first_frame = Image.new("RGB", (400, 400), color="green")
+        second_frame = Image.new("RGB", (400, 400), color="black")
+        buffer = BytesIO()
+        first_frame.save(buffer, format="MPO", save_all=True, append_images=[second_frame])
+        assert Image.open(BytesIO(buffer.getvalue())).format == "MPO"  # the fixture is real MPO
+
+        result = validate_image(buffer.getvalue())
+
+        assert result["valid"] is True
+        assert result["format"] == "jpeg"
+        assert result["dimensions"] == "400x400"
+
+    def test_validate_image_mpo_still_enforces_the_minimum_dimensions(self):
+        first_frame = Image.new("RGB", (100, 100), color="green")
+        second_frame = Image.new("RGB", (100, 100), color="black")
+        buffer = BytesIO()
+        first_frame.save(buffer, format="MPO", save_all=True, append_images=[second_frame])
+
+        result = validate_image(buffer.getvalue())
+
+        assert result["valid"] is False
+        assert "too small" in result["error"].lower()

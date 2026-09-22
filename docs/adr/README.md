@@ -23,7 +23,7 @@ status. To reverse a decision, write a new ADR that supersedes the old one.
 | [0007](0007-knowledge-corpus.md) | Knowledge corpus selection | Proposed |
 | [0008](0008-embedding-model.md) | Embedding model | Proposed |
 | [0009](0009-judge-model-and-validation.md) | Evaluation judge model and its validation | Proposed |
-| [0010](0010-usda-as-a-local-reference.md) | USDA FoodData Central as a local reference dataset, not a live dependency | Proposed |
+| [0010](0010-usda-as-a-local-reference.md) | USDA FoodData Central as a local reference dataset, not a live dependency | Accepted |
 
 ## Writing a new ADR
 

@@ -8,7 +8,7 @@
 
 A full-stack fitness PWA with AI meal photo analysis, offline support, and a mobile-first UI. Built with FastAPI, React, and deployed on Vercel with CI/CD.
 
-**Stack**: React · TypeScript · FastAPI · PostgreSQL · Gemini API · USDA API
+**Stack**: React · TypeScript · FastAPI · PostgreSQL (incl. a local USDA FoodData Central copy) · Gemini API
 
 ## Features
 
@@ -73,7 +73,6 @@ FRONTEND_URL=http://localhost:5173
 
 # Optional: without these, photo analysis runs in mock mode
 GEMINI_API_KEY=your-gemini-api-key        # https://aistudio.google.com, free tier
-USDA_API_KEY=your-usda-api-key
 # FOOD_RECOGNITION_PROVIDER=vision        # optional; needs GOOGLE_VISION_API_KEY and billing
 ```
 

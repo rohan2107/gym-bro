@@ -1,22 +1,17 @@
-"""Tests for the USDA FoodData Central nutrition service.
+"""Tests for nutrition lookup against the local USDA reference table (see ADR-0010).
 
-tests/fixtures/usda/banana_search.json is a real search response (query "banana, raw", recorded
-2026-09-21), trimmed to the fields the service reads. It matters because real Foundation and SR
-Legacy results list Energy twice, in kJ and kcal, in either order.
-
-Nothing here makes a live call.
+The `session` fixture (conftest.py) gives a real, empty SQLite database with every model's
+table created; these tests seed a handful of representative UsdaFood rows rather than the full
+~13,500-row dataset that ships in production, so they run fast and do not depend on a
+particular USDA release's exact contents.
 """
 
-import json
-import logging
-from pathlib import Path
-from typing import Any
+from typing import Any, Dict
 
-import httpx
 import pytest
-import respx
+from sqlalchemy.exc import SQLAlchemyError
 
-from app.config import settings
+from app.models import UsdaFood
 from app.services.nutrition import (
     NutritionLookupError,
     NutritionService,
@@ -24,250 +19,106 @@ from app.services.nutrition import (
     scale_to_portion,
 )
 
-FIXTURES = Path(__file__).parent / "fixtures" / "usda"
-SEARCH_URL = f"{NutritionService.BASE_URL}/foods/search"
-KEY = "test-usda-key-do-not-leak"
+
+def food(
+    fdc_id: int,
+    name: str,
+    data_type: str = "Survey (FNDDS)",
+    calories: float = 100.0,
+    protein_g: float = 1.0,
+    carbs_g: float = 20.0,
+    fat_g: float = 0.5,
+) -> UsdaFood:
+    return UsdaFood(
+        fdc_id=fdc_id,
+        name=name,
+        data_type=data_type,
+        calories=calories,
+        protein_g=protein_g,
+        carbs_g=carbs_g,
+        fat_g=fat_g,
+    )
 
 
-def app_log_text(caplog) -> str:
-    """Log lines written by this app (the HTTP client's own INFO lines are quieted in create_app)."""
-    return "\n".join(r.getMessage() for r in caplog.records if r.name.startswith("app."))
-
-
-def recorded_banana() -> dict[str, Any]:
-    return json.loads((FIXTURES / "banana_search.json").read_text())
-
-
-def food(fdc_id: int, description: str, data_type: str = "Survey (FNDDS)", energy: float = 100) -> dict[str, Any]:
-    return {
-        "fdcId": fdc_id,
-        "description": description,
-        "dataType": data_type,
-        "foodNutrients": [
-            {"nutrientName": "Energy", "unitName": "KCAL", "value": energy},
-            {"nutrientName": "Protein", "unitName": "G", "value": 1.0},
-            {"nutrientName": "Carbohydrate, by difference", "unitName": "G", "value": 20.0},
-            {"nutrientName": "Total lipid (fat)", "unitName": "G", "value": 0.5},
-        ],
-    }
+def seed(session, *foods: UsdaFood) -> None:
+    for f in foods:
+        session.add(f)
+    session.commit()
 
 
 @pytest.fixture
-def nutrition_service(monkeypatch) -> NutritionService:
-    """A real-mode service with a fake key and no retry delay."""
-    monkeypatch.setattr(settings, "USDA_API_KEY", KEY)
-    monkeypatch.setattr(NutritionService, "RETRY_DELAY_SECONDS", 0)
-    return NutritionService(mock_mode=False)
+def nutrition_service(session) -> NutritionService:
+    return NutritionService(session)
 
 
-class TestMockMode:
-    async def test_returns_fixed_data_without_a_key(self):
-        result = await NutritionService().search_food("pizza")
+class TestSearchFood:
+    async def test_finds_an_exact_name(self, session, nutrition_service):
+        seed(session, food(1, "Banana, raw", calories=97.0, protein_g=0.74, carbs_g=22.7, fat_g=0.28))
 
-        assert result is not None
-        assert result["confidence"] == "mock"
-
-
-class TestSearchRequest:
-    @respx.mock
-    async def test_credential_is_a_header_and_never_in_the_url(self, nutrition_service):
-        route = respx.get(SEARCH_URL).respond(200, json={"foods": [food(1, "Pizza, cheese")]})
-
-        await nutrition_service.search_food("pizza")
-
-        request = route.calls.last.request
-        assert request.headers["x-api-key"] == KEY
-        assert KEY not in str(request.url)
-        assert "api_key" not in str(request.url)
-
-    @respx.mock
-    async def test_sends_no_datatype_filter(self, nutrition_service):
-        """Any filter containing "Survey (FNDDS)" made USDA answer 400 about half the time."""
-        route = respx.get(SEARCH_URL).respond(200, json={"foods": [food(1, "Pizza, cheese")]})
-
-        await nutrition_service.search_food("pizza")
-
-        params = route.calls.last.request.url.params
-        assert "dataType" not in params
-        assert params["query"] == "pizza"
-        assert params["pageSize"] == "25"
-
-
-class TestSearchResults:
-    @respx.mock
-    async def test_returns_nutrition_per_100g(self, nutrition_service):
-        respx.get(SEARCH_URL).respond(
-            200, json={"foods": [food(174987, "Pizza, cheese, regular crust", energy=265)]}
-        )
-
-        result = await nutrition_service.search_food("pizza, cheese, regular crust")
+        result = await nutrition_service.search_food("banana")
 
         assert result == {
-            "name": "Pizza, cheese, regular crust",
-            "fdc_id": 174987,
-            "calories": 265,
-            "protein_g": 1.0,
-            "carbs_g": 20.0,
-            "fat_g": 0.5,
+            "name": "Banana, raw",
+            "fdc_id": 1,
+            "calories": 97.0,
+            "protein_g": 0.74,
+            "carbs_g": 22.7,
+            "fat_g": 0.28,
             "serving_size": "100g",
             "portion_g": 100.0,
             "confidence": "high",
         }
 
-    @respx.mock
-    async def test_recorded_banana_search_picks_plain_raw_banana(self, nutrition_service):
-        respx.get(SEARCH_URL).respond(200, json=recorded_banana())
+    async def test_matches_the_singular_query_against_a_plural_name(self, session, nutrition_service):
+        seed(session, food(1, "Bananas, ripe and slightly ripe, raw"))
 
-        result = await nutrition_service.search_food("banana")
+        assert await nutrition_service.search_food("banana") is not None
 
-        assert result is not None
-        assert result["name"] == "Banana, raw"
-        assert result["calories"] == 97
-
-    @respx.mock
-    async def test_nothing_anywhere_is_none_after_widening_once(self, nutrition_service):
-        route = respx.get(SEARCH_URL).respond(200, json={"foods": []})
-
-        assert await nutrition_service.search_food("nonexistentfood123") is None
-
-        sizes = [call.request.url.params["pageSize"] for call in route.calls]
-        assert sizes == ["25", "50"]
-
-    @respx.mock
-    async def test_widens_the_search_when_a_small_page_has_no_usable_result(self, nutrition_service):
-        """Branded products can fill the first page; the wider page reaches a real food."""
-        branded = food(1, "PEPPERONI PIZZA", "Branded")
-        route = respx.get(SEARCH_URL).mock(
-            side_effect=[
-                httpx.Response(200, json={"foods": [branded]}),
-                httpx.Response(200, json={"foods": [branded, food(2, "Pizza with pepperoni")]}),
-            ]
+    async def test_prefers_the_plainest_on_topic_result_over_a_decoy(self, session, nutrition_service):
+        """USDA-style data routinely lists a garnish or dessert ahead of the plain food."""
+        seed(
+            session,
+            food(1, "Dessert pizza"),
+            food(2, "Pizza, cheese, regular crust"),
+            food(3, "Pizza, cheese, thick crust"),
         )
 
-        result = await nutrition_service.search_food("pepperoni pizza")
+        result = await nutrition_service.search_food("pizza, cheese, regular crust")
 
-        assert result is not None and result["name"] == "Pizza with pepperoni"
-        assert route.call_count == 2
+        assert result["name"] == "Pizza, cheese, regular crust"
 
-    @respx.mock
-    async def test_a_usable_first_page_is_not_widened(self, nutrition_service):
-        route = respx.get(SEARCH_URL).respond(200, json={"foods": [food(1, "Banana, raw")]})
+    async def test_no_match_returns_none_without_raising(self, session, nutrition_service):
+        seed(session, food(1, "Banana, raw"))
 
-        await nutrition_service.search_food("banana")
+        assert await nutrition_service.search_food("xyzzy") is None
 
-        assert route.call_count == 1
-
-    @respx.mock
-    async def test_branded_products_are_never_used(self, nutrition_service):
-        respx.get(SEARCH_URL).respond(200, json={"foods": [food(1, "BANANA", "Branded")]})
-
+    async def test_no_rows_in_the_table_at_all_returns_none(self, session, nutrition_service):
         assert await nutrition_service.search_food("banana") is None
 
-    @respx.mock
-    async def test_an_entry_with_no_macro_data_is_skipped(self, nutrition_service):
-        """A recorded Foundation chicken lunchmeat had 71 nutrients and none of the four macros."""
-        empty = {
-            "fdcId": 1,
-            "description": "Lunchmeat, chicken breast, sliced",
-            "dataType": "Foundation",
-            "foodNutrients": [{"nutrientName": "Vitamin C", "unitName": "MG", "value": 0}],
-        }
-        respx.get(SEARCH_URL).respond(
-            200, json={"foods": [empty, food(2, "Chicken breast, rotisserie", energy=144)]}
-        )
-
-        result = await nutrition_service.search_food("chicken breast")
-
-        assert result is not None
-        assert result["name"] == "Chicken breast, rotisserie"
-
-
-class TestFailures:
-    @respx.mock
-    async def test_a_transient_400_is_retried(self, nutrition_service):
-        route = respx.get(SEARCH_URL).mock(
-            side_effect=[
-                httpx.Response(400, text="<html>400 Bad Request</html>"),
-                httpx.Response(200, json={"foods": [food(1, "Banana, raw")]}),
-            ]
-        )
-
-        result = await nutrition_service.search_food("banana")
-
-        assert result is not None
-        assert route.call_count == 2
-
-    @respx.mock
-    async def test_errors_on_the_small_page_still_reach_the_wider_search(self, nutrition_service):
-        route = respx.get(SEARCH_URL).mock(
-            side_effect=[
-                httpx.Response(400),
-                httpx.Response(400),
-                httpx.Response(200, json={"foods": [food(1, "Banana, raw")]}),
-            ]
-        )
-
-        result = await nutrition_service.search_food("banana")
-
-        assert result is not None
-        assert route.calls.last.request.url.params["pageSize"] == "50"
-
-    @respx.mock
-    @pytest.mark.parametrize("status", [400, 500, 503])
-    async def test_repeated_errors_raise_instead_of_looking_like_no_match(
-        self, nutrition_service, status
+    async def test_a_query_of_only_short_words_finds_nothing_rather_than_matching_everything(
+        self, session, nutrition_service
     ):
-        route = respx.get(SEARCH_URL).respond(status)
+        """"of" and "a" are dropped as tokens, so a query made only of them must not become an
+        unfiltered scan that matches the whole table."""
+        seed(session, food(1, "Banana, raw"), food(2, "Apple, raw"))
+
+        assert await nutrition_service.search_food("a of") is None
+
+    async def test_db_failure_raises_lookup_error_not_a_silent_none(self, session, nutrition_service, monkeypatch):
+        def broken_exec(*args, **kwargs):
+            raise SQLAlchemyError("connection lost")
+
+        monkeypatch.setattr(session, "exec", broken_exec)
 
         with pytest.raises(NutritionLookupError):
             await nutrition_service.search_food("banana")
-
-        assert route.call_count == 4  # two page sizes, two attempts each
-
-    @respx.mock
-    @pytest.mark.parametrize("status", [401, 403, 429])
-    async def test_a_bad_key_or_rate_limit_is_not_retried(self, nutrition_service, status):
-        route = respx.get(SEARCH_URL).respond(status)
-
-        with pytest.raises(NutritionLookupError):
-            await nutrition_service.search_food("banana")
-
-        assert route.call_count == 1
-
-    @respx.mock
-    async def test_network_failure_raises(self, nutrition_service):
-        respx.get(SEARCH_URL).mock(side_effect=httpx.ConnectTimeout("timed out"))
-
-        with pytest.raises(NutritionLookupError):
-            await nutrition_service.search_food("banana")
-
-    @respx.mock
-    async def test_a_non_json_success_body_is_treated_as_a_failure(self, nutrition_service):
-        respx.get(SEARCH_URL).respond(200, text="<html>not json</html>")
-
-        with pytest.raises(NutritionLookupError):
-            await nutrition_service.search_food("banana")
-
-    @respx.mock
-    async def test_failures_never_log_or_raise_the_key_or_url(self, nutrition_service, caplog):
-        respx.get(SEARCH_URL).respond(400)
-        caplog.set_level(logging.DEBUG)
-
-        with pytest.raises(NutritionLookupError) as raised:
-            await nutrition_service.search_food("banana")
-
-        assert KEY not in caplog.text
-        assert "api.nal.usda.gov" not in app_log_text(caplog)
-        assert KEY not in str(raised.value)
-        assert "api.nal.usda.gov" not in str(raised.value)
-        assert raised.value.__cause__ is None
 
 
 class TestBestMatch:
-    """USDA's own order puts "Dessert pizza" ahead of pizza; the service picks a plain match."""
+    """USDA-style data's own order is not always sensible; the service ranks it."""
 
     @pytest.mark.parametrize(
-        ("query", "candidates", "expected"),
+        ("query", "names", "expected"),
         [
             ("apples", ["Apple, candied", "Apple, dried", "Apple, raw"], "Apple, raw"),
             ("banana", ["Banana, baked", "Banana, raw", "Peppers, banana, raw"], "Banana, raw"),
@@ -276,27 +127,24 @@ class TestBestMatch:
                 ["Dessert pizza", "Pizza, cheese, regular crust", "Pizza, cheese, thick crust"],
                 "Pizza, cheese, regular crust",
             ),
-            ("pepperoni pizza", ["Pizza, cheese", "Pizza with pepperoni, thin crust"], "Pizza with pepperoni, thin crust"),
-            # A lunchmeat that merely contains the words loses to the food itself.
             (
-                "chicken breast",
-                ["Lunchmeat, chicken breast, sliced", "Chicken breast, rotisserie, skin not eaten"],
-                "Chicken breast, rotisserie, skin not eaten",
+                "pepperoni pizza",
+                ["Pizza, cheese", "Pizza with pepperoni, thin crust"],
+                "Pizza with pepperoni, thin crust",
             ),
         ],
     )
-    def test_prefers_the_plainest_on_topic_result(self, query, candidates, expected):
-        foods = [food(i, description) for i, description in enumerate(candidates)]
+    def test_prefers_the_plainest_on_topic_result(self, query, names, expected):
+        foods = [food(i, name) for i, name in enumerate(names)]
 
-        assert NutritionService._best_match(query, foods)["description"] == expected
+        assert NutritionService._best_match(query, foods).name == expected
 
     def test_prefers_the_better_data_type_on_a_tie(self):
         foods = [food(1, "Bananas, raw", "SR Legacy"), food(2, "Banana, raw", "Survey (FNDDS)")]
 
-        assert NutritionService._best_match("banana", foods)["fdcId"] == 2
+        assert NutritionService._best_match("banana", foods).fdc_id == 2
 
     def test_a_close_match_on_most_of_the_words_is_accepted(self):
-        """The mapped pizza query has no exact entry; three of its four words is close enough."""
         foods = [food(1, "Pizza, cheese, stuffed crust")]
 
         assert NutritionService._best_match("pizza, cheese, regular crust", foods) is not None
@@ -310,61 +158,27 @@ class TestBestMatch:
     def test_an_empty_query_matches_nothing(self):
         assert NutritionService._best_match("  ", [food(1, "Banana, raw")]) is None
 
+    def test_an_empty_candidate_list_matches_nothing(self):
+        assert NutritionService._best_match("banana", []) is None
 
-class TestExtractNutrition:
-    def test_complete_data(self, nutrition_service):
-        result = nutrition_service._extract_nutrition(food(12345, "Test Food", energy=200))
 
-        assert result["name"] == "Test Food"
-        assert result["fdc_id"] == 12345
-        assert result["calories"] == 200
+class TestToNutrition:
+    def test_survey_fndds_is_reported_as_high_confidence(self):
+        result = NutritionService._to_nutrition(food(1, "Banana, raw", "Survey (FNDDS)"))
         assert result["confidence"] == "high"
 
-    def test_missing_nutrients_default_to_zero_and_medium_confidence(self, nutrition_service):
-        result = nutrition_service._extract_nutrition(
-            {"fdcId": 1, "description": "Incomplete Food", "dataType": "Branded", "foodNutrients": []}
-        )
-
-        assert (result["calories"], result["protein_g"], result["carbs_g"], result["fat_g"]) == (0, 0, 0, 0)
+    @pytest.mark.parametrize("data_type", ["Foundation", "SR Legacy"])
+    def test_other_data_types_are_reported_as_medium_confidence(self, data_type):
+        result = NutritionService._to_nutrition(food(1, "Banana, raw", data_type))
         assert result["confidence"] == "medium"
 
-    def test_energy_is_taken_in_kcal_whichever_order_the_units_come_in(self, nutrition_service):
-        """Recorded Foundation and SR Legacy data list kJ and kcal in either order."""
-        by_name = {f["description"]: f for f in recorded_banana()["foods"]}
-
-        kcal_first = nutrition_service._extract_nutrition(by_name["Bananas, overripe, raw"])
-        kj_first = nutrition_service._extract_nutrition(by_name["Bananas, raw"])
-
-        assert kcal_first["calories"] == 85
-        assert kj_first["calories"] == 89
-
-    def test_energy_is_never_reported_in_kilojoules(self, nutrition_service):
-        result = nutrition_service._extract_nutrition(
-            {
-                "fdcId": 1,
-                "description": "kJ only",
-                "foodNutrients": [{"nutrientName": "Energy", "unitName": "kJ", "value": 371}],
-            }
-        )
-
-        assert result["calories"] == 0
-
-    def test_accepts_the_atwater_energy_name_used_by_some_foundation_foods(self, nutrition_service):
-        result = nutrition_service._extract_nutrition(
-            {
-                "fdcId": 1,
-                "description": "Peppers",
-                "foodNutrients": [
-                    {"nutrientName": "Energy (Atwater General Factors)", "unitName": "KCAL", "value": 23.9}
-                ],
-            }
-        )
-
-        assert result["calories"] == 23.9
+    def test_values_are_reported_per_100g(self):
+        result = NutritionService._to_nutrition(food(1, "Banana, raw"))
+        assert (result["serving_size"], result["portion_g"]) == ("100g", 100.0)
 
 
 class TestPortionHelpers:
-    PER_100G = {
+    PER_100G: Dict[str, Any] = {
         "name": "Pizza, cheese",
         "fdc_id": 1,
         "calories": 265,
@@ -398,6 +212,16 @@ class TestPortionHelpers:
 
         assert self.PER_100G["calories"] == 265
 
+    def test_scaling_again_from_the_original_100g_values_is_exact(self):
+        """The frontend rescales a portion by re-deriving from the per-100g basis, not by
+        compounding an already-scaled result; scale_to_portion must support being called
+        again from PER_100G for a different grams value without drift."""
+        first = scale_to_portion(self.PER_100G, 250)
+        second = scale_to_portion(self.PER_100G, 400)
+
+        assert first["calories"] != second["calories"]
+        assert second["calories"] == round(265 * 4)
+
     def test_estimate_to_nutrition_has_the_same_shape_and_low_confidence(self):
         result = estimate_to_nutrition(
             "pizza", 300, {"calories": 800, "protein_g": 30.0, "carbs_g": 90.0, "fat_g": 32.0}
@@ -408,13 +232,3 @@ class TestPortionHelpers:
         assert result["serving_size"] == "300g"
         assert result["portion_g"] == 300
         assert result["confidence"] == "low"
-
-    def test_scaling_again_from_the_original_100g_values_is_exact(self):
-        """The frontend rescales a portion by re-deriving from the per-100g basis, not by
-        compounding an already-scaled result; scale_to_portion must support being called
-        again from PER_100G for a different grams value without drift."""
-        first = scale_to_portion(self.PER_100G, 250)
-        second = scale_to_portion(self.PER_100G, 400)
-
-        assert first["calories"] != second["calories"]
-        assert second["calories"] == round(265 * 4)

@@ -62,20 +62,25 @@ How the system is built today. Decisions and their reasoning are in [adr/](adr/)
 │                                        │
 │  Services:                             │
 │  - FoodRecognizer    Gemini / Vision   │
-│  - NutritionService  USDA lookup       │
+│  - NutritionService  Local USDA table  │
 │  - RateLimiter       Per-user quotas   │
 │                                        │
 │  Auth: JWT cookie + Bearer token       │
 │  User Isolation: All queries filtered  │
 └────────┬───────────────────────────────┘
          │
-    ┌────┴────┬──────────────┐
-    ↓         ↓              ↓
-┌──────────┐ ┌──────────┐ ┌──────────┐
-│PostgreSQL│ │Gemini API│ │USDA API  │
-│ (Neon)   │ │ (Google) │ │  (USDA)  │
-└──────────┘ └──────────┘ └──────────┘
+    ┌────┴────┐
+    ↓         ↓
+┌──────────┐ ┌──────────┐
+│PostgreSQL│ │Gemini API│
+│(Neon; incl.│ (Google) │
+│USDA data)│ └──────────┘
+└──────────┘
 ```
+
+USDA FoodData Central is a one-time data source (`scripts/build_usda_dataset.py`), not a
+runtime dependency - the request path never calls it. See
+[ADR-0010](adr/0010-usda-as-a-local-reference.md).
 
 ---
 
@@ -218,10 +223,11 @@ flow, the session model and known gaps are in [AUTHENTICATION.md](AUTHENTICATION
   on vercel.app an allowed credentialed origin. `CORS_PREVIEW_ORIGIN_REGEX` allows additional
   origins but is unset by default, since on Vercel the frontend and API share an origin and
   CORS is never consulted.
-- **Credentials in logs**: the Gemini, Vision and USDA keys are sent as headers
-  (`x-goog-api-key`, `X-Goog-Api-Key`, `X-Api-Key`) rather than query parameters, because httpx
+- **Credentials in logs**: the Gemini and Vision keys are sent as headers
+  (`x-goog-api-key`, `X-Goog-Api-Key`) rather than query parameters, because httpx
   embeds the request URL in `HTTPStatusError` and in its own INFO log. Services log status
-  codes, not exception text, and the `httpx` logger is raised to WARNING at startup
+  codes, not exception text, and the `httpx` logger is raised to WARNING at startup. Nutrition
+  lookup has no credential at all since M1.0 - it queries a local table
   ([F13](AUDIT_2026-09.md#f13-api-key-in-the-request-url),
   [F15](AUDIT_2026-09.md#f15-usda-key-in-the-request-url-and-in-production-logs)).
 - **API protection**: 10s timeout on all external calls
@@ -243,8 +249,8 @@ in `auth.py` is largely uncovered because it needs a real Google flow.
 |---|---|
 | Gemini provider | Responses recorded from the live API, model fallback, parsing and validation, portion estimates, credentials |
 | Vision provider | Parsing, filtering, credentials |
-| Nutrition service | A recorded USDA response, retry, ranking, portion scaling, credentials |
-| Photo endpoint | Every failure path, mock-mode refusal, USDA grounding and the AI-estimate fallback |
+| Nutrition service | Local-table search seeded with representative rows, ranking, portion scaling, a database-failure path |
+| Photo endpoint | Every failure path, mock-mode refusal (recognition only - nutrition lookup has none), USDA grounding and the AI-estimate fallback |
 | Image validation | Format, size, HEIC |
 | Auth | JWT utilities, dependencies, the development header, provider selection |
 | Rate limiter | Atomicity, refunds |

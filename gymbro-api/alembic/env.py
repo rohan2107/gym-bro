@@ -12,7 +12,7 @@ from alembic import context
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 # Import models so Alembic can detect them
-from app.models import User, DailyCheckIn, FoodLog, NutrientEntry, WeightEntry, Workout, ExerciseSet  # noqa: F401
+from app.models import User, DailyCheckIn, FoodLog, NutrientEntry, WeightEntry, Workout, ExerciseSet, UsdaFood  # noqa: F401
 from app.config import settings
 
 # this is the Alembic Config object, which provides

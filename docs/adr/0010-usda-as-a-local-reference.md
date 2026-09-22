@@ -1,7 +1,8 @@
 # ADR-0010: USDA FoodData Central as a local reference dataset, not a live dependency
 
-- **Status**: Proposed
+- **Status**: Accepted
 - **Date**: 2026-09-21
+- **Accepted**: 2026-09-22
 
 ## Context
 
@@ -35,59 +36,83 @@ The alternative of relying on the model alone was considered. Published evidence
   ([DietAI24](https://pmc.ncbi.nlm.nih.gov/articles/PMC12589391/)).
 
 Portion size, not the per-100g density that USDA supplies, is the largest source of error.
-USDA data helps with the second and, through its household portion weights, with the first.
+USDA data helps with the second and, through its household portion weights, could help with the
+first in a later increment.
 
-## Decision (proposed)
+## Decision
 
-Treat USDA data as a **reference dataset the app owns**, not a service it calls per request.
+USDA data is a **reference dataset the app owns**, not a service it calls per request.
 
-1. **Now (done in M0.3b).** Keep the API on the request path, but as a helper: each lookup is
-   time-boxed, and when USDA fails or has no match the model's own estimate is used and
-   labelled as an AI estimate. A USDA problem lowers accuracy; it no longer ends the request.
-2. **Next (M1.0).** Import the FNDDS, Foundation and SR Legacy releases into Postgres through
-   an Alembic migration and a reproducible import script, trimmed to identifiers, descriptions,
-   macros and household portions. Search them locally. The request path then makes no USDA
-   call.
-3. **Measure (M1.3).** Compare, on a golden set of the author's own meals with known weights:
-   the model alone, the model with USDA lookup, and the model choosing among locally retrieved
+1. **M0.3b (done first).** Kept the API on the request path, but as a helper: each lookup was
+   time-boxed, and when USDA failed or had no match the model's own estimate was used and
+   labelled as an AI estimate. This absorbed the reliability problem while the rest of this
+   decision was built.
+2. **M1.0 (this decision, done).** `scripts/build_usda_dataset.py` downloads USDA's Foundation,
+   Survey (FNDDS) and SR Legacy bulk JSON releases (Branded excluded - its names are brand text
+   and its values are label claims), trims each food to name, data type and the four macros,
+   and writes `data/usda_foods.json`, committed to the repository. An Alembic migration loads
+   it into a `usda_food` table the same way every other table is created - once, automatically,
+   on merge to `main`. `NutritionService.search_food` now queries this table. The request path
+   makes no USDA call.
+3. **M1.3 (future).** Compare, on a golden set of the author's own meals with known weights:
+   the model alone, the model with local lookup, and the model choosing among locally retrieved
    candidates. Choose from the results, not from preference.
 
-The datasets are downloadable ([FoodData Central downloads](http://fdc.nal.usda.gov/download-datasets/)):
-FNDDS is 3.7MB zipped as JSON (64MB unzipped) and Foundation 459KB, both as of their latest
-releases; SR Legacy is 12MB zipped and will not be updated again. The API guide states the data
-is CC0 and asks that FoodData Central be credited as the source
-([API guide](http://fdc.nal.usda.gov/api-guide/)); the download page itself states no licence,
-so this should be confirmed against the release notes before the data is committed or served.
+## What building it found
+
+- **Real counts.** Foundation (2026-04-30 release): 395 foods, of which **32 entries in the raw
+  JSON array are literally `null`** - not missing fields, the array itself contains nulls - and
+  42 more have no kcal energy value at all, leaving 321 usable. Survey/FNDDS (2024-10-31): 5,432,
+  one without usable energy. SR Legacy (2018-04, its final release): 7,793, all usable. **13,545
+  foods after trimming, 2.6MB** as JSON, with no `fdc_id` collisions across the three releases.
+- **Energy needs the same care at ingestion that the old query-time code took.** Foundation and
+  SR Legacy list Energy in both kJ and kcal; Foundation sometimes carries only a computed
+  Atwater value (`Energy (Atwater General Factors)`, `...Specific Factors`) instead of a
+  directly measured one. `build_usda_dataset.py` resolves this once, offline, rather than on
+  every query.
+- **Licence:** confirmed via the [FoodData Central API guide](http://fdc.nal.usda.gov/api-guide/) -
+  public domain (CC0), crediting FoodData Central as the source is requested, not required. The
+  bulk downloads themselves need no API key.
+- **Storage:** checked against the actual Neon project (2026-09-22): 31.55MB used of the 500MB
+  free-tier limit, so the ~2.6MB table fits with room to spare.
+- **Search plan changed while building it.** The plan going in was Postgres trigram search
+  (`pg_trgm`). Building it surfaced a reason not to: this project's tests run migrations against
+  a fresh SQLite database for speed (`test_migrations.py`), and `pg_trgm`/GIN indexes are
+  Postgres-only, which would have forced either a Postgres-only test path or skipping trigram
+  search in tests. A plain case-insensitive substring prefilter needs no extension, works
+  identically on SQLite and Postgres, and loses nothing at this size: an unfiltered scan for
+  even a common single word ("chicken": ~800 of 13,545 rows) took single-digit milliseconds in
+  testing, and the real ranking already happens in Python over whatever the SQL query returns
+  (unchanged from the heuristic used against USDA's own search results - more matching words, a
+  name starting with a query word, fewer qualifiers, "raw", the better data type, then the
+  shorter name). No index was added for the same reason: correct first, and "add one if this
+  ever gets slow" is more honest than indexing against no measurement.
 
 ## Consequences
 
-- The request path loses its flakiest dependency, and search becomes fast and deterministic.
+- The request path loses its flakiest dependency: nutrition lookup makes no external call and
+  needs no API key, in every environment. There is no longer a "mock mode" for it to have.
 - Matching can be improved and measured offline, against a golden set, instead of guessed at
   against a moving API.
-- USDA's household portions (a slice, a cup, with gram weights) give portion estimates real
-  data to draw on.
-- The app takes on ingestion, a schema and refresh: FNDDS is updated every two years and
-  Foundation twice a year. This is the corpus work that [M1.1](../ROADMAP.md#m11-knowledge-corpus-and-retrieval)
-  needs anyway.
-- Coverage is limited to what USDA lists, which is mostly American foods. The AI-estimate
-  fallback remains for anything it does not.
-- Storage use on the free-tier database is small once trimmed, but the free-tier limit has not
-  been checked.
-
-## To verify before accepting
-
-- Postgres search quality on Neon (trigram or full-text; embeddings only if measured to help),
-  and which extensions the instance offers
-- The licence, from the release notes, and the attribution wording
-- That the trimmed data fits comfortably in the database's storage limit
+- The app takes on refresh: FNDDS is updated every two years and Foundation twice a year;
+  `scripts/build_usda_dataset.py` is re-run and the migration re-generated when that happens.
+  This is a smaller version of the corpus work [M1.1](../ROADMAP.md#m11-knowledge-corpus-and-retrieval)
+  needs anyway, done first on this more concrete case.
+- Coverage is limited to what USDA lists, which is mostly American foods, and the trimmed data
+  drops household portions and footnotes along with everything else not currently used. The
+  AI-estimate fallback remains for anything the table does not cover.
+- A future data refresh replaces the whole table (the migration is not incremental), which is
+  fine for reference data with no user records in it.
 
 ## Alternatives considered
 
 - **Keep calling the API on every request.** Rejected as the end state: reliability, latency
-  and an unverified shared-IP limit, for a step that a local copy does better.
+  and an unverified shared-IP limit, for a step a local copy does better.
 - **Model only.** Rejected: unsourced numbers with published error of tens of percent, and no
   way to evaluate them against a reference.
-- **Model estimate first, USDA as a background check.** Kept as a possible use of the local
-  copy: cheap once the data is local, and useful as a disagreement signal, but it does not
-  need to block a response.
+- **Model estimate first, local lookup as a background check.** Not pursued now; possible later
+  since the data is already local and cheap to query, but it does not need to block a response.
+- **Postgres trigram search (`pg_trgm`).** Rejected after prototyping it, for the test-portability
+  and unnecessary-at-this-size reasons above. Revisit only if the dataset grows enough that a
+  full scan measurably matters.
 - **A commercial nutrition API.** Rejected under [ADR-0003](0003-hard-capped-providers-only.md).

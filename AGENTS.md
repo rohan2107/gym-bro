@@ -118,6 +118,8 @@ The project is zero-spend ([ADR-0003](docs/adr/0003-hard-capped-providers-only.m
   `-latest` alias.
 - Treat model output as untrusted input: constrain it to a schema, then validate and limit it
   before it reaches a query or the database.
+- Prefer owning a small reference dataset over calling an external API on every request, when
+  the data is small, stable and redistributable ([ADR-0010](docs/adr/0010-usda-as-a-local-reference.md)).
 
 ## Evaluation discipline
 

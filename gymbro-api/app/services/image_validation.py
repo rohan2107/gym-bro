@@ -24,6 +24,16 @@ HEIF_UNSUPPORTED_MESSAGE = (
     "as JPEG."
 )
 
+# MPO ("Multi Picture Object") is a container format: a complete, standalone JPEG (the visible
+# photo) followed by one or more extra frames appended after its end marker, used for
+# depth/3D photos and thumbnails. macOS Continuity Camera and some Photos exports produce it.
+# An ordinary JPEG decoder reads up to the first end-of-image marker and ignores what follows,
+# so the first frame decodes as a plain photo; confirmed against the live Gemini API with a
+# constructed MPO file (a real photo as frame one, a second frame appended) on 2026-09-22 -
+# it named the food correctly, matching a plain JPEG of the same photo. So it is accepted here
+# and reported as "jpeg" to the rest of the pipeline, which only ever sees the format label.
+_ACCEPTED_FORMATS = frozenset({"jpeg", "jpg", "png", "webp"})
+
 
 def is_heif(image_bytes: bytes) -> bool:
     """True if the bytes look like a HEIC/HEIF image.
@@ -59,8 +69,11 @@ def validate_image(image_bytes: bytes) -> Dict[str, Any]:
                 "error": "Image too large. Maximum size is 10MB.",
             }
 
-        # Check format
-        if image.format.lower() not in ["jpeg", "jpg", "png", "webp"]:
+        # Check format. MPO is treated as its first frame, a plain JPEG - see _ACCEPTED_FORMATS.
+        image_format = image.format.lower()
+        if image_format == "mpo":
+            image_format = "jpeg"
+        elif image_format not in _ACCEPTED_FORMATS:
             return {
                 "valid": False,
                 "error": f"Unsupported format: {image.format}. Use JPEG, PNG, or WebP.",
@@ -75,7 +88,7 @@ def validate_image(image_bytes: bytes) -> Dict[str, Any]:
 
         return {
             "valid": True,
-            "format": image.format.lower(),
+            "format": image_format,
             "size_kb": round(size_kb, 2),
             "dimensions": f"{image.width}x{image.height}",
         }
