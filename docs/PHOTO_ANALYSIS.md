@@ -27,6 +27,7 @@ POST /api/food-logs/from-photo          (multipart, authenticated)
   content type must be image/*                                       -> 400
   stream the body in 64KB chunks, cap at 10MB                        -> 413
   validate with Pillow: format, minimum 200x200, not HEIC            -> 400
+      MPO accepted as its first frame (a plain JPEG); reported as jpeg
   reserve one unit of the user's daily quota (row-locked, atomic)    -> 429 if none left
   configured provider: names the foods in the photo (top 3)
       provider failure, quota or block                               -> 503, quota refunded
@@ -149,6 +150,17 @@ Without its key a provider runs in **mock mode** and returns fixed sample data (
   manual entry, because fabricated nutrition presented as an analysis of the user's photo is
   worse than no analysis.
 
+## Accepted formats
+
+JPEG, PNG and WebP. HEIC is rejected with an actionable message (see below). MPO - a container
+that macOS Continuity Camera and some Photos exports produce: a complete, standalone JPEG (the
+visible photo) followed by an extra frame appended after it, for depth or a thumbnail - is
+accepted and treated as its first frame. An ordinary JPEG decoder stops at the first end marker
+and ignores what follows, so this holds for every provider without special-casing it beyond
+image validation. Confirmed against the live Gemini API on 2026-09-22 with a constructed MPO
+file (a real photo as frame one, a second frame appended): it named the food correctly, matching
+a plain JPEG of the same photo.
+
 ## Failure behaviour
 
 | Condition | Response | Quota | User sees |
@@ -219,6 +231,7 @@ of the data ([ADR-0010](adr/0010-usda-as-a-local-reference.md)).
 - The endpoint's grounding logic: USDA scaled to the portion, per 100g without one, fallback to
   the estimate on error, no match and timeout, no fallback without a portion, and mixed results
   across several foods
+- Image validation: format acceptance including MPO, HEIC rejection, size and dimension limits
 - USDA lookup against a search response **recorded from the live API**
   (`tests/fixtures/usda/`): header credential, no `dataType` filter, retry and widening, no
   retry for `401`/`403`/`429`, no-match versus failure, kJ-versus-kcal extraction, result

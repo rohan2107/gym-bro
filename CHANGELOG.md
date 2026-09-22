@@ -58,6 +58,10 @@ entries are grouped by milestone and dated.
 
 ### Fixed
 
+- Uploading an MPO photo (produced by macOS Continuity Camera and some Photos exports) returned
+  "Unsupported format: MPO" and fell back to manual entry. It is now accepted and treated as its
+  first frame, a plain JPEG; confirmed against the live Gemini API that the appended frame is
+  ignored and the food is still named correctly
 - After a deploy, a device could run the old frontend against the new API for up to 24 hours,
   because the service worker served the page cache-first. The page is now fetched network-first
   (falling back to the cached shell offline or after four seconds), hashed assets stay
