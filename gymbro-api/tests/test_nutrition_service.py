@@ -110,6 +110,7 @@ class TestSearchResults:
             "carbs_g": 20.0,
             "fat_g": 0.5,
             "serving_size": "100g",
+            "portion_g": 100.0,
             "confidence": "high",
         }
 
@@ -371,6 +372,7 @@ class TestPortionHelpers:
         "carbs_g": 33.0,
         "fat_g": 10.0,
         "serving_size": "100g",
+        "portion_g": 100.0,
         "confidence": "high",
     }
 
@@ -384,6 +386,7 @@ class TestPortionHelpers:
             25.0,
         )
         assert result["serving_size"] == "250g"
+        assert result["portion_g"] == 250
 
     def test_scale_to_portion_keeps_the_identity_of_the_match(self):
         result = scale_to_portion(self.PER_100G, 250)
@@ -403,4 +406,15 @@ class TestPortionHelpers:
         assert set(result) == set(self.PER_100G)
         assert result["fdc_id"] is None
         assert result["serving_size"] == "300g"
+        assert result["portion_g"] == 300
         assert result["confidence"] == "low"
+
+    def test_scaling_again_from_the_original_100g_values_is_exact(self):
+        """The frontend rescales a portion by re-deriving from the per-100g basis, not by
+        compounding an already-scaled result; scale_to_portion must support being called
+        again from PER_100G for a different grams value without drift."""
+        first = scale_to_portion(self.PER_100G, 250)
+        second = scale_to_portion(self.PER_100G, 400)
+
+        assert first["calories"] != second["calories"]
+        assert second["calories"] == round(265 * 4)

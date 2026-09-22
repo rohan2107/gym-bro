@@ -40,6 +40,8 @@ export type PhotoNutrition = {
   confidence: string | null
   /** Where the numbers came from. Absent on older responses, which were USDA per 100g. */
   source?: 'usda' | 'ai_estimate'
+  /** The gram basis calories/macros above correspond to. Absent on older responses (100g). */
+  portion_g?: number
 }
 
 export type PhotoPrediction = {

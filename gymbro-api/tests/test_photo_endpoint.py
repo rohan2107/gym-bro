@@ -57,6 +57,7 @@ def mock_nutrition_data() -> dict[str, Any]:
         "carbs_g": 33.0,
         "fat_g": 10.0,
         "serving_size": "100g",
+        "portion_g": 100.0,
         "confidence": "high"
     }
 

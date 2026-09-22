@@ -83,8 +83,9 @@ dates. Work is sequenced by dependency, and a slipped milestone slips everything
 | M0.2 | Runtime alignment | S | Done |
 | M0.3a | Food-recognition providers | M | Done |
 | M0.3b | Portions and a graceful fallback | M | Done |
-| M0.4 | Stale frontend after a deploy (service worker) | S | In review |
-| M0.3c | Portion editing and device check | S | Not started |
+| M0.4 | Stale frontend after a deploy (service worker) | S | Done |
+| M0.3c | Portion editing | S | In review |
+| M0.3d | iPhone device check (HEIC, camera) | S | Not started |
 
 ### M0.1: Documentation restructure
 
@@ -167,17 +168,38 @@ confirmed on the device itself.
   worker must leave alone. The stale-page tests fail against the previous worker
 
 **Done when**: after a deploy, reloading the app shows the new frontend without clearing site
-data, and the app still opens offline from the last cached shell. The first part is checked on
-the phone after the deploy: the review note should read "Estimated for about…" without clearing
-anything. Devices that still hold the old worker pick up the new one on their next visit.
+data, and the app still opens offline from the last cached shell. Confirmed on a phone on
+2026-09-22: a photo taken the next day, with no site data cleared, showed the current note
+("Estimated for about 250g, from USDA values scaled to the portion.").
 
-### M0.3c: Portion editing and device check
+### M0.3c: Portion editing
 
-- Make the portion editable in the review screen, recalculating the macros from the gram value
-- Verify HEIC handling and camera capture on a real iPhone
+Every USDA and AI-estimate result now carries a numeric `portion_g`, defaulting to 100 for a
+plain per-100g result, so this applies uniformly regardless of source.
 
-**Done when**: changing the portion updates the macros, and the iPhone flow has been exercised
-on a device.
+- The review screen has an editable "Portion (g)" field
+- Changing it rescales calories and every macro, re-derived from the API's original values each
+  time so repeated edits do not compound rounding error
+- The basis note updates to the edited portion, not just the one the API returned
+- The portion itself is not sent when saving; only the resulting macros are, matching what the
+  food log already stores
+
+**Done when**: changing the portion updates the macros. Done in this increment; not yet
+confirmed on a device (see [M0.3d](#m03d-iphone-device-check-heic-camera)).
+
+### M0.3d: iPhone device check (HEIC, camera)
+
+Live camera capture already works: confirmed on an iPhone with two photos (bananas, eggs),
+both correctly analysed. What has not been exercised on a device:
+
+- Choosing an existing **HEIC** photo from the library (not the live camera, which iOS
+  typically re-encodes), to confirm the client shows the actionable HEIC message rather than a
+  raw error
+- The portion field ([M0.3c](#m03c-portion-editing)) on a touchscreen, including its numeric
+  keyboard
+
+**Done when**: a HEIC photo from the library shows the HEIC message, and editing the portion on
+the device works as it does in tests.
 
 ---
 
